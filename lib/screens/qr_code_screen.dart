@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -15,6 +16,13 @@ class QRCodeScreen extends StatelessWidget {
 
   const QRCodeScreen({super.key, required this.user});
   static const double _shareQrImageSize = 600;
+  static const String _qrTemplateAsset = 'assets/images/qr_template.png';
+  static const double _qrBoxWidthFactor = 0.42;
+  static const double _qrBoxTopFactor = 0.115;
+  static const double _qrBoxPaddingFactor = 0.06;
+  static const double _qrBoxCornerRadiusFactor = 0.08;
+  static final Future<ui.Image> _templateImageFuture =
+      _loadTemplateImage();
 
   @override
   Widget build(BuildContext context) {
@@ -89,36 +97,7 @@ class QRCodeScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    QrImageView(
-                      data: qrPayload,
-                      version: QrVersions.auto,
-                      size: 280,
-                      backgroundColor: Colors.white,
-                      errorCorrectionLevel: QrErrorCorrectLevel.L,
-                      gapless: true,
-                      eyeStyle: QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: const Color(0xFF2563EB),
-                      ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '🚗 Avahanaa',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2563EB),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Scan to notify owner',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
+                    _buildQrPreview(qrPayload),
                     if (licensePlate.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -273,6 +252,126 @@ class QRCodeScreen extends StatelessWidget {
     );
   }
 
+  static Future<ui.Image> _loadTemplateImage() async {
+    final data = await rootBundle.load(_qrTemplateAsset);
+    final bytes = data.buffer.asUint8List();
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromList(bytes, completer.complete);
+    return completer.future;
+  }
+
+  Widget _buildQrPreview(String qrData) {
+    return FutureBuilder<ui.Image>(
+      future: _templateImageFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return Column(
+            children: [
+              _buildTemplateQr(qrData, snapshot.data!),
+              const SizedBox(height: 12),
+            ],
+          );
+        }
+        return _buildClassicQr(qrData);
+      },
+    );
+  }
+
+  Widget _buildClassicQr(String qrData) {
+    return Column(
+      children: [
+        QrImageView(
+          data: qrData,
+          version: QrVersions.auto,
+          size: 280,
+          backgroundColor: Colors.white,
+          errorCorrectionLevel: QrErrorCorrectLevel.L,
+          gapless: true,
+          eyeStyle: QrEyeStyle(
+            eyeShape: QrEyeShape.square,
+            color: const Color(0xFF2563EB),
+          ),
+          dataModuleStyle: const QrDataModuleStyle(
+            dataModuleShape: QrDataModuleShape.square,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          '🚗 Avahanaa',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2563EB),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Scan to notify owner',
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTemplateQr(String qrData, ui.Image templateImage) {
+    final aspectRatio = templateImage.width / templateImage.height;
+    return AspectRatio(
+      aspectRatio: aspectRatio,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          final qrBoxSize = width * _qrBoxWidthFactor;
+          final qrBoxTop = height * _qrBoxTopFactor;
+          final qrBoxLeft = (width - qrBoxSize - 5) / 2;
+          final qrBoxPadding = qrBoxSize * _qrBoxPaddingFactor;
+          final qrRadius = qrBoxSize * _qrBoxCornerRadiusFactor;
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  _qrTemplateAsset,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                left: qrBoxLeft,
+                top: qrBoxTop,
+                width: qrBoxSize,
+                height: qrBoxSize,
+                child: Container(
+                  padding: EdgeInsets.all(qrBoxPadding),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(qrRadius),
+                  ),
+                  child: QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    padding: EdgeInsets.zero,
+                    backgroundColor: Colors.white,
+                    errorCorrectionLevel: QrErrorCorrectLevel.L,
+                    gapless: true,
+                    eyeStyle: QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: const Color(0xFF2563EB),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _shareQRCode(BuildContext context, String qrData) async {
     try {
       final pngBytes = await _buildQrPngBytes(qrData, _shareQrImageSize);
@@ -298,6 +397,23 @@ class QRCodeScreen extends StatelessWidget {
   }
 
   Future<List<int>?> _buildQrPngBytes(String data, double size) async {
+    final templateImage = await _loadTemplateImageSafely();
+    if (templateImage != null) {
+      return _buildTemplateQrBytes(data, templateImage);
+    }
+
+    return _buildPlainQrBytes(data, size);
+  }
+
+  Future<ui.Image?> _loadTemplateImageSafely() async {
+    try {
+      return await _templateImageFuture;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<int>?> _buildPlainQrBytes(String data, double size) async {
     final painter = QrPainter(
       data: data,
       version: QrVersions.auto,
@@ -321,6 +437,60 @@ class QRCodeScreen extends StatelessWidget {
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData?.buffer.asUint8List();
+  }
+
+  Future<List<int>?> _buildTemplateQrBytes(
+    String data,
+    ui.Image templateImage,
+  ) async {
+    final width = templateImage.width.toDouble();
+    final height = templateImage.height.toDouble();
+    final qrBoxSize = width * _qrBoxWidthFactor;
+    final qrBoxTop = height * _qrBoxTopFactor;
+    final qrBoxLeft = (width - qrBoxSize) / 2;
+    final qrBoxPadding = qrBoxSize * _qrBoxPaddingFactor;
+    final qrRadius = qrBoxSize * _qrBoxCornerRadiusFactor;
+    final qrSize = qrBoxSize - (qrBoxPadding * 2);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width, height),
+      Paint()..color = Colors.white,
+    );
+    canvas.drawImage(templateImage, Offset.zero, Paint());
+
+    final boxRect = Rect.fromLTWH(qrBoxLeft, qrBoxTop, qrBoxSize, qrBoxSize);
+    final boxPaint = Paint()..color = Colors.white;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(boxRect, Radius.circular(qrRadius)),
+      boxPaint,
+    );
+
+    final painter = QrPainter(
+      data: data,
+      version: QrVersions.auto,
+      errorCorrectionLevel: QrErrorCorrectLevel.L,
+      gapless: true,
+      eyeStyle: QrEyeStyle(
+        eyeShape: QrEyeShape.square,
+        color: const Color(0xFF2563EB),
+      ),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: Colors.black87,
+      ),
+    );
+
+    canvas.save();
+    canvas.translate(qrBoxLeft + qrBoxPadding, qrBoxTop + qrBoxPadding);
+    painter.paint(canvas, Size(qrSize, qrSize));
+    canvas.restore();
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(width.toInt(), height.toInt());
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData?.buffer.asUint8List();
   }
