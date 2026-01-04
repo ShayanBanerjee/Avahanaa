@@ -1,7 +1,12 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../models/user_model.dart';
 import '../utils/qr_payload_builder.dart';
 
@@ -9,6 +14,7 @@ class QRCodeScreen extends StatelessWidget {
   final UserModel user;
 
   const QRCodeScreen({super.key, required this.user});
+  static const double _shareQrImageSize = 600;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +33,7 @@ class QRCodeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () => _shareQRCode(shareableLink),
+            onPressed: () => _shareQRCode(context, qrPayload),
             tooltip: 'Share',
           ),
         ],
@@ -158,7 +164,7 @@ class QRCodeScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton.icon(
-                      onPressed: () => _shareQRCode(shareableLink),
+                      onPressed: () => _shareQRCode(context, qrPayload),
                       icon: const Icon(Icons.share),
                       label: const Text('Share QR Code'),
                       style: OutlinedButton.styleFrom(
@@ -267,10 +273,64 @@ class QRCodeScreen extends StatelessWidget {
     );
   }
 
-  void _shareQRCode(String url) {
-    Share.share(
-      'Scan my Avahanaa QR code to notify me: $url',
-      subject: 'My Avahanaa QR Code',
+  Future<void> _shareQRCode(BuildContext context, String qrData) async {
+    try {
+      final pngBytes = await _buildQrPngBytes(qrData, _shareQrImageSize);
+      if (pngBytes == null) {
+        _showShareError(context);
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+        '${tempDir.path}/avahanaa-qr-${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(pngBytes, flush: true);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Scan my Avahanaa QR code to notify me.',
+        subject: 'My Avahanaa QR Code',
+      );
+    } catch (_) {
+      _showShareError(context);
+    }
+  }
+
+  Future<List<int>?> _buildQrPngBytes(String data, double size) async {
+    final painter = QrPainter(
+      data: data,
+      version: QrVersions.auto,
+      errorCorrectionLevel: QrErrorCorrectLevel.L,
+      gapless: true,
+      eyeStyle: QrEyeStyle(
+        eyeShape: QrEyeShape.square,
+        color: const Color(0xFF2563EB),
+      ),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: Colors.black87,
+      ),
+    );
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final backgroundPaint = Paint()..color = Colors.white;
+    canvas.drawRect(Rect.fromLTWH(0, 0, size, size), backgroundPaint);
+    painter.paint(canvas, Size(size, size));
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData?.buffer.asUint8List();
+  }
+
+  void _showShareError(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Unable to share the QR code image.'),
+        duration: Duration(seconds: 2),
+      ),
     );
   }
 }

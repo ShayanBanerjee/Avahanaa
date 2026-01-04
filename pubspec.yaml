@@ -43,6 +43,7 @@ dependencies:
   qr_flutter: ^4.1.0
   encrypt: ^5.0.3
   share_plus: ^12.0.0
+  path_provider: ^2.1.2
   alarm: ^5.1.5
 
 dev_dependencies:
