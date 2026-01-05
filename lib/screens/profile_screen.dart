@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/vehicle_rc_service.dart';
 import '../models/user_model.dart';
 import 'auth/login_screen.dart';
 import '../utils/qr_payload_builder.dart';
@@ -17,6 +18,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   final _firestoreService = FirestoreService();
+  final _vehicleRcService = VehicleRcService();
   final _currentUser = FirebaseAuth.instance.currentUser;
   final _fcmService = FCMService();
   bool _isUpdatingNotificationPreference = false;
@@ -355,93 +357,195 @@ class _ProfileScreenState extends State<ProfileScreen> {
       text: user.carDetails?['licensePlate'] ?? '',
     );
 
+    Map<String, dynamic>? rcResponse;
+    final existingRcResponse = user.carDetails?['rcResponse'];
+    if (existingRcResponse is Map<String, dynamic>) {
+      rcResponse = existingRcResponse;
+    } else if (existingRcResponse is Map) {
+      rcResponse = Map<String, dynamic>.from(existingRcResponse);
+    }
+
+    bool isFetching = false;
+    String? fetchError;
+    String? lastFetchedPlate =
+        rcResponse != null ? plateController.text.trim().toUpperCase() : null;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text('Edit Car Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: colorController,
-                decoration: const InputDecoration(
-                  labelText: 'Color',
-                  hintText: 'e.g., Red, Blue',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: modelController,
-                decoration: const InputDecoration(
-                  labelText: 'Model',
-                  hintText: 'e.g., Toyota Camry',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: plateController,
-                decoration: const InputDecoration(
-                  labelText: 'License Plate',
-                  hintText: 'e.g., ABC-1234',
-                ),
-                textCapitalization: TextCapitalization.characters,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                final updatedCarDetails = {
-                  'color': colorController.text.trim(),
-                  'carModel': modelController.text.trim(),
-                  'licensePlate': plateController.text.trim().toUpperCase(),
-                };
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          Future<void> fetchVehicleDetails() async {
+            final plate = plateController.text.trim();
+            if (plate.isEmpty) {
+              setModalState(() {
+                fetchError = 'Enter a registration number to fetch details';
+              });
+              return;
+            }
 
-                await _firestoreService.updateUserProfile(
-                  userId: _currentUser!.uid,
-                  carDetails: updatedCarDetails,
-                );
+            setModalState(() {
+              isFetching = true;
+              fetchError = null;
+            });
 
-                if (user.qrCodeId.isNotEmpty) {
-                  final updatedUser =
-                      user.copyWith(carDetails: updatedCarDetails);
-                  await _firestoreService.syncQRCodeMetadata(
-                    qrCodeId: user.qrCodeId,
-                    metadata: QrPayloadBuilder.buildMetadata(updatedUser),
-                    shareableLink:
-                        QrPayloadBuilder.buildShareableLink(updatedUser),
-                    payload: QrPayloadBuilder.buildPayload(updatedUser),
-                  );
-                }
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                Future.delayed(const Duration(seconds: 0), () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Car details updated')),
-                  );
-                });
-              } catch (e) {
-                if (!mounted) return;
-                Future.delayed(const Duration(seconds: 0), () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+            try {
+              final response =
+                  await _vehicleRcService.fetchVehicleDetails(plate);
+              final details = _vehicleRcService.buildCarDetails(
+                rcResponse: response,
+                fallbackPlate: plate,
+              );
+              colorController.text = (details['color'] ?? '').toString();
+              modelController.text = (details['carModel'] ?? '').toString();
+              final normalizedPlate =
+                  (details['licensePlate'] ?? plate).toString().trim().toUpperCase();
+              plateController.text = normalizedPlate;
+              rcResponse = response;
+              lastFetchedPlate = normalizedPlate;
+            } catch (e) {
+              if (context.mounted) {
+                setModalState(() {
+                  fetchError = e.toString();
                 });
               }
-            },
-            child: const Text('Save'),
-          ),
-        ],
+            } finally {
+              if (context.mounted) {
+                setModalState(() {
+                  isFetching = false;
+                });
+              }
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            title: const Text('Edit Car Details'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: plateController,
+                    decoration: const InputDecoration(
+                      labelText: 'Registration Number',
+                      hintText: 'e.g., PB65AM0008',
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                    onChanged: (value) {
+                      final normalized = value.trim().toUpperCase();
+                      final shouldClearFetch = lastFetchedPlate != null &&
+                          normalized != lastFetchedPlate;
+                      if (shouldClearFetch || fetchError != null) {
+                        setModalState(() {
+                          if (shouldClearFetch) {
+                            rcResponse = null;
+                            lastFetchedPlate = null;
+                          }
+                          fetchError = null;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: isFetching ? null : fetchVehicleDetails,
+                      icon: isFetching
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.search),
+                      label: Text(
+                        isFetching ? 'Fetching details...' : 'Fetch vehicle details',
+                      ),
+                    ),
+                  ),
+                  if (fetchError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      fetchError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: colorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Color',
+                      hintText: 'e.g., Red, Blue',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: modelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Model',
+                      hintText: 'e.g., Toyota Camry',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: isFetching
+                    ? null
+                    : () async {
+                        try {
+                          final updatedCarDetails = {
+                            'color': colorController.text.trim(),
+                            'carModel': modelController.text.trim(),
+                            'licensePlate':
+                                plateController.text.trim().toUpperCase(),
+                            if (rcResponse != null) 'rcResponse': rcResponse,
+                          };
+
+                          await _firestoreService.updateUserProfile(
+                            userId: _currentUser!.uid,
+                            carDetails: updatedCarDetails,
+                          );
+
+                          if (user.qrCodeId.isNotEmpty) {
+                            final updatedUser =
+                                user.copyWith(carDetails: updatedCarDetails);
+                            await _firestoreService.syncQRCodeMetadata(
+                              qrCodeId: user.qrCodeId,
+                              metadata: QrPayloadBuilder.buildMetadata(updatedUser),
+                              shareableLink:
+                                  QrPayloadBuilder.buildShareableLink(updatedUser),
+                              payload: QrPayloadBuilder.buildPayload(updatedUser),
+                            );
+                          }
+
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          Future.delayed(const Duration(seconds: 0), () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Car details updated')),
+                            );
+                          });
+                        } catch (e) {
+                          if (!mounted) return;
+                          Future.delayed(const Duration(seconds: 0), () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          });
+                        }
+                      },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

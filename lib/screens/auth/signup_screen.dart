@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../services/vehicle_rc_service.dart';
 import '../home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -19,10 +20,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _carModelController = TextEditingController();
   final _carLicenseController = TextEditingController();
   final _authService = AuthService();
+  final _vehicleRcService = VehicleRcService();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isFetchingVehicleDetails = false;
+  Map<String, dynamic>? _rcResponse;
+  String? _vehicleFetchError;
+  String? _lastFetchedPlate;
 
   @override
   void dispose() {
@@ -42,17 +48,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final licensePlate = _carLicenseController.text.trim().toUpperCase();
+      final carDetails = {
+        'color': _carColorController.text.trim(),
+        'carModel': _carModelController.text.trim(),
+        'licensePlate': licensePlate,
+        if (_rcResponse != null) 'rcResponse': _rcResponse,
+      };
+
       await _authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         phoneNumber: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
-        carDetails: {
-          'color': _carColorController.text.trim(),
-          'carModel': _carModelController.text.trim(),
-          'licensePlate': _carLicenseController.text.trim().toUpperCase(),
-        },
+        carDetails: carDetails,
       );
 
       if (!mounted) return;
@@ -84,6 +94,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _fetchVehicleDetails() async {
+    final vehicleNumber = _carLicenseController.text.trim();
+    if (vehicleNumber.isEmpty) {
+      setState(() {
+        _vehicleFetchError = 'Enter a registration number to fetch details';
+      });
+      return;
+    }
+
+    setState(() {
+      _isFetchingVehicleDetails = true;
+      _vehicleFetchError = null;
+    });
+
+    try {
+      final rcResponse =
+          await _vehicleRcService.fetchVehicleDetails(vehicleNumber);
+      final details = _vehicleRcService.buildCarDetails(
+        rcResponse: rcResponse,
+        fallbackPlate: vehicleNumber,
+      );
+      _carColorController.text = (details['color'] ?? '').toString();
+      _carModelController.text = (details['carModel'] ?? '').toString();
+      final plate = (details['licensePlate'] ?? vehicleNumber).toString();
+      final normalizedPlate = plate.trim().toUpperCase();
+      _carLicenseController.text = normalizedPlate;
+      _rcResponse = rcResponse;
+      _lastFetchedPlate = normalizedPlate;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vehicle details fetched')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _vehicleFetchError = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isFetchingVehicleDetails = false);
       }
     }
   }
@@ -159,6 +216,68 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // Registration number field
+                TextFormField(
+                  controller: _carLicenseController,
+                  textCapitalization: TextCapitalization.characters,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (value) {
+                    final normalized = value.trim().toUpperCase();
+                    final shouldClearFetch =
+                        _lastFetchedPlate != null &&
+                            normalized != _lastFetchedPlate;
+                    if (shouldClearFetch || _vehicleFetchError != null) {
+                      setState(() {
+                        if (shouldClearFetch) {
+                          _rcResponse = null;
+                          _lastFetchedPlate = null;
+                        }
+                        _vehicleFetchError = null;
+                      });
+                    }
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Registration Number *',
+                    prefixIcon: Icon(Icons.confirmation_number_outlined),
+                    hintText: 'e.g., PB65AM0008',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your registration number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isFetchingVehicleDetails
+                        ? null
+                        : _fetchVehicleDetails,
+                    icon: _isFetchingVehicleDetails
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search),
+                    label: Text(
+                      _isFetchingVehicleDetails
+                          ? 'Fetching details...'
+                          : 'Fetch vehicle details',
+                    ),
+                  ),
+                ),
+                if (_vehicleFetchError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _vehicleFetchError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ],
+                const SizedBox(height: 16),
+
                 // Car color field
                 TextFormField(
                   controller: _carColorController,
@@ -190,25 +309,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your car model';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // License plate field
-                TextFormField(
-                  controller: _carLicenseController,
-                  textCapitalization: TextCapitalization.characters,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'License Plate *',
-                    prefixIcon: Icon(Icons.confirmation_number_outlined),
-                    hintText: 'e.g., ABC-1234',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your license plate';
                     }
                     return null;
                   },
@@ -283,7 +383,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignUp,
+                    onPressed: _isLoading || _isFetchingVehicleDetails
+                        ? null
+                        : _handleSignUp,
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,
