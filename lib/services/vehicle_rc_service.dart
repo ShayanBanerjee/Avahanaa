@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import '../models/vehicle_details.dart';
+
 class VehicleRcService {
   VehicleRcService({Dio? dio}) : _dio = dio ?? Dio();
 
@@ -57,9 +59,9 @@ class VehicleRcService {
         .toString()
         .trim();
     final carModel =
-        (rcResponse['make_model'] ??
-                rcResponse['model_name2'] ??
+        (rcResponse['model_name2'] ??
                 rcResponse['model_name'] ??
+                rcResponse['make_model'] ??
                 rcResponse['make_name'] ??
                 rcResponse['make_name2'] ??
                 '')
@@ -67,11 +69,18 @@ class VehicleRcService {
             .trim();
     final color =
         (rcResponse['color'] ?? rcResponse['colour'] ?? '').toString().trim();
+    final vehicleDetails = VehicleDetails.fromRcResponse(rcResponse);
+    final assetNumber = vehicleDetails.assetNumber.isNotEmpty
+        ? vehicleDetails.assetNumber
+        : licensePlate;
 
     return {
       'licensePlate': licensePlate,
       'carModel': carModel,
       'color': color,
+      'assetNumber': assetNumber,
+      if (vehicleDetails.variantId != null)
+        'variantId': vehicleDetails.variantId,
       'rcResponse': rcResponse,
     };
   }

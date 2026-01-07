@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/vehicle_rc_service.dart';
+import '../../models/vehicle_details.dart';
 import '../home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -49,10 +50,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       final licensePlate = _carLicenseController.text.trim().toUpperCase();
+      final vehicleDetails = _rcResponse != null
+          ? VehicleDetails.fromRcResponse(_rcResponse!)
+          : null;
+      final assetNumber = vehicleDetails?.assetNumber.isNotEmpty == true
+          ? vehicleDetails!.assetNumber
+          : licensePlate;
       final carDetails = {
         'color': _carColorController.text.trim(),
         'carModel': _carModelController.text.trim(),
         'licensePlate': licensePlate,
+        'assetNumber': assetNumber,
+        if (vehicleDetails?.variantId != null)
+          'variantId': vehicleDetails!.variantId,
         if (_rcResponse != null) 'rcResponse': _rcResponse,
       };
 
@@ -148,6 +158,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

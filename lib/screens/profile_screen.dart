@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/vehicle_rc_service.dart';
 import '../models/user_model.dart';
+import '../models/vehicle_details.dart';
 import 'auth/login_screen.dart';
 import '../utils/qr_payload_builder.dart';
 import '../services/fcm_service.dart';
@@ -500,13 +501,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? null
                     : () async {
                         try {
-                          final updatedCarDetails = {
-                            'color': colorController.text.trim(),
-                            'carModel': modelController.text.trim(),
-                            'licensePlate':
-                                plateController.text.trim().toUpperCase(),
-                            if (rcResponse != null) 'rcResponse': rcResponse,
-                          };
+                          final updatedCarDetails =
+                              Map<String, dynamic>.from(user.carDetails ?? {});
+                          updatedCarDetails.remove('makeModel');
+                          updatedCarDetails.remove('vehicleType');
+                          updatedCarDetails['color'] =
+                              colorController.text.trim();
+                          updatedCarDetails['carModel'] =
+                              modelController.text.trim();
+                          updatedCarDetails['licensePlate'] =
+                              plateController.text.trim().toUpperCase();
+
+                          if (rcResponse != null) {
+                            final vehicleDetails =
+                                VehicleDetails.fromRcResponse(rcResponse!);
+                            if (vehicleDetails.assetNumber.isNotEmpty) {
+                              updatedCarDetails['assetNumber'] =
+                                  vehicleDetails.assetNumber;
+                            }
+                            if (vehicleDetails.variantId != null) {
+                              updatedCarDetails['variantId'] =
+                                  vehicleDetails.variantId;
+                            }
+                            updatedCarDetails['rcResponse'] = rcResponse;
+                          }
 
                           await _firestoreService.updateUserProfile(
                             userId: _currentUser!.uid,
