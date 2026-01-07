@@ -348,15 +348,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditCarDialog(UserModel user) {
-    final colorController = TextEditingController(
-      text: user.carDetails?['color'] ?? '',
-    );
-    final modelController = TextEditingController(
-      text: user.carDetails?['carModel'] ?? '',
-    );
-    final plateController = TextEditingController(
-      text: user.carDetails?['licensePlate'] ?? '',
-    );
+    final initialColor = (user.carDetails?['color'] ?? '').toString().trim();
+    final initialModel = (user.carDetails?['carModel'] ?? '').toString().trim();
+    final initialPlate =
+        (user.carDetails?['licensePlate'] ?? '').toString().trim().toUpperCase();
+    final colorController = TextEditingController(text: initialColor);
+    final modelController = TextEditingController(text: initialModel);
+    final plateController = TextEditingController(text: initialPlate);
 
     Map<String, dynamic>? rcResponse;
     final existingRcResponse = user.carDetails?['rcResponse'];
@@ -365,6 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } else if (existingRcResponse is Map) {
       rcResponse = Map<String, dynamic>.from(existingRcResponse);
     }
+    final initialRcResponse = rcResponse;
 
     bool isFetching = false;
     String? fetchError;
@@ -375,6 +374,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
+          bool hasFormChanges() {
+            return colorController.text.trim() != initialColor ||
+                modelController.text.trim() != initialModel ||
+                plateController.text.trim().toUpperCase() != initialPlate ||
+                rcResponse != initialRcResponse;
+          }
+
           Future<void> fetchVehicleDetails() async {
             final plate = plateController.text.trim();
             if (plate.isEmpty) {
@@ -403,6 +409,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               plateController.text = normalizedPlate;
               rcResponse = response;
               lastFetchedPlate = normalizedPlate;
+              setModalState(() {});
             } catch (e) {
               if (context.mounted) {
                 setModalState(() {
@@ -437,15 +444,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       final normalized = value.trim().toUpperCase();
                       final shouldClearFetch = lastFetchedPlate != null &&
                           normalized != lastFetchedPlate;
-                      if (shouldClearFetch || fetchError != null) {
-                        setModalState(() {
-                          if (shouldClearFetch) {
-                            rcResponse = null;
-                            lastFetchedPlate = null;
-                          }
+                      setModalState(() {
+                        if (shouldClearFetch) {
+                          rcResponse = null;
+                          lastFetchedPlate = null;
+                        }
+                        if (fetchError != null) {
                           fetchError = null;
-                        });
-                      }
+                        }
+                      });
                     },
                   ),
                   const SizedBox(height: 8),
@@ -479,6 +486,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       labelText: 'Color',
                       hintText: 'e.g., Red, Blue',
                     ),
+                    onChanged: (_) => setModalState(() {}),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -487,6 +495,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       labelText: 'Model',
                       hintText: 'e.g., Toyota Camry',
                     ),
+                    onChanged: (_) => setModalState(() {}),
                   ),
                 ],
               ),
@@ -497,7 +506,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: isFetching
+                onPressed: isFetching || !hasFormChanges()
                     ? null
                     : () async {
                         try {
@@ -569,54 +578,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditPhoneDialog(UserModel user) {
-    final phoneController = TextEditingController(text: user.phoneNumber);
+    final initialPhone = user.phoneNumber.trim();
+    final phoneController = TextEditingController(text: initialPhone);
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text('Edit Phone Number'),
-        content: TextField(
-          controller: phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            labelText: 'Phone Number',
-            hintText: '+1234567890',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _firestoreService.updateUserProfile(
-                  userId: _currentUser!.uid,
-                  phoneNumber: phoneController.text.trim(),
-                );
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final hasChanges = phoneController.text.trim() != initialPhone;
 
-                if (!mounted) return;
-                Navigator.pop(context);
-                Future.delayed(const Duration(seconds: 0), () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Phone number updated')),
-                  );
-                });
-              } catch (e) {
-                if (!mounted) return;
-                Future.delayed(const Duration(seconds: 0), () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                });
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            title: const Text('Edit Phone Number'),
+            content: TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                hintText: '+1234567890',
+              ),
+              onChanged: (_) => setModalState(() {}),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: hasChanges
+                    ? () async {
+                        try {
+                          await _firestoreService.updateUserProfile(
+                            userId: _currentUser!.uid,
+                            phoneNumber: phoneController.text.trim(),
+                          );
+
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          Future.delayed(const Duration(seconds: 0), () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Phone number updated')),
+                            );
+                          });
+                        } catch (e) {
+                          if (!mounted) return;
+                          Future.delayed(const Duration(seconds: 0), () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          });
+                        }
+                      }
+                    : null,
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -628,88 +648,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text('Change Password'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Current Password',
-                ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final hasChanges = currentPasswordController.text.isNotEmpty ||
+              newPasswordController.text.isNotEmpty ||
+              confirmPasswordController.text.isNotEmpty;
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            title: const Text('Change Password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: currentPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                    ),
+                    onChanged: (_) => setModalState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: newPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New Password',
+                    ),
+                    onChanged: (_) => setModalState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: confirmPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm Password',
+                    ),
+                    onChanged: (_) => setModalState(() {}),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: newPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'New Password',
-                ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: confirmPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                ),
+              TextButton(
+                onPressed: hasChanges
+                    ? () async {
+                        if (newPasswordController.text !=
+                            confirmPasswordController.text) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Passwords do not match')),
+                          );
+                          return;
+                        }
+
+                        try {
+                          // Re-authenticate first
+                          final credential = EmailAuthProvider.credential(
+                            email: _currentUser!.email!,
+                            password: currentPasswordController.text,
+                          );
+                          await _currentUser
+                              .reauthenticateWithCredential(credential);
+
+                          // Update password
+                          await _authService.updatePassword(
+                            newPassword: newPasswordController.text,
+                          );
+
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          Future.delayed(const Duration(seconds: 0), () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Password updated successfully')),
+                            );
+                          });
+                        } catch (e) {
+                          if (!mounted) return;
+                          Future.delayed(const Duration(seconds: 0), () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          });
+                        }
+                      }
+                    : null,
+                child: const Text('Update'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (newPasswordController.text !=
-                  confirmPasswordController.text) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Passwords do not match')),
-                );
-                return;
-              }
-
-              try {
-                // Re-authenticate first
-                final credential = EmailAuthProvider.credential(
-                  email: _currentUser!.email!,
-                  password: currentPasswordController.text,
-                );
-                await _currentUser.reauthenticateWithCredential(credential);
-
-                // Update password
-                await _authService.updatePassword(
-                  newPassword: newPasswordController.text,
-                );
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                Future.delayed(const Duration(seconds: 0), () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Password updated successfully')),
-                  );
-                });
-              } catch (e) {
-                if (!mounted) return;
-                Future.delayed(const Duration(seconds: 0), () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                });
-              }
-            },
-            child: const Text('Update'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
