@@ -109,11 +109,7 @@ class AuthService {
   // Reset password
   Future<void> resetPassword({required String email}) async {
     try {
-      final projectId = Firebase.app().options.projectId;
-      final actionCodeSettings = ActionCodeSettings(
-        url: 'https://$projectId.firebaseapp.com',
-        handleCodeInApp: false,
-      );
+      final actionCodeSettings = _buildActionCodeSettings();
       await _auth.sendPasswordResetEmail(
         email: email,
         actionCodeSettings: actionCodeSettings,
@@ -124,6 +120,40 @@ class AuthService {
     } catch (e) {
       log('Password reset failed: $e');
       throw 'Failed to send password reset email. Please try again.';
+    }
+  }
+
+  // Send email verification
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw 'No user is currently signed in.';
+      }
+      await user.sendEmailVerification(_buildActionCodeSettings());
+    } on FirebaseAuthException catch (e) {
+      log('Email verification failed (${e.code}): ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      log('Email verification failed: $e');
+      throw 'Failed to send verification email. Please try again.';
+    }
+  }
+
+  Future<bool> reloadAndCheckEmailVerified() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        return false;
+      }
+      await user.reload();
+      return _auth.currentUser?.emailVerified ?? false;
+    } on FirebaseAuthException catch (e) {
+      log('Reload failed (${e.code}): ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      log('Reload failed: $e');
+      throw 'Failed to refresh user. Please try again.';
     }
   }
 
@@ -210,6 +240,14 @@ class AuthService {
       default:
         return 'Authentication failed: ${e.message ?? "Unknown error"}';
     }
+  }
+
+  ActionCodeSettings _buildActionCodeSettings() {
+    final projectId = Firebase.app().options.projectId;
+    return ActionCodeSettings(
+      url: 'https://$projectId.firebaseapp.com',
+      handleCodeInApp: false,
+    );
   }
 
   Future<void> _updateFcmTokenForUser(String userId) async {

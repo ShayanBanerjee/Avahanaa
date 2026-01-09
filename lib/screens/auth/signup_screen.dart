@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/vehicle_rc_service.dart';
 import '../../models/vehicle_details.dart';
-import '../home_screen.dart';
+import 'verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -77,20 +77,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (!mounted) return;
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      try {
+        await _authService.sendEmailVerification();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
 
-      // Wait a moment for the Cloud Function to create QR code
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Navigate to home screen
+      // Navigate to verify email screen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(
+            email: _emailController.text.trim(),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;

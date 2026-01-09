@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/verify_email_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/fcm_service.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -160,13 +161,17 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: FirebaseAuth.instance.userChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const _SplashLoadingView();
         }
 
         if (snapshot.hasData) {
+          final user = snapshot.data!;
+          if (!user.emailVerified) {
+            return VerifyEmailScreen(email: user.email ?? '');
+          }
           return const HomeScreen();
         }
 

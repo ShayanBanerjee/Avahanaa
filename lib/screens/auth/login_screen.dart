@@ -3,6 +3,7 @@ import '../../services/auth_service.dart';
 import '../home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import 'verify_email_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,17 +34,29 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.signIn(
+      final userCredential = await _authService.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (!mounted) return;
 
+      final user = userCredential?.user;
+      if (user != null && !user.emailVerified) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(
+              email: user.email ?? _emailController.text.trim(),
+            ),
+          ),
+        );
+        return;
+      }
+
       // Navigate to home screen
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
     } catch (e) {
       if (!mounted) return;
 
