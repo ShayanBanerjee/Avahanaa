@@ -8,6 +8,7 @@ import '../models/vehicle_details.dart';
 import 'auth/login_screen.dart';
 import '../utils/qr_payload_builder.dart';
 import '../services/fcm_service.dart';
+import '../widgets/admob_banner.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -37,232 +38,245 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<UserModel?>(
-        stream: _firestoreService.streamUserData(_currentUser!.uid),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<UserModel?>(
+              stream: _firestoreService.streamUserData(_currentUser!.uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final user = snapshot.data;
-          if (user == null) {
-            return const Center(child: Text('User data not found'));
-          }
+                final user = snapshot.data;
+                if (user == null) {
+                  return const Center(child: Text('User data not found'));
+                }
 
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                // Profile Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color.fromARGB(255, 0, 81, 173), Color(0xFF002b5c)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
+                return SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Avatar
+                      // Profile Header
                       Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 0, 81, 173),
+                              Color(0xFF002b5c)
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Avatar
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  user.email[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2563EB),
+                                  ),
+                                ),
+                              ),
                             ),
+                            const SizedBox(height: 16),
+
+                            Text(
+                              user.email,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+
+                            if (user.phoneNumber.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                user.phoneNumber,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            user.email[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2563EB),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Text(
-                        user.email,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
                       ),
 
-                      if (user.phoneNumber.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          user.phoneNumber,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                // Car Details Section
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Card(
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.directions_car,
-                              color: Color(0xFF2563EB)),
-                          title: const Text(
-                            'Car Details',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(user.carDescription),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => _showEditCarDialog(user),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Account Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Card(
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading:
-                              const Icon(Icons.phone, color: Color(0xFF2563EB)),
-                          title: const Text('Phone Number'),
-                          subtitle: Text(
-                            user.phoneNumber.isEmpty
-                                ? 'Not set'
-                                : user.phoneNumber,
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => _showEditPhoneDialog(user),
-                        ),
-                        const Divider(height: 1),
-                        ListTile(
-                          leading:
-                              const Icon(Icons.lock, color: Color(0xFF2563EB)),
-                          title: const Text('Change Password'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: _showChangePasswordDialog,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // QR Code Section
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Card(
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          secondary: const Icon(Icons.qr_code,
-                              color: Color(0xFF2563EB)),
-                          title: const Text('QR Code Active'),
-                          subtitle: Text(
-                            _isUpdatingNotificationPreference
-                                ? 'Updating...'
-                                : 'Allow others to notify you',
-                          ),
-                          value: user.notificationsEnabled,
-                          onChanged: _isUpdatingNotificationPreference
-                              ? null
-                              : (value) =>
-                                  _handleNotificationToggle(user, value),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Statistics
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: FutureBuilder<Map<String, int>>(
-                    future: _firestoreService
-                        .getNotificationStats(_currentUser.uid),
-                    builder: (context, snapshot) {
-                      final stats = snapshot.data ?? {'today': 0, 'total': 0};
-
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      // Car Details Section
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Card(
+                          child: Column(
                             children: [
-                              _buildStatItem(
-                                'Today',
-                                stats['today'].toString(),
-                                Icons.today,
-                              ),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Colors.grey[300],
-                              ),
-                              _buildStatItem(
-                                'Total',
-                                stats['total'].toString(),
-                                Icons.notifications,
+                              ListTile(
+                                leading: const Icon(Icons.directions_car,
+                                    color: Color(0xFF2563EB)),
+                                title: const Text(
+                                  'Car Details',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(user.carDescription),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => _showEditCarDialog(user),
                               ),
                             ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ),
 
-                const SizedBox(height: 16),
-
-                // Danger Zone
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Card(
-                    color: Colors.red[50],
-                    child: ListTile(
-                      leading:
-                          Icon(Icons.delete_forever, color: Colors.red[700]),
-                      title: Text(
-                        'Delete Account',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.w600,
+                      // Account Section
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Card(
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.phone,
+                                    color: Color(0xFF2563EB)),
+                                title: const Text('Phone Number'),
+                                subtitle: Text(
+                                  user.phoneNumber.isEmpty
+                                      ? 'Not set'
+                                      : user.phoneNumber,
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => _showEditPhoneDialog(user),
+                              ),
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.lock,
+                                    color: Color(0xFF2563EB)),
+                                title: const Text('Change Password'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: _showChangePasswordDialog,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      subtitle: const Text('Permanently delete your account'),
-                      trailing:
-                          const Icon(Icons.chevron_right, color: Colors.red),
-                      onTap: _showDeleteAccountDialog,
-                    ),
-                  ),
-                ),
 
-                const SizedBox(height: 32),
-              ],
+                      // QR Code Section
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Card(
+                          child: Column(
+                            children: [
+                              SwitchListTile(
+                                secondary: const Icon(Icons.qr_code,
+                                    color: Color(0xFF2563EB)),
+                                title: const Text('QR Code Active'),
+                                subtitle: Text(
+                                  _isUpdatingNotificationPreference
+                                      ? 'Updating...'
+                                      : 'Allow others to notify you',
+                                ),
+                                value: user.notificationsEnabled,
+                                onChanged: _isUpdatingNotificationPreference
+                                    ? null
+                                    : (value) =>
+                                        _handleNotificationToggle(user, value),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Statistics
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: FutureBuilder<Map<String, int>>(
+                          future: _firestoreService
+                              .getNotificationStats(_currentUser.uid),
+                          builder: (context, snapshot) {
+                            final stats =
+                                snapshot.data ?? {'today': 0, 'total': 0};
+
+                            return Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildStatItem(
+                                      'Today',
+                                      stats['today'].toString(),
+                                      Icons.today,
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      height: 40,
+                                      color: Colors.grey[300],
+                                    ),
+                                    _buildStatItem(
+                                      'Total',
+                                      stats['total'].toString(),
+                                      Icons.notifications,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Danger Zone
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Card(
+                          color: Colors.red[50],
+                          child: ListTile(
+                            leading: Icon(Icons.delete_forever,
+                                color: Colors.red[700]),
+                            title: Text(
+                              'Delete Account',
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle:
+                                const Text('Permanently delete your account'),
+                            trailing:
+                                const Icon(Icons.chevron_right, color: Colors.red),
+                            onTap: _showDeleteAccountDialog,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+          const AdMobBanner(),
+        ],
       ),
     );
   }

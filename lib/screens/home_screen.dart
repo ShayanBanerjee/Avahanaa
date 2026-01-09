@@ -8,6 +8,7 @@ import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'qr_code_screen.dart';
 import '../utils/qr_payload_builder.dart';
+import '../widgets/admob_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -64,20 +65,35 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _firestoreService.streamUserData(_currentUser!.uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Column(
+            children: [
+              Expanded(child: Center(child: CircularProgressIndicator())),
+              AdMobBanner(),
+            ],
+          );
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
+          return Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Text('Error: ${snapshot.error}'),
+                ),
+              ),
+              const AdMobBanner(),
+            ],
           );
         }
 
         final user = snapshot.data;
 
         if (user == null) {
-          return const Center(
-            child: Text('User data not found'),
+          return const Column(
+            children: [
+              Expanded(child: Center(child: Text('User data not found'))),
+              AdMobBanner(),
+            ],
           );
         }
 
@@ -86,10 +102,20 @@ class _HomeScreenState extends State<HomeScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _generateQrCode(user);
           });
-          return _buildWaitingForQRCode();
+          return Column(
+            children: [
+              Expanded(child: _buildWaitingForQRCode()),
+              const AdMobBanner(),
+            ],
+          );
         }
 
-        return _buildMainContent(user);
+        return Column(
+          children: [
+            Expanded(child: _buildMainContent(user)),
+            const AdMobBanner(),
+          ],
+        );
       },
     );
   }
