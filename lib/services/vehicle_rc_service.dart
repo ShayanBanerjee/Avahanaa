@@ -7,11 +7,12 @@ import '../models/vehicle_details.dart';
 class VehicleRcService {
   VehicleRcService({Dio? dio}) : _dio = dio ?? Dio();
 
-  static const String _apiUrl =
-      'https://rto-vehicle-details5.p.rapidapi.com/address';
-  static const String _apiKey =
-      '2af7283ee9msh6e36517829362abp1cd22djsn7feb3c87caf0';
-  static const String _apiHost = 'rto-vehicle-details5.p.rapidapi.com';
+  static const String _defaultLookupUrl =
+      'https://us-central1-congestion-free.cloudfunctions.net/fetchVehicleRc';
+  static final String _lookupUrl = const String.fromEnvironment(
+    'VEHICLE_RC_LOOKUP_URL',
+    defaultValue: _defaultLookupUrl,
+  );
 
   final Dio _dio;
 
@@ -23,14 +24,8 @@ class VehicleRcService {
 
     try {
       final response = await _dio.get(
-        _apiUrl,
+        _lookupUrl,
         queryParameters: {'registration': normalizedNumber},
-        options: Options(
-          headers: const {
-            'x-rapidapi-key': _apiKey,
-            'x-rapidapi-host': _apiHost,
-          },
-        ),
       );
 
       final data = _normalizeResponse(response.data);
@@ -45,9 +40,17 @@ class VehicleRcService {
       return data;
     } on DioException catch (e) {
       final errorData = e.response?.data;
-      final normalizedError = _normalizeResponse(errorData);
+      final normalizedError = _normalizeErrorResponse(errorData);
       final errorMessage = _extractErrorMessage(normalizedError);
       throw errorMessage ?? 'Failed to fetch vehicle details';
+    }
+  }
+
+  Map<String, dynamic> _normalizeErrorResponse(dynamic data) {
+    try {
+      return _normalizeResponse(data);
+    } catch (_) {
+      return {};
     }
   }
 
@@ -67,8 +70,9 @@ class VehicleRcService {
                 '')
             .toString()
             .trim();
-    final color =
-        (rcResponse['color'] ?? rcResponse['colour'] ?? '').toString().trim();
+    final color = (rcResponse['color'] ?? rcResponse['colour'] ?? '')
+        .toString()
+        .trim();
     final vehicleDetails = VehicleDetails.fromRcResponse(rcResponse);
     final assetNumber = vehicleDetails.assetNumber.isNotEmpty
         ? vehicleDetails.assetNumber
