@@ -1,6 +1,5 @@
 import 'dart:developer';
 
-import 'package:alarm/alarm.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -18,14 +17,19 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  await Alarm.init();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   try {
-    await FCMService.showAlarmForMessage(message);
+    // FCM notification payloads are auto-displayed by Android in background/
+    // terminated states. Show a local notification only for data-only payloads.
+    if (message.notification == null) {
+      await FCMService.showNotificationForMessage(message);
+    }
   } catch (e, stack) {
-    log('Error scheduling alarm for background message: $e', error: e, stackTrace: stack);
+    log(
+      'Error showing background notification: $e',
+      error: e,
+      stackTrace: stack,
+    );
   }
   log('Handling background message: ${message.messageId}');
 }
@@ -33,13 +37,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize alarm plugin early so alarms can be scheduled from notifications.
-  await Alarm.init();
-
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize AdMob
   if (!kIsWeb &&
@@ -146,8 +145,10 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
         ),
 
         // Card Theme
@@ -201,10 +202,7 @@ class _SplashLoadingView extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2563EB),
-              Color(0xFF10B981),
-            ],
+            colors: [Color(0xFF2563EB), Color(0xFF10B981)],
           ),
         ),
         child: Center(
