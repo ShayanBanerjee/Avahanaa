@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
-import '../services/vehicle_rc_service.dart';
 import '../models/user_model.dart';
-import '../models/vehicle_details.dart';
 import 'auth/login_screen.dart';
 import '../utils/qr_payload_builder.dart';
+import '../utils/vehicle_registration_validator.dart';
 import '../services/fcm_service.dart';
 import '../widgets/admob_banner.dart';
 
@@ -20,7 +19,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   final _firestoreService = FirestoreService();
-  final _vehicleRcService = VehicleRcService();
   final _currentUser = FirebaseAuth.instance.currentUser;
   final _fcmService = FCMService();
   bool _isUpdatingNotificationPreference = false;
@@ -64,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           gradient: LinearGradient(
                             colors: [
                               Color.fromARGB(255, 0, 81, 173),
-                              Color(0xFF002b5c)
+                              Color(0xFF002b5c),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -130,8 +128,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             children: [
                               ListTile(
-                                leading: const Icon(Icons.directions_car,
-                                    color: Color(0xFF2563EB)),
+                                leading: const Icon(
+                                  Icons.directions_car,
+                                  color: Color(0xFF2563EB),
+                                ),
                                 title: const Text(
                                   'Car Details',
                                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -152,8 +152,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             children: [
                               ListTile(
-                                leading: const Icon(Icons.phone,
-                                    color: Color(0xFF2563EB)),
+                                leading: const Icon(
+                                  Icons.phone,
+                                  color: Color(0xFF2563EB),
+                                ),
                                 title: const Text('Phone Number'),
                                 subtitle: Text(
                                   user.phoneNumber.isEmpty
@@ -165,8 +167,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const Divider(height: 1),
                               ListTile(
-                                leading: const Icon(Icons.lock,
-                                    color: Color(0xFF2563EB)),
+                                leading: const Icon(
+                                  Icons.lock,
+                                  color: Color(0xFF2563EB),
+                                ),
                                 title: const Text('Change Password'),
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: _showChangePasswordDialog,
@@ -183,8 +187,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             children: [
                               SwitchListTile(
-                                secondary: const Icon(Icons.qr_code,
-                                    color: Color(0xFF2563EB)),
+                                secondary: const Icon(
+                                  Icons.qr_code,
+                                  color: Color(0xFF2563EB),
+                                ),
                                 title: const Text('QR Code Active'),
                                 subtitle: Text(
                                   _isUpdatingNotificationPreference
@@ -194,8 +200,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 value: user.notificationsEnabled,
                                 onChanged: _isUpdatingNotificationPreference
                                     ? null
-                                    : (value) =>
-                                        _handleNotificationToggle(user, value),
+                                    : (value) => _handleNotificationToggle(
+                                        user,
+                                        value,
+                                      ),
                               ),
                             ],
                           ),
@@ -206,8 +214,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: FutureBuilder<Map<String, int>>(
-                          future: _firestoreService
-                              .getNotificationStats(_currentUser.uid),
+                          future: _firestoreService.getNotificationStats(
+                            _currentUser.uid,
+                          ),
                           builder: (context, snapshot) {
                             final stats =
                                 snapshot.data ?? {'today': 0, 'total': 0};
@@ -250,8 +259,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Card(
                           color: Colors.red[50],
                           child: ListTile(
-                            leading: Icon(Icons.delete_forever,
-                                color: Colors.red[700]),
+                            leading: Icon(
+                              Icons.delete_forever,
+                              color: Colors.red[700],
+                            ),
                             title: Text(
                               'Delete Account',
                               style: TextStyle(
@@ -259,10 +270,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            subtitle:
-                                const Text('Permanently delete your account'),
-                            trailing:
-                                const Icon(Icons.chevron_right, color: Colors.red),
+                            subtitle: const Text(
+                              'Permanently delete your account',
+                            ),
+                            trailing: const Icon(
+                              Icons.chevron_right,
+                              color: Colors.red,
+                            ),
                             onTap: _showDeleteAccountDialog,
                           ),
                         ),
@@ -295,19 +309,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }
 
-  Future<void> _handleNotificationToggle(
-      UserModel user, bool isEnabled) async {
+  Future<void> _handleNotificationToggle(UserModel user, bool isEnabled) async {
     if (_isUpdatingNotificationPreference || _currentUser == null) return;
 
     setState(() {
@@ -364,25 +371,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showEditCarDialog(UserModel user) {
     final initialColor = (user.carDetails?['color'] ?? '').toString().trim();
     final initialModel = (user.carDetails?['carModel'] ?? '').toString().trim();
-    final initialPlate =
-        (user.carDetails?['licensePlate'] ?? '').toString().trim().toUpperCase();
+    final initialPlate = VehicleRegistrationValidator.normalize(
+      (user.carDetails?['licensePlate'] ?? '').toString(),
+    );
     final colorController = TextEditingController(text: initialColor);
     final modelController = TextEditingController(text: initialModel);
     final plateController = TextEditingController(text: initialPlate);
-
-    Map<String, dynamic>? rcResponse;
-    final existingRcResponse = user.carDetails?['rcResponse'];
-    if (existingRcResponse is Map<String, dynamic>) {
-      rcResponse = existingRcResponse;
-    } else if (existingRcResponse is Map) {
-      rcResponse = Map<String, dynamic>.from(existingRcResponse);
-    }
-    final initialRcResponse = rcResponse;
-
-    bool isFetching = false;
-    String? fetchError;
-    String? lastFetchedPlate =
-        rcResponse != null ? plateController.text.trim().toUpperCase() : null;
+    String? registrationError;
 
     showDialog(
       context: context,
@@ -391,52 +386,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           bool hasFormChanges() {
             return colorController.text.trim() != initialColor ||
                 modelController.text.trim() != initialModel ||
-                plateController.text.trim().toUpperCase() != initialPlate ||
-                rcResponse != initialRcResponse;
-          }
-
-          Future<void> fetchVehicleDetails() async {
-            final plate = plateController.text.trim();
-            if (plate.isEmpty) {
-              setModalState(() {
-                fetchError = 'Enter a registration number to fetch details';
-              });
-              return;
-            }
-
-            setModalState(() {
-              isFetching = true;
-              fetchError = null;
-            });
-
-            try {
-              final response =
-                  await _vehicleRcService.fetchVehicleDetails(plate);
-              final details = _vehicleRcService.buildCarDetails(
-                rcResponse: response,
-                fallbackPlate: plate,
-              );
-              colorController.text = (details['color'] ?? '').toString();
-              modelController.text = (details['carModel'] ?? '').toString();
-              final normalizedPlate =
-                  (details['licensePlate'] ?? plate).toString().trim().toUpperCase();
-              plateController.text = normalizedPlate;
-              rcResponse = response;
-              lastFetchedPlate = normalizedPlate;
-              setModalState(() {});
-            } catch (e) {
-              if (context.mounted) {
-                setModalState(() {
-                  fetchError = e.toString();
-                });
-              }
-            } finally {
-              if (context.mounted) {
-                setModalState(() {
-                  isFetching = false;
-                });
-              }
-            }
+                VehicleRegistrationValidator.normalize(plateController.text) !=
+                    initialPlate;
           }
 
           return AlertDialog(
@@ -449,50 +400,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   TextField(
                     controller: plateController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Registration Number',
                       hintText: 'e.g., PB65AM0008',
+                      errorText: registrationError,
                     ),
                     textCapitalization: TextCapitalization.characters,
-                    onChanged: (value) {
-                      final normalized = value.trim().toUpperCase();
-                      final shouldClearFetch = lastFetchedPlate != null &&
-                          normalized != lastFetchedPlate;
+                    onChanged: (_) {
                       setModalState(() {
-                        if (shouldClearFetch) {
-                          rcResponse = null;
-                          lastFetchedPlate = null;
-                        }
-                        if (fetchError != null) {
-                          fetchError = null;
-                        }
+                        registrationError = null;
                       });
                     },
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: isFetching ? null : fetchVehicleDetails,
-                      icon: isFetching
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.search),
-                      label: Text(
-                        isFetching ? 'Fetching details...' : 'Fetch vehicle details',
-                      ),
-                    ),
-                  ),
-                  if (fetchError != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      fetchError!,
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ],
                   const SizedBox(height: 16),
                   TextField(
                     controller: colorController,
@@ -520,34 +439,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: isFetching || !hasFormChanges()
+                onPressed: !hasFormChanges()
                     ? null
                     : () async {
+                        final normalizedPlate =
+                            VehicleRegistrationValidator.normalize(
+                              plateController.text,
+                            );
+                        if (normalizedPlate.isEmpty) {
+                          setModalState(() {
+                            registrationError =
+                                'Please enter your registration number';
+                          });
+                          return;
+                        }
+                        if (!VehicleRegistrationValidator.isValid(
+                          normalizedPlate,
+                        )) {
+                          setModalState(() {
+                            registrationError =
+                                'Please enter a valid registration number';
+                          });
+                          return;
+                        }
+
                         try {
-                          final updatedCarDetails =
-                              Map<String, dynamic>.from(user.carDetails ?? {});
+                          final updatedCarDetails = Map<String, dynamic>.from(
+                            user.carDetails ?? {},
+                          );
                           updatedCarDetails.remove('makeModel');
                           updatedCarDetails.remove('vehicleType');
-                          updatedCarDetails['color'] =
-                              colorController.text.trim();
-                          updatedCarDetails['carModel'] =
-                              modelController.text.trim();
-                          updatedCarDetails['licensePlate'] =
-                              plateController.text.trim().toUpperCase();
-
-                          if (rcResponse != null) {
-                            final vehicleDetails =
-                                VehicleDetails.fromRcResponse(rcResponse!);
-                            if (vehicleDetails.assetNumber.isNotEmpty) {
-                              updatedCarDetails['assetNumber'] =
-                                  vehicleDetails.assetNumber;
-                            }
-                            if (vehicleDetails.variantId != null) {
-                              updatedCarDetails['variantId'] =
-                                  vehicleDetails.variantId;
-                            }
-                            updatedCarDetails['rcResponse'] = rcResponse;
-                          }
+                          updatedCarDetails.remove('variantId');
+                          updatedCarDetails.remove('rcResponse');
+                          updatedCarDetails['color'] = colorController.text
+                              .trim();
+                          updatedCarDetails['carModel'] = modelController.text
+                              .trim();
+                          updatedCarDetails['licensePlate'] = normalizedPlate;
+                          updatedCarDetails['assetNumber'] = normalizedPlate;
 
                           await _firestoreService.updateUserProfile(
                             userId: _currentUser!.uid,
@@ -555,14 +484,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
 
                           if (user.qrCodeId.isNotEmpty) {
-                            final updatedUser =
-                                user.copyWith(carDetails: updatedCarDetails);
+                            final updatedUser = user.copyWith(
+                              carDetails: updatedCarDetails,
+                            );
                             await _firestoreService.syncQRCodeMetadata(
                               qrCodeId: user.qrCodeId,
-                              metadata: QrPayloadBuilder.buildMetadata(updatedUser),
+                              metadata: QrPayloadBuilder.buildMetadata(
+                                updatedUser,
+                              ),
                               shareableLink:
-                                  QrPayloadBuilder.buildShareableLink(updatedUser),
-                              payload: QrPayloadBuilder.buildPayload(updatedUser),
+                                  QrPayloadBuilder.buildShareableLink(
+                                    updatedUser,
+                                  ),
+                              payload: QrPayloadBuilder.buildPayload(
+                                updatedUser,
+                              ),
                             );
                           }
 
@@ -570,7 +506,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.pop(context);
                           Future.delayed(const Duration(seconds: 0), () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Car details updated')),
+                              const SnackBar(
+                                content: Text('Car details updated'),
+                              ),
                             );
                           });
                         } catch (e) {
@@ -633,7 +571,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Future.delayed(const Duration(seconds: 0), () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Phone number updated')),
+                                content: Text('Phone number updated'),
+                              ),
                             );
                           });
                         } catch (e) {
@@ -664,7 +603,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          final hasChanges = currentPasswordController.text.isNotEmpty ||
+          final hasChanges =
+              currentPasswordController.text.isNotEmpty ||
               newPasswordController.text.isNotEmpty ||
               confirmPasswordController.text.isNotEmpty;
 
@@ -716,7 +656,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (newPasswordController.text !=
                             confirmPasswordController.text) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Passwords do not match')),
+                            const SnackBar(
+                              content: Text('Passwords do not match'),
+                            ),
                           );
                           return;
                         }
@@ -727,8 +669,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             email: _currentUser!.email!,
                             password: currentPasswordController.text,
                           );
-                          await _currentUser
-                              .reauthenticateWithCredential(credential);
+                          await _currentUser.reauthenticateWithCredential(
+                            credential,
+                          );
 
                           // Update password
                           await _authService.updatePassword(
@@ -740,7 +683,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Future.delayed(const Duration(seconds: 0), () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Password updated successfully')),
+                                content: Text('Password updated successfully'),
+                              ),
                             );
                           });
                         } catch (e) {
@@ -784,9 +728,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -882,10 +826,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
         ),
         TextButton(
           onPressed: _submit,
-          child: const Text(
-            'Delete',
-            style: TextStyle(color: Colors.red),
-          ),
+          child: const Text('Delete', style: TextStyle(color: Colors.red)),
         ),
       ],
     );
