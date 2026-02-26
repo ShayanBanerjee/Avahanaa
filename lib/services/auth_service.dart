@@ -23,15 +23,11 @@ class AuthService {
     required String email,
     required String password,
     String? phoneNumber,
-    Map<String, dynamic>? carDetails,
   }) async {
     try {
       // Create user in Firebase Auth
-      final UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Create user document in Firestore
       if (userCredential.user != null) {
@@ -39,7 +35,6 @@ class AuthService {
           userId: userCredential.user!.uid,
           email: email,
           phoneNumber: phoneNumber,
-          carDetails: carDetails,
         );
         await _updateFcmTokenForUser(userCredential.user!.uid);
       }
@@ -57,7 +52,6 @@ class AuthService {
     required String userId,
     required String email,
     String? phoneNumber,
-    Map<String, dynamic>? carDetails,
   }) async {
     try {
       await _firestore.collection('users').doc(userId).set({
@@ -65,8 +59,7 @@ class AuthService {
         'phoneNumber': phoneNumber ?? '',
         'createdAt': FieldValue.serverTimestamp(),
         'fcmToken': '',
-        'qrCodeId': '', // Will be set by Cloud Function trigger
-        'carDetails': carDetails ?? {},
+        'primaryVehicleId': '',
         'notificationsEnabled': true,
       });
     } catch (e) {
@@ -81,11 +74,8 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(email: email, password: password);
       if (userCredential.user != null) {
         await _updateFcmTokenForUser(userCredential.user!.uid);
       }
@@ -196,15 +186,39 @@ class AuthService {
 
       final userRef = _firestore.collection('users').doc(user.uid);
       final userDoc = await userRef.get();
-      final qrCodeId = userDoc.data()?['qrCodeId'];
+      final legacyQrCodeId = (userDoc.data()?['qrCodeId'] ?? '')
+          .toString()
+          .trim();
+
+      final vehiclesSnapshot = await userRef.collection('vehicles').get();
+      final notificationsSnapshot = await _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      final batch = _firestore.batch();
+      for (final vehicleDoc in vehiclesSnapshot.docs) {
+        final qrCodeId = (vehicleDoc.data()['qrCodeId'] ?? '')
+            .toString()
+            .trim();
+        if (qrCodeId.isNotEmpty) {
+          batch.delete(_firestore.collection('qrCodes').doc(qrCodeId));
+        }
+        batch.delete(vehicleDoc.reference);
+      }
+
+      for (final notificationDoc in notificationsSnapshot.docs) {
+        batch.delete(notificationDoc.reference);
+      }
+
+      if (legacyQrCodeId.isNotEmpty) {
+        batch.delete(_firestore.collection('qrCodes').doc(legacyQrCodeId));
+      }
+
+      await batch.commit();
 
       // Delete user document
       await userRef.delete();
-
-      // Delete QR code document
-      if (qrCodeId != null && qrCodeId.isNotEmpty) {
-        await _firestore.collection('qrCodes').doc(qrCodeId).delete();
-      }
 
       // Delete auth account
       await user.delete();
@@ -257,13 +271,10 @@ class AuthService {
         log('FCM token not available at login/signup');
         return;
       }
-      await _firestore.collection('users').doc(userId).set(
-        {
-          'fcmToken': token,
-          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      await _firestore.collection('users').doc(userId).set({
+        'fcmToken': token,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
       log('FCM token saved for user $userId');
     } catch (e) {
       log('Error updating FCM token for user $userId: $e');

@@ -4,6 +4,7 @@ class NotificationModel {
   final String id;
   final String qrCodeId;
   final String userId;
+  final String vehicleId;
   final String reason;
   final String message;
   final DateTime sentAt;
@@ -15,6 +16,7 @@ class NotificationModel {
     required this.id,
     required this.qrCodeId,
     required this.userId,
+    this.vehicleId = '',
     required this.reason,
     required this.message,
     required this.sentAt,
@@ -31,6 +33,7 @@ class NotificationModel {
       id: doc.id,
       qrCodeId: data['qrCodeId'] ?? '',
       userId: data['userId'] ?? '',
+      vehicleId: data['vehicleId'] ?? '',
       reason: data['reason'] ?? '',
       message: data['message'] ?? '',
       sentAt: (data['sentAt'] as Timestamp).toDate(),
@@ -45,6 +48,7 @@ class NotificationModel {
     return {
       'qrCodeId': qrCodeId,
       'userId': userId,
+      'vehicleId': vehicleId,
       'reason': reason,
       'message': message,
       'sentAt': Timestamp.fromDate(sentAt),
@@ -58,6 +62,7 @@ class NotificationModel {
   NotificationModel copyWith({
     String? qrCodeId,
     String? userId,
+    String? vehicleId,
     String? reason,
     String? message,
     DateTime? sentAt,
@@ -69,6 +74,7 @@ class NotificationModel {
       id: id,
       qrCodeId: qrCodeId ?? this.qrCodeId,
       userId: userId ?? this.userId,
+      vehicleId: vehicleId ?? this.vehicleId,
       reason: reason ?? this.reason,
       message: message ?? this.message,
       sentAt: sentAt ?? this.sentAt,

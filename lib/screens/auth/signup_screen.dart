@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
+import '../../models/user_model.dart';
+import '../../models/vehicle_model.dart';
 import '../../utils/vehicle_registration_validator.dart';
 import 'verify_email_screen.dart';
 
@@ -20,6 +23,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _carModelController = TextEditingController();
   final _carLicenseController = TextEditingController();
   final _authService = AuthService();
+  final _firestoreService = FirestoreService();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -53,14 +57,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'assetNumber': licensePlate,
       };
 
-      await _authService.signUp(
+      final credential = await _authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         phoneNumber: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
-        carDetails: carDetails,
       );
+
+      final userId = credential?.user?.uid;
+      if (userId != null) {
+        final vehicle = await _firestoreService.upsertVehicle(
+          userId: userId,
+          vehicle: VehicleModel(
+            id: '',
+            userId: userId,
+            color: (carDetails['color'] ?? '').toString(),
+            carModel: (carDetails['carModel'] ?? '').toString(),
+            licensePlate: (carDetails['licensePlate'] ?? '').toString(),
+            assetNumber: (carDetails['assetNumber'] ?? '').toString(),
+          ),
+          setPrimaryIfMissing: true,
+          syncLegacyUserFields: true,
+        );
+
+        final user =
+            await _firestoreService.getUserData(userId) ??
+            UserModel(
+              id: userId,
+              email: _emailController.text.trim(),
+              phoneNumber: _phoneController.text.trim(),
+              notificationsEnabled: true,
+              primaryVehicleId: vehicle.id,
+            );
+
+        await _firestoreService.ensureVehicleQrCode(
+          user: user,
+          vehicle: vehicle,
+          syncLegacyUserFields: true,
+        );
+      }
 
       if (!mounted) return;
 

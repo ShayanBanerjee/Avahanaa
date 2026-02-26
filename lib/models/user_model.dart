@@ -5,8 +5,11 @@ class UserModel {
   final String email;
   final String phoneNumber;
   final String fcmToken;
+  final String primaryVehicleId;
+  // Legacy single-QR field kept for backward compatibility.
   final String qrCodeId;
   final DateTime? createdAt;
+  // Legacy single-vehicle field kept for backward compatibility.
   final Map<String, dynamic>? carDetails;
   final bool notificationsEnabled;
 
@@ -15,6 +18,7 @@ class UserModel {
     required this.email,
     this.phoneNumber = '',
     this.fcmToken = '',
+    this.primaryVehicleId = '',
     this.qrCodeId = '',
     this.createdAt,
     this.carDetails,
@@ -23,13 +27,14 @@ class UserModel {
 
   // Create UserModel from Firestore document
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = (doc.data() as Map<String, dynamic>?) ?? {};
 
     return UserModel(
       id: doc.id,
       email: data['email'] ?? '',
       phoneNumber: data['phoneNumber'] ?? '',
       fcmToken: data['fcmToken'] ?? '',
+      primaryVehicleId: data['primaryVehicleId'] ?? '',
       qrCodeId: data['qrCodeId'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       carDetails: data['carDetails'] as Map<String, dynamic>?,
@@ -43,6 +48,7 @@ class UserModel {
       'email': email,
       'phoneNumber': phoneNumber,
       'fcmToken': fcmToken,
+      'primaryVehicleId': primaryVehicleId,
       'qrCodeId': qrCodeId,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
@@ -57,6 +63,7 @@ class UserModel {
     String? email,
     String? phoneNumber,
     String? fcmToken,
+    String? primaryVehicleId,
     String? qrCodeId,
     DateTime? createdAt,
     Map<String, dynamic>? carDetails,
@@ -67,11 +74,34 @@ class UserModel {
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       fcmToken: fcmToken ?? this.fcmToken,
+      primaryVehicleId: primaryVehicleId ?? this.primaryVehicleId,
       qrCodeId: qrCodeId ?? this.qrCodeId,
       createdAt: createdAt ?? this.createdAt,
       carDetails: carDetails ?? this.carDetails,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
+  }
+
+  bool get hasLegacyVehicleData {
+    if (carDetails == null || carDetails!.isEmpty) {
+      return false;
+    }
+    final normalized = legacyCarDetailsNormalized;
+    return normalized['licensePlate'].toString().isNotEmpty ||
+        normalized['color'].toString().isNotEmpty ||
+        normalized['carModel'].toString().isNotEmpty;
+  }
+
+  Map<String, dynamic> get legacyCarDetailsNormalized {
+    final details = carDetails ?? {};
+    return {
+      'color': (details['color'] ?? '').toString().trim(),
+      'carModel': (details['carModel'] ?? '').toString().trim(),
+      'licensePlate': (details['licensePlate'] ?? '').toString().trim(),
+      'assetNumber': (details['assetNumber'] ?? details['licensePlate'] ?? '')
+          .toString()
+          .trim(),
+    };
   }
 
   // Get formatted car details
@@ -100,6 +130,6 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, email: $email, phoneNumber: $phoneNumber, qrCodeId: $qrCodeId, notificationsEnabled: $notificationsEnabled)';
+    return 'UserModel(id: $id, email: $email, phoneNumber: $phoneNumber, primaryVehicleId: $primaryVehicleId, qrCodeId: $qrCodeId, notificationsEnabled: $notificationsEnabled)';
   }
 }

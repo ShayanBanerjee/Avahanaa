@@ -9,30 +9,36 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/user_model.dart';
+import '../models/vehicle_model.dart';
 import '../utils/qr_payload_builder.dart';
 
 class QRCodeScreen extends StatelessWidget {
   final UserModel user;
+  final VehicleModel vehicle;
 
-  const QRCodeScreen({super.key, required this.user});
+  const QRCodeScreen({super.key, required this.user, required this.vehicle});
   static const double _shareQrImageSize = 600;
   static const String _qrTemplateAsset = 'assets/images/qr_template.png';
   static const double _qrBoxWidthFactor = 0.42;
   static const double _qrBoxTopFactor = 0.115;
   static const double _qrBoxPaddingFactor = 0.06;
   static const double _qrBoxCornerRadiusFactor = 0.08;
-  static final Future<ui.Image> _templateImageFuture =
-      _loadTemplateImage();
+  static final Future<ui.Image> _templateImageFuture = _loadTemplateImage();
 
   @override
   Widget build(BuildContext context) {
-    final qrPayload = QrPayloadBuilder.buildPayload(user);
-    final shareableLink = QrPayloadBuilder.buildShareableLink(user);
-    final carDetails = user.carDetails ?? {};
-    final licensePlate = (carDetails['licensePlate'] ?? '').toString();
+    final qrPayload = QrPayloadBuilder.buildPayload(
+      user: user,
+      vehicle: vehicle,
+    );
+    final shareableLink = QrPayloadBuilder.buildShareableLink(
+      user: user,
+      vehicle: vehicle,
+    );
+    final licensePlate = vehicle.licensePlate;
     final carDescriptor = [
-      (carDetails['color'] ?? '').toString(),
-      (carDetails['carModel'] ?? '').toString(),
+      vehicle.color,
+      vehicle.carModel,
     ].where((part) => part.isNotEmpty).join(' ');
 
     return Scaffold(
@@ -331,10 +337,7 @@ class QRCodeScreen extends StatelessWidget {
           return Stack(
             children: [
               Positioned.fill(
-                child: Image.asset(
-                  _qrTemplateAsset,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.asset(_qrTemplateAsset, fit: BoxFit.cover),
               ),
               Positioned(
                 left: qrBoxLeft,

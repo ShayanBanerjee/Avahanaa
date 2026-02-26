@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/firestore_service.dart';
+import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
 import '../models/user_model.dart';
+import '../models/vehicle_model.dart';
+import '../services/firestore_service.dart';
+import '../utils/qr_payload_builder.dart';
+import '../widgets/admob_banner.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'qr_code_screen.dart';
-import '../utils/qr_payload_builder.dart';
-import '../widgets/admob_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,9 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
   final _currentUser = FirebaseAuth.instance.currentUser;
   int _selectedIndex = 0;
-  String? _lastSyncedPayload;
+  String? _lastSyncedPayloadKey;
   bool _isSyncingQrMetadata = false;
   bool _isGeneratingQrCode = false;
+  bool _isBootstrappingLegacyVehicle = false;
 
   @override
   Widget build(BuildContext context) {
@@ -63,8 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomeContent() {
     return StreamBuilder<UserModel?>(
       stream: _firestoreService.streamUserData(_currentUser!.uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Column(
             children: [
               Expanded(child: Center(child: CircularProgressIndicator())),
@@ -73,20 +75,18 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        if (snapshot.hasError) {
+        if (userSnapshot.hasError) {
           return Column(
             children: [
               Expanded(
-                child: Center(
-                  child: Text('Error: ${snapshot.error}'),
-                ),
+                child: Center(child: Text('Error: ${userSnapshot.error}')),
               ),
               const AdMobBanner(),
             ],
           );
         }
 
-        final user = snapshot.data;
+        final user = userSnapshot.data;
 
         if (user == null) {
           return const Column(
@@ -97,30 +97,121 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        // Check if QR code is generated
-        if (user.qrCodeId.isEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _generateQrCode(user);
-          });
-          return Column(
-            children: [
-              Expanded(child: _buildWaitingForQRCode()),
-              const AdMobBanner(),
-            ],
-          );
-        }
+        return StreamBuilder<List<VehicleModel>>(
+          stream: _firestoreService.streamUserVehicles(user.id),
+          builder: (context, vehicleSnapshot) {
+            if (vehicleSnapshot.connectionState == ConnectionState.waiting) {
+              return const Column(
+                children: [
+                  Expanded(child: Center(child: CircularProgressIndicator())),
+                  AdMobBanner(),
+                ],
+              );
+            }
 
-        return Column(
-          children: [
-            Expanded(child: _buildMainContent(user)),
-            const AdMobBanner(),
-          ],
+            if (vehicleSnapshot.hasError) {
+              return Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text('Error: ${vehicleSnapshot.error}'),
+                    ),
+                  ),
+                  const AdMobBanner(),
+                ],
+              );
+            }
+
+            final vehicles = vehicleSnapshot.data ?? const <VehicleModel>[];
+
+            if (vehicles.isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _bootstrapLegacyVehicle(user);
+              });
+
+              final waitingOnMigration =
+                  user.hasLegacyVehicleData || user.qrCodeId.trim().isNotEmpty;
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: _buildWaitingForQRCode(
+                      title: waitingOnMigration
+                          ? 'Preparing your vehicle...'
+                          : 'No vehicles found',
+                      subtitle: waitingOnMigration
+                          ? 'Migrating your existing profile data'
+                          : 'Add a vehicle from Profile to generate QR',
+                    ),
+                  ),
+                  const AdMobBanner(),
+                ],
+              );
+            }
+
+            final selectedVehicle = _selectVehicle(user, vehicles);
+
+            if (selectedVehicle.qrCodeId.trim().isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _generateQrCode(user, selectedVehicle);
+              });
+              return Column(
+                children: [
+                  Expanded(child: _buildWaitingForQRCode()),
+                  const AdMobBanner(),
+                ],
+              );
+            }
+
+            return Column(
+              children: [
+                Expanded(child: _buildMainContent(user, selectedVehicle)),
+                const AdMobBanner(),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildWaitingForQRCode() {
+  VehicleModel _selectVehicle(UserModel user, List<VehicleModel> vehicles) {
+    final primaryId = user.primaryVehicleId.trim();
+    if (primaryId.isNotEmpty) {
+      for (final vehicle in vehicles) {
+        if (vehicle.id == primaryId) {
+          return vehicle;
+        }
+      }
+    }
+    return vehicles.first;
+  }
+
+  Future<void> _bootstrapLegacyVehicle(UserModel user) async {
+    if (_isBootstrappingLegacyVehicle) {
+      return;
+    }
+
+    final needsMigration =
+        user.hasLegacyVehicleData || user.qrCodeId.trim().isNotEmpty;
+    if (!needsMigration) {
+      return;
+    }
+
+    _isBootstrappingLegacyVehicle = true;
+    try {
+      await _firestoreService.bootstrapVehiclesFromLegacyUser(user);
+    } catch (e) {
+      debugPrint('Error bootstrapping legacy vehicle: $e');
+    } finally {
+      _isBootstrappingLegacyVehicle = false;
+    }
+  }
+
+  Widget _buildWaitingForQRCode({
+    String title = 'Generating your QR code...',
+    String subtitle = 'This usually takes a few seconds',
+  }) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -129,20 +220,14 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 24),
-            const Text(
-              'Generating your QR code...',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'This usually takes a few seconds',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              subtitle,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -150,13 +235,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMainContent(UserModel user) {
-    final qrPayload = QrPayloadBuilder.buildPayload(user);
-    final metadata = QrPayloadBuilder.buildMetadata(user);
+  Widget _buildMainContent(UserModel user, VehicleModel vehicle) {
+    final qrPayload = QrPayloadBuilder.buildPayload(
+      user: user,
+      vehicle: vehicle,
+    );
 
-    if (user.qrCodeId.isNotEmpty) {
+    if (vehicle.qrCodeId.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _syncQrMetadata(user, qrPayload, metadata);
+        _syncQrMetadata(user, vehicle, qrPayload);
       });
     }
 
@@ -180,10 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Text(
                     'Welcome back!',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -194,6 +278,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (vehicle.licensePlate.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      vehicle.licensePlate,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -208,7 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => QRCodeScreen(user: user),
+                        builder: (_) =>
+                            QRCodeScreen(user: user, vehicle: vehicle),
                       ),
                     );
                   },
@@ -279,8 +374,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: StreamBuilder<int>(
-                stream: _firestoreService
-                    .streamUnreadNotificationCount(_currentUser!.uid),
+                stream: _firestoreService.streamUnreadNotificationCount(
+                  _currentUser!.uid,
+                ),
                 builder: (context, snapshot) {
                   final unreadCount = snapshot.data ?? 0;
 
@@ -304,9 +400,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildStatItem(
                             icon: Icons.qr_code,
                             label: 'QR Status',
-                            value:
-                                user.notificationsEnabled ? 'Active' : 'Inactive',
-                            color: user.notificationsEnabled
+                            value: vehicle.isActive ? 'Active' : 'Inactive',
+                            color: vehicle.isActive
                                 ? const Color(0xFF10B981)
                                 : const Color(0xFFEF4444),
                           ),
@@ -330,10 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Color(0xFF2563EB),
-                          ),
+                          Icon(Icons.info_outline, color: Color(0xFF2563EB)),
                           SizedBox(width: 12),
                           Text(
                             'How it works',
@@ -348,9 +440,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 16),
                       _buildInstructionStep('1', 'Print your QR code'),
                       _buildInstructionStep(
-                          '2', 'Place it on your car windshield'),
+                        '2',
+                        'Place it on your car windshield',
+                      ),
                       _buildInstructionStep(
-                          '3', 'Receive instant notifications'),
+                        '3',
+                        'Receive instant notifications',
+                      ),
                     ],
                   ),
                 ),
@@ -383,13 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }
@@ -420,26 +510,27 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Color(0xFF1F2937),
-            ),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _generateQrCode(UserModel user) async {
-    if (_isGeneratingQrCode || user.qrCodeId.isNotEmpty) {
+  Future<void> _generateQrCode(UserModel user, VehicleModel vehicle) async {
+    if (_isGeneratingQrCode || vehicle.qrCodeId.trim().isNotEmpty) {
       return;
     }
 
     _isGeneratingQrCode = true;
     try {
-      final payload = await _firestoreService.createQRCodeForUser(user);
+      final payload = await _firestoreService.ensureVehicleQrCode(
+        user: user,
+        vehicle: vehicle,
+        syncLegacyUserFields: true,
+      );
       if (mounted) {
-        _lastSyncedPayload = payload;
+        _lastSyncedPayloadKey = '${vehicle.id}:$payload';
       }
     } catch (e) {
       debugPrint('Error generating QR code: $e');
@@ -448,33 +539,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _syncQrMetadata(
-    UserModel user,
-    String payload,
-    Map<String, dynamic> metadata,
-  ) {
-    if (user.qrCodeId.isEmpty ||
+  void _syncQrMetadata(UserModel user, VehicleModel vehicle, String payload) {
+    final syncKey = '${vehicle.id}:$payload';
+    if (vehicle.qrCodeId.trim().isEmpty ||
         _isSyncingQrMetadata ||
-        _lastSyncedPayload == payload) {
+        _lastSyncedPayloadKey == syncKey) {
       return;
     }
 
     _isSyncingQrMetadata = true;
-    final shareableLink = QrPayloadBuilder.buildShareableLink(user);
 
     _firestoreService
-        .syncQRCodeMetadata(
-      qrCodeId: user.qrCodeId,
-      metadata: metadata,
-      shareableLink: shareableLink,
-      payload: payload,
-    )
+        .syncVehicleQrMetadata(
+          user: user,
+          vehicle: vehicle,
+          isActive: vehicle.isActive,
+        )
         .then((_) {
-      _lastSyncedPayload = payload;
-    }).catchError((e) {
-      debugPrint('Error syncing QR metadata: $e');
-    }).whenComplete(() {
-      _isSyncingQrMetadata = false;
-    });
+          _lastSyncedPayloadKey = syncKey;
+        })
+        .catchError((e) {
+          debugPrint('Error syncing QR metadata: $e');
+        })
+        .whenComplete(() {
+          _isSyncingQrMetadata = false;
+        });
   }
 }
