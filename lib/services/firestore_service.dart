@@ -267,10 +267,6 @@ class FirestoreService {
         user: user,
         vehicle: updatedVehicle,
       );
-      final shareableLink = QrPayloadBuilder.buildShareableLink(
-        user: user,
-        vehicle: updatedVehicle,
-      );
 
       final batch = _firestore.batch();
 
@@ -297,7 +293,7 @@ class FirestoreService {
       batch.set(qrCodeRef, {
         'metadata': metadata,
         'payload': payload,
-        'shareableLink': shareableLink,
+        'shareableLink': FieldValue.delete(),
         'userId': user.id,
         'vehicleId': updatedVehicle.id,
         'isActive': updatedVehicle.isActive,
@@ -332,15 +328,11 @@ class FirestoreService {
         user: user,
         vehicle: vehicle,
       );
-      final shareableLink = QrPayloadBuilder.buildShareableLink(
-        user: user,
-        vehicle: vehicle,
-      );
 
       await _firestore.collection('qrCodes').doc(vehicle.qrCodeId).set({
         'metadata': metadata,
         'payload': payload,
-        'shareableLink': shareableLink,
+        'shareableLink': FieldValue.delete(),
         'userId': user.id,
         'vehicleId': vehicle.id,
         'isActive': isActive ?? vehicle.isActive,
@@ -467,10 +459,20 @@ class FirestoreService {
     String? payload,
   }) async {
     try {
+      final payloadValue = payload?.trim();
+      final shareableLinkValue = shareableLink?.trim();
+      final shouldWriteShareableLink =
+          shareableLinkValue != null &&
+          shareableLinkValue.isNotEmpty &&
+          shareableLinkValue != payloadValue;
+
       await _firestore.collection('qrCodes').doc(qrCodeId).set({
         'metadata': metadata,
-        if (shareableLink != null) 'shareableLink': shareableLink,
         if (payload != null) 'payload': payload,
+        if (!shouldWriteShareableLink &&
+            (payload != null || shareableLink != null))
+          'shareableLink': FieldValue.delete(),
+        if (shouldWriteShareableLink) 'shareableLink': shareableLinkValue,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
