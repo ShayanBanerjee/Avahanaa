@@ -9,6 +9,7 @@ import '../services/firestore_service.dart';
 import '../utils/vehicle_registration_validator.dart';
 import '../widgets/admob_banner.dart';
 import 'auth/login_screen.dart';
+import 'legal_documents_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -207,6 +208,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: const Text('Change Password'),
                                     trailing: const Icon(Icons.chevron_right),
                                     onTap: _showChangePasswordDialog,
+                                  ),
+                                  const Divider(height: 1),
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.privacy_tip_outlined,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                    title: const Text('Legal & Privacy'),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const LegalDocumentsScreen(),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),

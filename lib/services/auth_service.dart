@@ -89,6 +89,21 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId != null) {
+      try {
+        await _clearFcmTokenForUser(userId);
+      } catch (e) {
+        log('Failed to clear stored FCM token for user $userId: $e');
+      }
+    }
+
+    try {
+      await FirebaseMessaging.instance.deleteToken();
+    } catch (e) {
+      log('Failed to delete local FCM token during sign out: $e');
+    }
+
     try {
       await _auth.signOut();
     } catch (e) {
@@ -190,32 +205,11 @@ class AuthService {
           .toString()
           .trim();
 
-      final vehiclesSnapshot = await userRef.collection('vehicles').get();
-      final notificationsSnapshot = await _firestore
-          .collection('notifications')
-          .where('userId', isEqualTo: user.uid)
-          .get();
-
-      final batch = _firestore.batch();
-      for (final vehicleDoc in vehiclesSnapshot.docs) {
-        final qrCodeId = (vehicleDoc.data()['qrCodeId'] ?? '')
-            .toString()
-            .trim();
-        if (qrCodeId.isNotEmpty) {
-          batch.delete(_firestore.collection('qrCodes').doc(qrCodeId));
-        }
-        batch.delete(vehicleDoc.reference);
-      }
-
-      for (final notificationDoc in notificationsSnapshot.docs) {
-        batch.delete(notificationDoc.reference);
-      }
-
+      await _deleteVehiclesAndLinkedQrCodes(user.uid);
+      await _deleteNotifications(user.uid);
       if (legacyQrCodeId.isNotEmpty) {
-        batch.delete(_firestore.collection('qrCodes').doc(legacyQrCodeId));
+        await _firestore.collection('qrCodes').doc(legacyQrCodeId).delete();
       }
-
-      await batch.commit();
 
       // Delete user document
       await userRef.delete();
@@ -227,6 +221,60 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       throw 'Failed to delete account. Please try again.';
+    }
+  }
+
+  Future<void> _clearFcmTokenForUser(String userId) async {
+    await _firestore.collection('users').doc(userId).set({
+      'fcmToken': FieldValue.delete(),
+      'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> _deleteVehiclesAndLinkedQrCodes(String userId) async {
+    final vehiclesRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('vehicles');
+
+    // A vehicle delete may include an extra linked qrCode delete. Keep ops well
+    // below Firestore's 500 write batch limit.
+    while (true) {
+      final snapshot = await vehiclesRef.limit(200).get();
+      if (snapshot.docs.isEmpty) {
+        return;
+      }
+
+      final batch = _firestore.batch();
+      for (final vehicleDoc in snapshot.docs) {
+        final qrCodeId = (vehicleDoc.data()['qrCodeId'] ?? '')
+            .toString()
+            .trim();
+        if (qrCodeId.isNotEmpty) {
+          batch.delete(_firestore.collection('qrCodes').doc(qrCodeId));
+        }
+        batch.delete(vehicleDoc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  Future<void> _deleteNotifications(String userId) async {
+    while (true) {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .limit(400)
+          .get();
+      if (snapshot.docs.isEmpty) {
+        return;
+      }
+
+      final batch = _firestore.batch();
+      for (final notificationDoc in snapshot.docs) {
+        batch.delete(notificationDoc.reference);
+      }
+      await batch.commit();
     }
   }
 

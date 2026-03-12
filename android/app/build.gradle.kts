@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.gradle.api.GradleException
 
 plugins {
     id("com.android.application")
@@ -13,6 +14,10 @@ val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+}
+val isReleaseBuild = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true) ||
+        taskName.contains("bundle", ignoreCase = true)
 }
 
 android {
@@ -49,7 +54,13 @@ android {
                 keyAlias = keystoreProperties["keyAlias"] as String?
                 keyPassword = keystoreProperties["keyPassword"] as String?
             } else {
-                // Fallback keeps local builds working; replace with real keystore before releasing.
+                // Keep local non-release builds working, but block invalid release artifacts.
+                if (isReleaseBuild) {
+                    throw GradleException(
+                        "Missing android/key.properties for release signing. " +
+                            "Create android/key.properties with storeFile/storePassword/keyAlias/keyPassword.",
+                    )
+                }
                 initWith(getByName("debug"))
             }
         }

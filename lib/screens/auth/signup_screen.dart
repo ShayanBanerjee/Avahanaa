@@ -3,6 +3,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/user_model.dart';
 import '../../models/vehicle_model.dart';
+import '../legal_documents_screen.dart';
 import '../../utils/vehicle_registration_validator.dart';
 import 'verify_email_screen.dart';
 
@@ -128,6 +129,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _openLegalDocuments() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const LegalDocumentsScreen()));
   }
 
   @override
@@ -338,10 +345,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 24),
 
                 // Terms text
-                Text(
-                  'By creating an account, you agree to our Terms of Service and Privacy Policy',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 0,
+                  runSpacing: 0,
+                  children: [
+                    Text(
+                      'By creating an account, you agree to our ',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    TextButton(
+                      onPressed: _openLegalDocuments,
+                      style: TextButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Terms of Service'),
+                    ),
+                    Text(
+                      ' and ',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    TextButton(
+                      onPressed: _openLegalDocuments,
+                      style: TextButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Privacy Policy'),
+                    ),
+                  ],
                 ),
               ],
             ),
