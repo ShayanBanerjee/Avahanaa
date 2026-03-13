@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart' as svg;
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -18,12 +18,13 @@ class QRCodeScreen extends StatelessWidget {
 
   const QRCodeScreen({super.key, required this.user, required this.vehicle});
   static const double _shareQrImageSize = 600;
-  static const String _qrTemplateAsset = 'assets/images/qr_template.png';
+  static const String _qrTemplateAsset = 'assets/images/qr_template.svg';
   static const double _qrBoxWidthFactor = 0.42;
   static const double _qrBoxTopFactor = 0.115;
   static const double _qrBoxPaddingFactor = 0.06;
   static const double _qrBoxCornerRadiusFactor = 0.08;
-  static final Future<ui.Image> _templateImageFuture = _loadTemplateImage();
+  static final Future<svg.PictureInfo> _templatePictureFuture =
+      _loadTemplatePicture();
 
   @override
   Widget build(BuildContext context) {
@@ -258,22 +259,18 @@ class QRCodeScreen extends StatelessWidget {
     );
   }
 
-  static Future<ui.Image> _loadTemplateImage() async {
-    final data = await rootBundle.load(_qrTemplateAsset);
-    final bytes = data.buffer.asUint8List();
-    final completer = Completer<ui.Image>();
-    ui.decodeImageFromList(bytes, completer.complete);
-    return completer.future;
+  static Future<svg.PictureInfo> _loadTemplatePicture() {
+    return svg.vg.loadPicture(const svg.SvgAssetLoader(_qrTemplateAsset), null);
   }
 
   Widget _buildQrPreview(String qrData) {
-    return FutureBuilder<ui.Image>(
-      future: _templateImageFuture,
+    return FutureBuilder<svg.PictureInfo>(
+      future: _templatePictureFuture,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           return Column(
             children: [
-              _buildTemplateQr(qrData, snapshot.data!),
+              _buildTemplateQr(qrData, snapshot.data!.size),
               const SizedBox(height: 12),
             ],
           );
@@ -320,8 +317,8 @@ class QRCodeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTemplateQr(String qrData, ui.Image templateImage) {
-    final aspectRatio = templateImage.width / templateImage.height;
+  Widget _buildTemplateQr(String qrData, Size templateSize) {
+    final aspectRatio = templateSize.width / templateSize.height;
     return AspectRatio(
       aspectRatio: aspectRatio,
       child: LayoutBuilder(
@@ -329,15 +326,18 @@ class QRCodeScreen extends StatelessWidget {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
           final qrBoxSize = width * _qrBoxWidthFactor;
-          final qrBoxTop = height * _qrBoxTopFactor;
-          final qrBoxLeft = (width - qrBoxSize - 5) / 2;
+          final qrBoxTop = height * _qrBoxTopFactor * 0.7;
+          final qrBoxLeft = (width - qrBoxSize) / 2;
           final qrBoxPadding = qrBoxSize * _qrBoxPaddingFactor;
           final qrRadius = qrBoxSize * _qrBoxCornerRadiusFactor;
 
           return Stack(
             children: [
               Positioned.fill(
-                child: Image.asset(_qrTemplateAsset, fit: BoxFit.cover),
+                child: svg.SvgPicture.asset(
+                  _qrTemplateAsset,
+                  fit: BoxFit.cover,
+                ),
               ),
               Positioned(
                 left: qrBoxLeft,
@@ -400,17 +400,17 @@ class QRCodeScreen extends StatelessWidget {
   }
 
   Future<List<int>?> _buildQrPngBytes(String data, double size) async {
-    final templateImage = await _loadTemplateImageSafely();
-    if (templateImage != null) {
-      return _buildTemplateQrBytes(data, templateImage);
+    final templatePicture = await _loadTemplatePictureSafely();
+    if (templatePicture != null) {
+      return _buildTemplateQrBytes(data, templatePicture, size);
     }
 
     return _buildPlainQrBytes(data, size);
   }
 
-  Future<ui.Image?> _loadTemplateImageSafely() async {
+  Future<svg.PictureInfo?> _loadTemplatePictureSafely() async {
     try {
-      return await _templateImageFuture;
+      return await _templatePictureFuture;
     } catch (_) {
       return null;
     }
@@ -446,10 +446,14 @@ class QRCodeScreen extends StatelessWidget {
 
   Future<List<int>?> _buildTemplateQrBytes(
     String data,
-    ui.Image templateImage,
+    svg.PictureInfo templatePicture,
+    double maxWidth,
   ) async {
-    final width = templateImage.width.toDouble();
-    final height = templateImage.height.toDouble();
+    final templateWidth = templatePicture.size.width;
+    final templateHeight = templatePicture.size.height;
+    final aspectRatio = templateWidth / templateHeight;
+    final width = maxWidth;
+    final height = width / aspectRatio;
     final qrBoxSize = width * _qrBoxWidthFactor;
     final qrBoxTop = height * _qrBoxTopFactor;
     final qrBoxLeft = (width - qrBoxSize) / 2;
@@ -463,7 +467,10 @@ class QRCodeScreen extends StatelessWidget {
       Rect.fromLTWH(0, 0, width, height),
       Paint()..color = Colors.white,
     );
-    canvas.drawImage(templateImage, Offset.zero, Paint());
+    canvas.save();
+    canvas.scale(width / templateWidth, height / templateHeight);
+    canvas.drawPicture(templatePicture.picture);
+    canvas.restore();
 
     final boxRect = Rect.fromLTWH(qrBoxLeft, qrBoxTop, qrBoxSize, qrBoxSize);
     final boxPaint = Paint()..color = Colors.white;
@@ -493,7 +500,7 @@ class QRCodeScreen extends StatelessWidget {
     canvas.restore();
 
     final picture = recorder.endRecording();
-    final image = await picture.toImage(width.toInt(), height.toInt());
+    final image = await picture.toImage(width.round(), height.round());
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData?.buffer.asUint8List();
   }
