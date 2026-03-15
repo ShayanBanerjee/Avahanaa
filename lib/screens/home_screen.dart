@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../services/firestore_service.dart';
@@ -29,36 +30,83 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      _buildHomeContent(),
-      const NotificationsScreen(),
-      const ProfileScreen(),
-    ];
-
-    return Scaffold(
-      body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
-            label: 'Notifications',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+    return StreamBuilder<int>(
+      stream: _firestoreService.streamUnreadNotificationCount(
+        _currentUser!.uid,
       ),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+        final List<Widget> screens = [
+          _buildHomeContent(),
+          const NotificationsScreen(),
+          const ProfileScreen(),
+        ];
+
+        return Scaffold(
+          body: screens[_selectedIndex],
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: Colors.white,
+            currentIndex: _selectedIndex,
+            onTap: (index) => setState(() => _selectedIndex = index),
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildNotificationsNavIcon(unreadCount, isActive: false),
+                activeIcon: _buildNotificationsNavIcon(
+                  unreadCount,
+                  isActive: true,
+                ),
+                label: 'Notifications',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNotificationsNavIcon(int unreadCount, {required bool isActive}) {
+    final baseIcon = Icon(
+      isActive ? Icons.notifications : Icons.notifications_outlined,
+    );
+    if (unreadCount <= 0) {
+      return baseIcon;
+    }
+
+    final badgeText = unreadCount > 99 ? '99+' : unreadCount.toString();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        baseIcon,
+        Positioned(
+          right: -8,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              badgeText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -292,6 +340,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // Critical unread alerts banner
+            _buildCriticalAlertsBanner(user),
+
             // QR Code Card
             Padding(
               padding: const EdgeInsets.all(24),
@@ -481,6 +532,112 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 4),
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
+    );
+  }
+
+  Widget _buildCriticalAlertsBanner(UserModel user) {
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _firestoreService.streamUserNotifications(user.id),
+      builder: (context, snapshot) {
+        final notifications = snapshot.data ?? const <NotificationModel>[];
+        final unread = notifications.where(
+          (notification) => !notification.read,
+        );
+        if (unread.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final latestUnread = unread.first;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFCA5A5)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFB91C1C),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Unread Critical Alerts',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF7F1D1D),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${unread.length} alert${unread.length == 1 ? '' : 's'} pending',
+                    style: const TextStyle(
+                      color: Color(0xFF7F1D1D),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    latestUnread.message.isEmpty
+                        ? latestUnread.reasonText
+                        : latestUnread.message,
+                    style: const TextStyle(
+                      color: Color(0xFF991B1B),
+                      fontSize: 13,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => NotificationsScreen(
+                                  initialNotificationId: latestUnread.id,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.visibility),
+                          label: const Text('View latest alert'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB91C1C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () {
+                          setState(() => _selectedIndex = 1);
+                        },
+                        child: const Text('Open inbox'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

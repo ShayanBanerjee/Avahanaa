@@ -510,6 +510,27 @@ class FirestoreService {
         );
   }
 
+  Future<List<NotificationModel>> getUserNotifications(
+    String userId, {
+    int limit = 100,
+  }) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .orderBy('sentAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => NotificationModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting user notifications: $e');
+      return [];
+    }
+  }
+
   Stream<List<NotificationModel>> streamVehicleNotifications({
     required String userId,
     required String vehicleId,

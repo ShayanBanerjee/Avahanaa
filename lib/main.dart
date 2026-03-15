@@ -10,7 +10,9 @@ import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'services/fcm_service.dart';
+import 'services/notification_navigation_service.dart';
 
 // Handle background messages (must be a top-level, entry-point function).
 @pragma('vm:entry-point')
@@ -63,18 +65,29 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
   @override
   void initState() {
     super.initState();
+    NotificationNavigationService.configureRouteFactory((notificationId) {
+      return MaterialPageRoute<void>(
+        builder: (_) =>
+            NotificationsScreen(initialNotificationId: notificationId),
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationNavigationService.drainPending();
+    });
     _initializeFCM();
   }
 
   Future<void> _initializeFCM() async {
     final fcmService = FCMService();
     await fcmService.initialize();
+    NotificationNavigationService.drainPending();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Avahanaa',
+      navigatorKey: NotificationNavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
