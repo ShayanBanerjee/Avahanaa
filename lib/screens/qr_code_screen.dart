@@ -20,9 +20,10 @@ class QRCodeScreen extends StatelessWidget {
   static const double _shareQrImageSize = 600;
   static const String _qrTemplateAsset = 'assets/images/qr_template.svg';
   static const double _qrBoxWidthFactor = 0.42;
-  static const double _qrBoxTopFactor = 0.115;
   static const double _qrBoxPaddingFactor = 0.06;
   static const double _qrBoxCornerRadiusFactor = 0.08;
+  static const double _templateQrSlotTopFactor = 15.253906 / 240.749997;
+  static const double _templateQrSlotSizeFactor = 70.125 / 147.75;
   static final Future<svg.PictureInfo> _templatePictureFuture =
       _loadTemplatePicture();
 
@@ -325,11 +326,7 @@ class QRCodeScreen extends StatelessWidget {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
-          final qrBoxSize = width * _qrBoxWidthFactor;
-          final qrBoxTop = height * _qrBoxTopFactor * 0.7;
-          final qrBoxLeft = (width - qrBoxSize) / 2;
-          final qrBoxPadding = qrBoxSize * _qrBoxPaddingFactor;
-          final qrRadius = qrBoxSize * _qrBoxCornerRadiusFactor;
+          final qrBoxLayout = _buildQrBoxLayout(width: width, height: height);
 
           return Stack(
             children: [
@@ -340,15 +337,15 @@ class QRCodeScreen extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: qrBoxLeft,
-                top: qrBoxTop,
-                width: qrBoxSize,
-                height: qrBoxSize,
+                left: qrBoxLayout.left,
+                top: qrBoxLayout.top,
+                width: qrBoxLayout.size,
+                height: qrBoxLayout.size,
                 child: Container(
-                  padding: EdgeInsets.all(qrBoxPadding),
+                  padding: EdgeInsets.all(qrBoxLayout.padding),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(qrRadius),
+                    borderRadius: BorderRadius.circular(qrBoxLayout.radius),
                   ),
                   child: QrImageView(
                     data: qrData,
@@ -454,12 +451,8 @@ class QRCodeScreen extends StatelessWidget {
     final aspectRatio = templateWidth / templateHeight;
     final width = maxWidth;
     final height = width / aspectRatio;
-    final qrBoxSize = width * _qrBoxWidthFactor;
-    final qrBoxTop = height * _qrBoxTopFactor;
-    final qrBoxLeft = (width - qrBoxSize) / 2;
-    final qrBoxPadding = qrBoxSize * _qrBoxPaddingFactor;
-    final qrRadius = qrBoxSize * _qrBoxCornerRadiusFactor;
-    final qrSize = qrBoxSize - (qrBoxPadding * 2);
+    final qrBoxLayout = _buildQrBoxLayout(width: width, height: height);
+    final qrSize = qrBoxLayout.size - (qrBoxLayout.padding * 2);
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -472,10 +465,15 @@ class QRCodeScreen extends StatelessWidget {
     canvas.drawPicture(templatePicture.picture);
     canvas.restore();
 
-    final boxRect = Rect.fromLTWH(qrBoxLeft, qrBoxTop, qrBoxSize, qrBoxSize);
+    final boxRect = Rect.fromLTWH(
+      qrBoxLayout.left,
+      qrBoxLayout.top,
+      qrBoxLayout.size,
+      qrBoxLayout.size,
+    );
     final boxPaint = Paint()..color = Colors.white;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(boxRect, Radius.circular(qrRadius)),
+      RRect.fromRectAndRadius(boxRect, Radius.circular(qrBoxLayout.radius)),
       boxPaint,
     );
 
@@ -495,7 +493,10 @@ class QRCodeScreen extends StatelessWidget {
     );
 
     canvas.save();
-    canvas.translate(qrBoxLeft + qrBoxPadding, qrBoxTop + qrBoxPadding);
+    canvas.translate(
+      qrBoxLayout.left + qrBoxLayout.padding,
+      qrBoxLayout.top + qrBoxLayout.padding,
+    );
     painter.paint(canvas, Size(qrSize, qrSize));
     canvas.restore();
 
@@ -513,4 +514,41 @@ class QRCodeScreen extends StatelessWidget {
       ),
     );
   }
+
+  _QrBoxLayout _buildQrBoxLayout({
+    required double width,
+    required double height,
+  }) {
+    final qrBoxSize = width * _qrBoxWidthFactor;
+    final qrSlotTop = height * _templateQrSlotTopFactor;
+    final qrSlotSize = width * _templateQrSlotSizeFactor;
+    final qrBoxTop = qrSlotTop + ((qrSlotSize - qrBoxSize) / 2);
+    final qrBoxLeft = (width - qrBoxSize) / 2;
+    final qrBoxPadding = qrBoxSize * _qrBoxPaddingFactor;
+    final qrRadius = qrBoxSize * _qrBoxCornerRadiusFactor;
+
+    return _QrBoxLayout(
+      size: qrBoxSize,
+      top: qrBoxTop,
+      left: qrBoxLeft,
+      padding: qrBoxPadding,
+      radius: qrRadius,
+    );
+  }
+}
+
+class _QrBoxLayout {
+  final double size;
+  final double top;
+  final double left;
+  final double padding;
+  final double radius;
+
+  const _QrBoxLayout({
+    required this.size,
+    required this.top,
+    required this.left,
+    required this.padding,
+    required this.radius,
+  });
 }
