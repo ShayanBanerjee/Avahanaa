@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/material.dart';
+import 'firebase_emulators.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
@@ -42,6 +43,10 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Development only, and a no-op unless --dart-define=USE_FIREBASE_EMULATOR.
+  await connectToFirebaseEmulatorsIfEnabled();
+  await signInDevFixtureUserIfEnabled();
 
   // Initialize AdMob
   if (!kIsWeb &&

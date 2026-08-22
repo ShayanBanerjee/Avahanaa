@@ -5,7 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/hero_header.dart';
 import '../../widgets/ui_kit.dart';
 import '../home_screen.dart';
-import 'login_screen.dart' show AuthButtonSpinner;
+import 'login_screen.dart' show AuthButtonSpinner, LoginScreen;
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -96,6 +96,23 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     } finally {
       if (mounted) setState(() => _isResending = false);
     }
+  }
+
+  /// Escape hatch.
+  ///
+  /// This screen is a dead end otherwise: `AuthGate` routes here for any signed
+  /// in but unverified account, and there is nothing to pop back to, so the
+  /// hardware back button just exits the app. Someone who mistyped their email
+  /// at sign-up would be stuck here permanently, unable to reach sign-in and
+  /// unable to correct the address.
+  Future<void> _useDifferentEmail() async {
+    final navigator = Navigator.of(context);
+    await _authService.signOut();
+    if (!mounted) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -217,6 +234,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                       child: _isResending
                           ? const AuthButtonSpinner()
                           : const Text('Resend the email'),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextButton.icon(
+                      onPressed: _useDifferentEmail,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.onDarkMuted,
+                      ),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text('Use a different email'),
                     ),
                   ],
                 ),
