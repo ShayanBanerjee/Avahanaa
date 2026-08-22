@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../../services/auth_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/hero_header.dart';
+import '../../widgets/ui_kit.dart';
 import '../home_screen.dart';
+import 'login_screen.dart' show AuthButtonSpinner, LoginScreen;
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -31,6 +36,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back from the mail app is the most likely moment for the
+    // verification to have completed, so re-check silently.
     if (state == AppLifecycleState.resumed) {
       _checkVerification(showFeedback: false);
     }
@@ -40,40 +47,32 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     if (_isChecking) return;
 
     setState(() => _isChecking = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
       final verified = await _authService.reloadAndCheckEmailVerified();
       if (!mounted) return;
 
       if (verified) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
           (route) => false,
         );
         return;
       }
 
       if (showFeedback) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email not verified yet. Please check your inbox.'),
-          ),
+        showAppSnackBar(
+          messenger,
+          'Not verified yet — check your inbox and tap the link.',
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      if (showFeedback) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted || !showFeedback) return;
+      showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
     } finally {
-      if (mounted) {
-        setState(() => _isChecking = false);
-      }
+      if (mounted) setState(() => _isChecking = false);
     }
   }
 
@@ -81,161 +80,173 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     if (_isResending) return;
 
     setState(() => _isResending = true);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
       await _authService.sendEmailVerification();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Verification email sent.'),
-          backgroundColor: Colors.green,
-        ),
+      showAppSnackBar(
+        messenger,
+        'Verification email sent',
+        kind: AppSnackKind.success,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
     } finally {
-      if (mounted) {
-        setState(() => _isResending = false);
-      }
+      if (mounted) setState(() => _isResending = false);
     }
+  }
+
+  /// Escape hatch.
+  ///
+  /// This screen is a dead end otherwise: `AuthGate` routes here for any signed
+  /// in but unverified account, and there is nothing to pop back to, so the
+  /// hardware back button just exits the app. Someone who mistyped their email
+  /// at sign-up would be stuck here permanently, unable to reach sign-in and
+  /// unable to correct the address.
+  Future<void> _useDifferentEmail() async {
+    final navigator = Navigator.of(context);
+    await _authService.signOut();
+    if (!mounted) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    const backgroundGreen = Color(0xFF16A34A);
-    final trimmedEmail = widget.email.trim();
+    final email = widget.email.trim();
 
     return Scaffold(
-      backgroundColor: backgroundGreen,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+      body: HeroSurface(
+        padding: EdgeInsets.zero,
+        colors: const [
+          AppColors.success,
+          AppColors.successDark,
+          AppColors.primaryDark,
+        ],
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: EntranceFade(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        shape: BoxShape.circle,
+                        boxShadow: AppShadows.hero,
+                      ),
+                      child: const Icon(
+                        Icons.mark_email_read_rounded,
+                        size: 52,
+                        color: AppColors.successDark,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    Text(
+                      'Confirm your email',
+                      textAlign: TextAlign.center,
+                      style: AppText.displayMedium.copyWith(
+                        color: AppColors.onDark,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'We sent a verification link to',
+                      textAlign: TextAlign.center,
+                      style: AppText.bodyLarge.copyWith(
+                        color: AppColors.onDarkMuted,
+                      ),
+                    ),
+                    if (email.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        email,
+                        textAlign: TextAlign.center,
+                        style: AppText.titleMedium.copyWith(
+                          color: AppColors.onDark,
+                        ),
                       ),
                     ],
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    size: 64,
-                    color: backgroundGreen,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                const Text(
-                  'Verify your email',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Navigate to your email to verify your mail.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                if (trimmedEmail.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    trimmedEmail,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Warning: Check your spam or promotions folder if you do not see the email.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: backgroundGreen,
-                    ),
-                    onPressed:
-                        _isChecking ? null : () => _checkVerification(),
-                    child: _isChecking
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                backgroundGreen,
+                    const SizedBox(height: AppSpacing.xl),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: AppRadius.cardAll,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.24),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 20,
+                            color: AppColors.onDark,
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Text(
+                              'No email yet? Check your spam and promotions '
+                              'folders — it often lands there.',
+                              style: AppText.bodySmall.copyWith(
+                                color: AppColors.onDark,
                               ),
                             ),
-                          )
-                        : const Text('I have verified'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed:
-                      _isResending ? null : () => _resendVerificationEmail(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                  ),
-                  child: _isResending
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
                           ),
-                        )
-                      : const Text('Resend verification email'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.surface,
+                          foregroundColor: AppColors.successDark,
+                        ),
+                        onPressed: _isChecking
+                            ? null
+                            : () => _checkVerification(),
+                        child: _isChecking
+                            ? const AuthButtonSpinner(
+                                color: AppColors.successDark,
+                              )
+                            : const Text("I've verified — continue"),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextButton(
+                      onPressed: _isResending ? null : _resendVerificationEmail,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.onDark,
+                      ),
+                      child: _isResending
+                          ? const AuthButtonSpinner()
+                          : const Text('Resend the email'),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextButton.icon(
+                      onPressed: _useDifferentEmail,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.onDarkMuted,
+                      ),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text('Use a different email'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

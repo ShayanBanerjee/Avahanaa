@@ -22,6 +22,16 @@ Fix: point the manifest at the current critical channel, and/or make the sender
 emit data-only pushes so the app fully controls presentation. The two must be
 decided together with the out-of-repo sender.
 
+## 2b. Legacy sticker artwork is bundled but unused (Aug 2026)
+
+`assets/images/qr_template.svg` (230KB) was the old composited sticker. The
+sticker is now drawn on a canvas by `lib/utils/sticker_renderer.dart`, and
+nothing references the SVG. The `flutter_svg` dependency was removed with it.
+
+The file is deliberately left in place rather than deleted — it is the owner's
+artwork and restoring the old design should stay a one-line decision. If it is
+not coming back, delete it and the app bundle drops 230KB.
+
 ## 2. The alarm sound is shipped but unused
 
 `assets/audio/avahanaa_alarm.wav` is bundled via `pubspec.yaml` and referenced
@@ -67,13 +77,18 @@ and call `.length`. `streamUnreadNotificationCount` streams every unread doc jus
 to count them, and it is attached at the top of `HomeScreen.build`, so it stays
 open the whole session. Use aggregate `count()` queries instead.
 
-## 6. Thin test coverage
+## 6. Thin test coverage — PARTLY CLOSED (Aug 2026)
 
-Only `test/notification_payload_test.dart` is meaningful; `widget_test.dart` is
-the Flutter counter template. `QrPayloadBuilder` and
-`VehicleRegistrationValidator` are pure functions with real edge cases (Bharat
-series plates, short-route vs query fallback) and should be covered before the
-next QR change.
+`QrPayloadBuilder` and `VehicleRegistrationValidator` are now covered by
+`test/qr_payload_builder_test.dart` and
+`test/vehicle_registration_validator_test.dart`, including Bharat-series plates
+and the short-route vs query fallback. `test/ui_kit_layout_test.dart` pumps the
+shared design-system components at 320dp across 1.0x–2.0x text scale and fails
+on any overflow.
+
+Still open: no coverage of the screens themselves, because they construct
+`FirebaseAuth.instance.currentUser` and Firestore streams at build time. Making
+them testable needs an injection seam in `FirestoreService`/`AuthService`.
 
 ## 7. Legacy dual-write is still on
 

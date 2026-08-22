@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/material.dart';
+import 'firebase_emulators.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
@@ -13,6 +14,8 @@ import 'screens/home_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
+import 'theme/app_theme.dart';
+import 'widgets/hero_header.dart';
 
 // Handle background messages (must be a top-level, entry-point function).
 @pragma('vm:entry-point')
@@ -40,6 +43,10 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Development only, and a no-op unless --dart-define=USE_FIREBASE_EMULATOR.
+  await connectToFirebaseEmulatorsIfEnabled();
+  await signInDevFixtureUserIfEnabled();
 
   // Initialize AdMob
   if (!kIsWeb &&
@@ -85,91 +92,32 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = AvahanaaTheme.light();
+
     return MaterialApp(
       title: 'Avahanaa',
       navigatorKey: NotificationNavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: const Color(0xFF2563EB),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-        fontFamily: 'SF Pro Display',
-
-        // App Bar Theme
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Color(0xFF1F2937)),
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1F2937),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-
-        // Elevated Button Theme
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+      theme: theme,
+      // Light-only by design — see AvahanaaTheme.light(). Supplying the same
+      // theme for dark keeps a device in dark mode from falling back to
+      // Material defaults.
+      darkTheme: theme,
+      themeMode: ThemeMode.light,
+      builder: (context, child) {
+        // Clamp runaway system font scaling. Above 1.6x the alert surfaces
+        // start to truncate, and a truncated alert is a failed alert.
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: media.textScaler.clamp(
+              minScaleFactor: 0.9,
+              maxScaleFactor: 1.6,
             ),
           ),
-        ),
-
-        // Text Button Theme
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF2563EB),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-
-        // Input Decoration Theme
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 2),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 2),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-        ),
-
-        // Card Theme
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          color: Colors.white,
-        ),
-      ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const AuthGate(),
     );
   }
@@ -184,7 +132,7 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.userChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _SplashLoadingView();
+          return const SplashView();
         }
 
         if (snapshot.hasData) {
@@ -201,28 +149,54 @@ class AuthGate extends StatelessWidget {
   }
 }
 
-class _SplashLoadingView extends StatelessWidget {
-  const _SplashLoadingView();
+/// Shown while Firebase resolves the session. Carries the brand gradient so it
+/// continues the native splash rather than flashing a bare spinner.
+class SplashView extends StatelessWidget {
+  const SplashView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2563EB), Color(0xFF10B981)],
-          ),
-        ),
-        child: Center(
-          child: SizedBox(
-            width: 30,
-            height: 30,
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              strokeWidth: 3,
-            ),
+    return Scaffold(
+      body: HeroSurface(
+        padding: EdgeInsets.zero,
+        child: SizedBox.expand(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.hero),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 88,
+                  height: 88,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Avahanaa',
+                style: AppText.displayMedium.copyWith(
+                  color: AppColors.onDark,
+                  letterSpacing: -0.8,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Reachable without being reachable',
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.onDarkMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.onDark),
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),

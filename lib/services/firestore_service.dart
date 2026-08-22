@@ -647,6 +647,38 @@ class FirestoreService {
     }
   }
 
+  // Mark every unread notification for a user as read.
+  //
+  // Returns the ids that were flipped so the caller can cancel their escalation
+  // reminders — a notification the owner has acknowledged must stop nagging.
+  Future<List<String>> markAllNotificationsAsRead(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .where('read', isEqualTo: false)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return const <String>[];
+      }
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'read': true,
+          'readAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      debugPrint('Error marking all notifications as read: $e');
+      throw 'Failed to mark alerts as read';
+    }
+  }
+
   // Clear all notifications for user
   Future<void> clearAllNotifications(String userId) async {
     try {

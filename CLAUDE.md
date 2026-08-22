@@ -56,7 +56,7 @@ lib/
     home_screen.dart         Bottom nav shell + home tab (largest screen file)
     notifications_screen.dart
     profile_screen.dart      Vehicle list, account settings (largest file, 1047 lines)
-    qr_code_screen.dart      QR render, SVG sticker template, share/save
+    qr_code_screen.dart      Sticker studio: style picker, live preview, share
     legal_documents_screen.dart
   services/
     auth_service.dart        Sign up/in/out, account deletion, FCM token writes
@@ -64,15 +64,25 @@ lib/
     fcm_service.dart         Push receipt, local notifications, reminder scheduling
     notification_payload.dart      FCM data-payload contract + reminder ID derivation
     notification_navigation_service.dart  Deep-link a tapped notification to a screen
+  theme/
+    app_theme.dart           ALL design tokens + ThemeData (single source)
   utils/
     qr_payload_builder.dart  Builds the URL encoded into the QR
+    sticker_renderer.dart    Canvas-drawn printable sticker (preview + export)
+    notification_visuals.dart  Alert reason -> icon, colour, severity, guidance
     qr_encryption.dart       AES helper — CURRENTLY UNUSED, see Known issues
     vehicle_registration_validator.dart  Indian plate regex (standard + Bharat series)
-  widgets/admob_banner.dart
+  widgets/
+    ui_kit.dart              Shared components (cards, rows, empty states, ...)
+    hero_header.dart         Brand gradient surface + glass panel
+    qr_visual.dart           Canonical QR styling and the QR hero plinth
+    admob_banner.dart
 docs/                        Architecture and contract docs — read before changing behaviour
 assets/
-  images/qr_template.svg     The printable sticker artwork; QR is composited into a slot
+  fonts/                     Inter, Plus Jakarta Sans, Noto Sans Kannada (subset)
+  images/qr_template.svg     Legacy sticker artwork — NO LONGER USED, see Known issues
   audio/avahanaa_alarm.wav   Alarm sound — CURRENTLY UNUSED, see Known issues
+tool/verify_sticker_scan.py  Decodes exported stickers under simulated scan conditions
 test/                        Only notification_payload_test.dart is meaningful
 ```
 
@@ -152,10 +162,22 @@ background isolate can cancel them without reading state.
 - Services swallow errors with `debugPrint`/`log` and return null/empty for
   reads, but `throw 'Human readable string'` for writes the user initiated.
   Screens catch that string and show a `SnackBar`. Keep that split.
-- Theme lives in `main.dart`. Colours are inline hex constants; the recurring
-  palette is `#2563EB` primary blue, `#10B981` green, `#DC2626` alert red,
-  `#F9FAFB` background, `#1F2937` text, `#E5E7EB` borders. Radius 12 for
-  inputs/buttons, 16 for cards, 24 for hero surfaces.
+- **All design tokens live in `lib/theme/app_theme.dart`** — `AppColors`,
+  `AppSpacing`, `AppRadius`, `AppShadows`, `AppMotion`, `AppText`, and
+  `AvahanaaTheme.light()`. Screens must not hardcode hex, spacing or text
+  styles; if a shade is missing, add it to the token file so the whole app
+  moves together. The palette is `#2563EB` primary blue, `#10B981` green,
+  `#DC2626` alert red, `#F9FAFB` background, `#1F2937` text, `#E5E7EB` borders.
+  Radius 12 for inputs/buttons, 16 for cards, 24 for hero surfaces.
+- Shared components live in `lib/widgets/ui_kit.dart` (cards, list rows, empty
+  states, stat tiles, plate badge, skeletons, snackbars), `hero_header.dart`
+  (the brand gradient surface) and `qr_visual.dart` (the single definition of
+  how a QR is drawn). Compose these instead of hand-rolling containers.
+- Fonts are bundled: **Inter** for body/labels, **Plus Jakarta Sans** for
+  display. Both are variable fonts, so `AppText` sets `fontVariations` as well
+  as `fontWeight` — setting only `fontWeight` renders at the default axis
+  position on some Android builds. The theme previously declared
+  `SF Pro Display`, which was never shipped and silently fell back to Roboto.
 - Config that varies by environment uses `String.fromEnvironment` with a safe
   default (see `qr_payload_builder.dart`), passed via `--dart-define`.
 - Indian vehicle plates: always validate through
@@ -170,12 +192,11 @@ flutter run
 flutter build appbundle --release   # needs android/key.properties (gitignored)
 ```
 
-The analyze baseline as of Aug 2026 is **20 info-level issues, zero errors and
-zero warnings** — mostly `use_build_context_synchronously` in
-`profile_screen.dart`, deprecated `withOpacity`, and the deprecated
-`Share.shareXFiles` API in `qr_code_screen.dart`. Do not add to that count. When
-you touch a file that already has lints, fixing them is welcome but optional;
-introducing a new one is not.
+The analyze baseline as of Aug 2026 is **zero issues** — zero errors, zero
+warnings, zero lints. The previous baseline of 20 info-level issues
+(`use_build_context_synchronously` in `profile_screen.dart`, deprecated
+`withOpacity`, deprecated `Share.shareXFiles`) was cleared during the v1.1.0 UI
+rebuild. Keep it at zero: a new lint is now a regression, not a rounding error.
 
 Release builds require `--dart-define` values for the QR host if not using the
 defaults. `android/key.properties` is intentionally absent from git; the build

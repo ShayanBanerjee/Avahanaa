@@ -86,21 +86,45 @@ plate below in letter-spaced w600, vehicle descriptor below that in muted text.
 
 ## The printable sticker
 
-`assets/images/qr_template.svg` is the sticker artwork; the generated QR is
-composited into a slot whose geometry is expressed as factors of the template
-dimensions in `qr_code_screen.dart`. If the artwork changes, recompute those
-factors from the SVG coordinates rather than adjusting them by eye.
+The sticker is **drawn on a canvas**, not composited from artwork:
+`lib/utils/sticker_renderer.dart` holds `StickerPainter`, and the on-screen
+preview (`CustomPaint`) and the exported PNG (`renderStickerPng`) both run it.
+There is therefore no way for the preview to disagree with the print file —
+change the painter and both move together.
+
+Three styles ship: `signature` (brand header on white, the default), `bold`
+(full gradient panel), and `minimal` (black and white, the most scan-forgiving
+and the cheapest to print). All geometry is expressed as a fraction of the
+sticker width, so a design scales from a 100px chip thumbnail to a 1748px print
+master with no relayout.
+
+The sheet is ISO A-ratio (`kStickerAspectRatio`), so it prints to A5 or A6 with
+no cropping and no wasted margin.
+
+The legacy artwork `assets/images/qr_template.svg` is **no longer used**. It is
+left in the repo rather than deleted, but nothing references it.
 
 Sticker-specific rules, all of which trump aesthetics:
 
-- Maximum quiet zone around the QR. A cramped code fails on a dirty windscreen.
+- Maximum quiet zone around the QR — `_drawQrBlock` reserves 9% of the code
+  block on every side and nothing is ever drawn inside it. A cramped code fails
+  on a dirty windscreen.
 - High contrast only — pure black on pure white. No gradients, no brand colour,
-  no logo overlaying the code.
+  no logo overlaying the code. Styles may colour the *sheet*; never the code.
 - The instruction text must read at arm's length through glass: large, short,
-  and in both English and Kannada where space allows, since this ships in
-  Bangalore.
-- Always verify a changed template by scanning the exported 600px image with
-  Google Lens before shipping.
+  and in both English and Kannada, since this ships in Bangalore. The Kannada
+  line uses a bundled subset of Noto Sans Kannada so a printed sheet renders
+  identically on every device.
+- Always scan-verify a changed sticker before shipping. Do not do this by eye
+  alone:
+
+  ```bash
+  STICKER_OUT=/tmp/stickers flutter test test/sticker_renderer_test.dart
+  python3 tool/verify_sticker_scan.py /tmp/stickers
+  ```
+
+  That decodes every style under downscaling, blur, tilt, glare and noise. A
+  Google Lens check on a real print is still worth doing on top of it.
 
 ## Accessibility
 

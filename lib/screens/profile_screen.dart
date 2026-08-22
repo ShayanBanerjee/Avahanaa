@@ -1,13 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/vehicle_registration_validator.dart';
 import '../widgets/admob_banner.dart';
+import '../widgets/hero_header.dart';
+import '../widgets/ui_kit.dart';
 import 'auth/login_screen.dart';
 import 'legal_documents_screen.dart';
 
@@ -28,16 +33,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Sign Out',
-          ),
-        ],
-      ),
       body: Column(
         children: [
           Expanded(
@@ -45,12 +40,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               stream: _firestoreService.streamUserData(_currentUser!.uid),
               builder: (context, userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const _ProfileSkeleton();
                 }
 
                 final user = userSnapshot.data;
                 if (user == null) {
-                  return const Center(child: Text('User data not found'));
+                  return AppEmptyState(
+                    icon: Icons.person_off_outlined,
+                    title: 'Profile unavailable',
+                    message:
+                        'We could not load your account details. Sign out and '
+                        'back in to restore them.',
+                    action: OutlinedButton.icon(
+                      onPressed: _handleLogout,
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Sign out'),
+                    ),
+                  );
                 }
 
                 return StreamBuilder<List<VehicleModel>>(
@@ -60,280 +66,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         vehiclesSnapshot.data ?? const <VehicleModel>[];
 
                     return SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Profile Header
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Color.fromARGB(255, 0, 81, 173),
-                                  Color(0xFF002b5c),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                          _ProfileHeader(
+                            user: user,
+                            vehicleCount: vehicles.length,
+                            onSignOut: _handleLogout,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.lg,
+                              AppSpacing.xl,
+                              AppSpacing.lg,
+                              0,
                             ),
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Avatar
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      user.email[0].toUpperCase(),
-                                      style: const TextStyle(
-                                        fontSize: 40,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2563EB),
-                                      ),
-                                    ),
-                                  ),
+                                EntranceFade(
+                                  child: _buildProtectionCard(user, vehicles),
                                 ),
-                                const SizedBox(height: 16),
-
-                                Text(
-                                  user.email,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                const SizedBox(height: AppSpacing.xl),
+                                EntranceFade(
+                                  delay: const Duration(milliseconds: 60),
+                                  child: _buildVehiclesSection(user, vehicles),
                                 ),
-
-                                if (user.phoneNumber.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    user.phoneNumber,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                                const SizedBox(height: AppSpacing.xl),
+                                EntranceFade(
+                                  delay: const Duration(milliseconds: 120),
+                                  child: _buildStatsCard(),
+                                ),
+                                const SizedBox(height: AppSpacing.xl),
+                                EntranceFade(
+                                  delay: const Duration(milliseconds: 180),
+                                  child: _buildAccountSection(user),
+                                ),
+                                const SizedBox(height: AppSpacing.xl),
+                                EntranceFade(
+                                  delay: const Duration(milliseconds: 240),
+                                  child: _buildDangerZone(),
+                                ),
                               ],
                             ),
                           ),
-
-                          // Vehicles Section
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Card(
-                              child: Column(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.directions_car,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                    title: const Text(
-                                      'Vehicles',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      vehicles.isEmpty
-                                          ? 'No vehicles added'
-                                          : '${vehicles.length} vehicle${vehicles.length == 1 ? '' : 's'}',
-                                    ),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.add),
-                                      tooltip: 'Add Vehicle',
-                                      onPressed: () =>
-                                          _showAddVehicleDialog(user),
-                                    ),
-                                  ),
-                                  if (vehicles.isEmpty)
-                                    const Padding(
-                                      padding: EdgeInsets.fromLTRB(
-                                        16,
-                                        0,
-                                        16,
-                                        16,
-                                      ),
-                                      child: Text(
-                                        'Add a vehicle to generate and manage QR codes.',
-                                      ),
-                                    ),
-                                  for (int i = 0; i < vehicles.length; i++) ...[
-                                    if (i > 0) const Divider(height: 1),
-                                    _buildVehicleTile(user, vehicles[i]),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // Account Section
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Card(
-                              child: Column(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.phone,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                    title: const Text('Phone Number'),
-                                    subtitle: Text(
-                                      user.phoneNumber.isEmpty
-                                          ? 'Not set'
-                                          : user.phoneNumber,
-                                    ),
-                                    trailing: const Icon(Icons.chevron_right),
-                                    onTap: () => _showEditPhoneDialog(user),
-                                  ),
-                                  const Divider(height: 1),
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.lock,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                    title: const Text('Change Password'),
-                                    trailing: const Icon(Icons.chevron_right),
-                                    onTap: _showChangePasswordDialog,
-                                  ),
-                                  const Divider(height: 1),
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.privacy_tip_outlined,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                    title: const Text('Legal & Privacy'),
-                                    trailing: const Icon(Icons.chevron_right),
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              const LegalDocumentsScreen(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // QR Code Section
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Card(
-                              child: Column(
-                                children: [
-                                  SwitchListTile(
-                                    secondary: const Icon(
-                                      Icons.qr_code,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                    title: const Text('QR Code Active'),
-                                    subtitle: Text(
-                                      _isUpdatingNotificationPreference
-                                          ? 'Updating...'
-                                          : 'Allow others to notify you across all vehicles',
-                                    ),
-                                    value: user.notificationsEnabled,
-                                    onChanged: _isUpdatingNotificationPreference
-                                        ? null
-                                        : (value) => _handleNotificationToggle(
-                                            vehicles,
-                                            value,
-                                          ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // Statistics
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: FutureBuilder<Map<String, int>>(
-                              future: _firestoreService.getNotificationStats(
-                                _currentUser.uid,
-                              ),
-                              builder: (context, snapshot) {
-                                final stats =
-                                    snapshot.data ?? {'today': 0, 'total': 0};
-
-                                return Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(20),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceAround,
-                                      children: [
-                                        _buildStatItem(
-                                          'Today',
-                                          stats['today'].toString(),
-                                          Icons.today,
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 40,
-                                          color: Colors.grey[300],
-                                        ),
-                                        _buildStatItem(
-                                          'Total',
-                                          stats['total'].toString(),
-                                          Icons.notifications,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Danger Zone
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Card(
-                              color: Colors.red[50],
-                              child: ListTile(
-                                leading: Icon(
-                                  Icons.delete_forever,
-                                  color: Colors.red[700],
-                                ),
-                                title: Text(
-                                  'Delete Account',
-                                  style: TextStyle(
-                                    color: Colors.red[700],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Permanently delete your account',
-                                ),
-                                trailing: const Icon(
-                                  Icons.chevron_right,
-                                  color: Colors.red,
-                                ),
-                                onTap: _showDeleteAccountDialog,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
                         ],
                       ),
                     );
@@ -348,88 +125,270 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildVehicleTile(UserModel user, VehicleModel vehicle) {
-    final isPrimary = user.primaryVehicleId.trim() == vehicle.id;
+  // -- Sections -----------------------------------------------------------
 
-    return ListTile(
-      leading: Icon(
-        Icons.directions_car,
-        color: isPrimary ? const Color(0xFF10B981) : const Color(0xFF2563EB),
-      ),
-      title: Text(
-        vehicle.licensePlate.trim().isEmpty
-            ? 'Unnamed Vehicle'
-            : vehicle.licensePlate,
-      ),
-      subtitle: Text(vehicle.description),
-      trailing: Wrap(
-        spacing: 4,
+  /// The master switch. Promoted out of a settings list into its own card
+  /// because it decides whether the product works at all.
+  Widget _buildProtectionCard(UserModel user, List<VehicleModel> vehicles) {
+    final isOn = user.notificationsEnabled;
+
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      borderColor: isOn
+          ? AppColors.success.withValues(alpha: 0.35)
+          : AppColors.border,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            tooltip: isPrimary ? 'Primary Vehicle' : 'Set as Primary',
-            icon: Icon(
-              isPrimary ? Icons.star : Icons.star_border,
-              color: isPrimary ? const Color(0xFF10B981) : Colors.grey,
-            ),
-            onPressed: isPrimary
-                ? null
-                : () => _setPrimaryVehicle(user, vehicle),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'edit') {
-                _showEditVehicleDialog(user, vehicle);
-              } else if (value == 'delete') {
-                _confirmDeleteVehicle(user, vehicle);
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
+          Row(
+            children: [
+              AppIconBadge(
+                icon: isOn ? Icons.verified_user_rounded : Icons.shield_outlined,
+                color: isOn ? AppColors.success : AppColors.textTertiary,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isOn ? 'Protection is on' : 'Protection is off',
+                      style: AppText.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _isUpdatingNotificationPreference
+                          ? 'Updating…'
+                          : isOn
+                          ? 'Scans reach you on every vehicle'
+                          : 'Scans will not reach you',
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: isOn,
+                onChanged: _isUpdatingNotificationPreference
+                    ? null
+                    : (value) => _handleNotificationToggle(vehicles, value),
+              ),
             ],
           ),
+          if (!isOn) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.warningTint,
+                borderRadius: AppRadius.controlAll,
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: AppColors.warning,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Anyone scanning your sticker will see that you cannot '
+                      'be reached right now.',
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
-      onTap: () => _showEditVehicleDialog(user, vehicle),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
+  Widget _buildVehiclesSection(UserModel user, List<VehicleModel> vehicles) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(icon, color: const Color(0xFF2563EB), size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2563EB),
+        SectionHeader(
+          overline: 'Your garage',
+          title: vehicles.length == 1 ? 'Your vehicle' : 'Your vehicles',
+          action: TextButton.icon(
+            onPressed: () => _showAddVehicleSheet(user),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('Add'),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        if (vehicles.isEmpty)
+          AppCard(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              children: [
+                const AppIconBadge(
+                  icon: Icons.directions_car_outlined,
+                  color: AppColors.primary,
+                  size: 52,
+                  iconSize: 26,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text('No vehicles yet', style: AppText.titleMedium),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Add a vehicle and Avahanaa creates its QR sticker '
+                  'automatically.',
+                  textAlign: TextAlign.center,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddVehicleSheet(user),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Add a vehicle'),
+                ),
+              ],
+            ),
+          )
+        else
+          for (final vehicle in vehicles)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _VehicleCard(
+                vehicle: vehicle,
+                isPrimary: user.primaryVehicleId.trim() == vehicle.id,
+                onEdit: () => _showEditVehicleSheet(user, vehicle),
+                onDelete: () => _confirmDeleteVehicle(user, vehicle),
+                onSetPrimary: () => _setPrimaryVehicle(user, vehicle),
+              ),
+            ),
       ],
     );
   }
+
+  Widget _buildStatsCard() {
+    return FutureBuilder<Map<String, int>>(
+      future: _firestoreService.getNotificationStats(_currentUser!.uid),
+      builder: (context, snapshot) {
+        final stats = snapshot.data ?? const {'today': 0, 'total': 0};
+
+        return AppCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: AppStatTile(
+                  icon: Icons.today_rounded,
+                  value: '${stats['today'] ?? 0}',
+                  label: 'Alerts today',
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 56,
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                color: AppColors.border,
+              ),
+              Expanded(
+                child: AppStatTile(
+                  icon: Icons.history_rounded,
+                  value: '${stats['total'] ?? 0}',
+                  label: 'Alerts all time',
+                  color: AppColors.success,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountSection(UserModel user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(overline: 'Settings', title: 'Account'),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              AppListRow(
+                icon: Icons.phone_rounded,
+                title: 'Phone number',
+                subtitle: user.phoneNumber.trim().isEmpty
+                    ? 'Not set — only used for account recovery'
+                    : user.phoneNumber,
+                onTap: () => _showEditPhoneSheet(user),
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              AppListRow(
+                icon: Icons.lock_rounded,
+                title: 'Change password',
+                onTap: _showChangePasswordSheet,
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              AppListRow(
+                icon: Icons.policy_rounded,
+                title: 'Legal & privacy',
+                subtitle: 'Privacy policy and terms of service',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LegalDocumentsScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              AppListRow(
+                icon: Icons.logout_rounded,
+                title: 'Sign out',
+                iconColor: AppColors.textSecondary,
+                onTap: _handleLogout,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDangerZone() {
+    return AppCard(
+      padding: EdgeInsets.zero,
+      color: AppColors.alertSurface,
+      borderColor: AppColors.alertBorder,
+      child: AppListRow(
+        icon: Icons.delete_forever_rounded,
+        iconColor: AppColors.alert,
+        titleColor: AppColors.alertDeep,
+        title: 'Delete account',
+        subtitle: 'Permanently removes your QR codes and alerts',
+        onTap: _showDeleteAccountDialog,
+      ),
+    );
+  }
+
+  // -- Actions ------------------------------------------------------------
 
   Future<void> _handleNotificationToggle(
     List<VehicleModel> vehicles,
     bool isEnabled,
   ) async {
     final userId = _currentUser?.uid;
-    if (userId == null) {
-      return;
-    }
+    if (userId == null || _isUpdatingNotificationPreference) return;
 
-    if (_isUpdatingNotificationPreference) {
-      return;
-    }
-
-    setState(() {
-      _isUpdatingNotificationPreference = true;
-    });
-
+    setState(() => _isUpdatingNotificationPreference = true);
     final messenger = ScaffoldMessenger.of(context);
 
     try {
@@ -453,33 +412,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _fcmService.deleteFCMToken();
       }
 
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              isEnabled
-                  ? 'QR code notifications enabled'
-                  : 'QR code notifications disabled',
-            ),
-          ),
-        );
-      }
+      if (!mounted) return;
+      showAppSnackBar(
+        messenger,
+        isEnabled
+            ? 'Protection on — scans will reach you'
+            : 'Protection off — scans will not reach you',
+        kind: isEnabled ? AppSnackKind.success : AppSnackKind.neutral,
+      );
     } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Failed to update QR code status: $e')),
-        );
-      }
+      if (!mounted) return;
+      showAppSnackBar(
+        messenger,
+        'Could not update protection: $e',
+        kind: AppSnackKind.error,
+      );
     } finally {
       if (mounted) {
-        setState(() {
-          _isUpdatingNotificationPreference = false;
-        });
+        setState(() => _isUpdatingNotificationPreference = false);
       }
     }
   }
 
   Future<void> _setPrimaryVehicle(UserModel user, VehicleModel vehicle) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await _firestoreService.setPrimaryVehicle(
         userId: user.id,
@@ -491,20 +447,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         syncLegacyUserFields: true,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Primary vehicle updated')));
+      showAppSnackBar(
+        messenger,
+        'Primary vehicle updated',
+        kind: AppSnackKind.success,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      showAppSnackBar(messenger, 'Error: $e', kind: AppSnackKind.error);
     }
   }
 
-  void _showAddVehicleDialog(UserModel user) {
-    _showVehicleDialog(
-      title: 'Add Vehicle',
+  Future<void> _showAddVehicleSheet(UserModel user) async {
+    await _showVehicleSheet(
+      title: 'Add a vehicle',
+      subtitle: 'Its QR sticker is created automatically.',
       onSave: (color, model, plate) async {
         final createdVehicle = await _firestoreService.upsertVehicle(
           userId: user.id,
@@ -533,9 +490,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showEditVehicleDialog(UserModel user, VehicleModel vehicle) {
-    _showVehicleDialog(
-      title: 'Edit Vehicle',
+  Future<void> _showEditVehicleSheet(
+    UserModel user,
+    VehicleModel vehicle,
+  ) async {
+    await _showVehicleSheet(
+      title: 'Edit vehicle',
+      subtitle: 'The QR code stays the same.',
       initialColor: vehicle.color,
       initialModel: vehicle.carModel,
       initialPlate: vehicle.licensePlate,
@@ -544,16 +505,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             user.primaryVehicleId.trim().isEmpty ||
             user.primaryVehicleId == vehicle.id;
 
-        final updatedVehicle = vehicle.copyWith(
-          color: color,
-          carModel: model,
-          licensePlate: plate,
-          assetNumber: plate,
-        );
-
         final savedVehicle = await _firestoreService.upsertVehicle(
           userId: user.id,
-          vehicle: updatedVehicle,
+          vehicle: vehicle.copyWith(
+            color: color,
+            carModel: model,
+            licensePlate: plate,
+            assetNumber: plate,
+          ),
           syncLegacyUserFields: isPrimaryVehicle,
         );
 
@@ -568,148 +527,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showVehicleDialog({
+  Future<void> _showVehicleSheet({
     required String title,
+    required String subtitle,
     String initialColor = '',
     String initialModel = '',
     String initialPlate = '',
     required Future<void> Function(String color, String model, String plate)
     onSave,
-  }) {
-    final normalizedInitialPlate = VehicleRegistrationValidator.normalize(
-      initialPlate,
-    );
-    final colorController = TextEditingController(text: initialColor.trim());
-    final modelController = TextEditingController(text: initialModel.trim());
-    final plateController = TextEditingController(text: normalizedInitialPlate);
-    String? registrationError;
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
 
-    showDialog(
+    final saved = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          bool hasFormChanges() {
-            return colorController.text.trim() != initialColor.trim() ||
-                modelController.text.trim() != initialModel.trim() ||
-                VehicleRegistrationValidator.normalize(plateController.text) !=
-                    normalizedInitialPlate;
-          }
-
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
-            title: Text(title),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: plateController,
-                    decoration: InputDecoration(
-                      labelText: 'Registration Number',
-                      hintText: 'e.g., PB65AM0008',
-                      errorText: registrationError,
-                    ),
-                    textCapitalization: TextCapitalization.characters,
-                    onChanged: (_) {
-                      setModalState(() {
-                        registrationError = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: colorController,
-                    decoration: const InputDecoration(
-                      labelText: 'Color',
-                      hintText: 'e.g., Red, Blue',
-                    ),
-                    onChanged: (_) => setModalState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: modelController,
-                    decoration: const InputDecoration(
-                      labelText: 'Model',
-                      hintText: 'e.g., Toyota Camry',
-                    ),
-                    onChanged: (_) => setModalState(() {}),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: !hasFormChanges()
-                    ? null
-                    : () async {
-                        final normalizedPlate =
-                            VehicleRegistrationValidator.normalize(
-                              plateController.text,
-                            );
-                        if (normalizedPlate.isEmpty) {
-                          setModalState(() {
-                            registrationError =
-                                'Please enter your registration number';
-                          });
-                          return;
-                        }
-                        if (!VehicleRegistrationValidator.isValid(
-                          normalizedPlate,
-                        )) {
-                          setModalState(() {
-                            registrationError =
-                                'Please enter a valid registration number';
-                          });
-                          return;
-                        }
-
-                        try {
-                          await onSave(
-                            colorController.text.trim(),
-                            modelController.text.trim(),
-                            normalizedPlate,
-                          );
-
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          Future.delayed(const Duration(seconds: 0), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Vehicle saved')),
-                            );
-                          });
-                        } catch (e) {
-                          if (!mounted) return;
-                          Future.delayed(const Duration(seconds: 0), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          });
-                        }
-                      },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
+      isScrollControlled: true,
+      builder: (context) => _VehicleFormSheet(
+        title: title,
+        subtitle: subtitle,
+        initialColor: initialColor,
+        initialModel: initialModel,
+        initialPlate: initialPlate,
+        onSave: onSave,
       ),
     );
+
+    if (saved == true && mounted) {
+      showAppSnackBar(messenger, 'Vehicle saved', kind: AppSnackKind.success);
+    }
   }
 
   Future<void> _confirmDeleteVehicle(
     UserModel user,
     VehicleModel vehicle,
   ) async {
+    final label = vehicle.licensePlate.trim().isEmpty
+        ? 'this vehicle'
+        : vehicle.licensePlate.trim();
+
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Vehicle'),
+        title: const Text('Delete vehicle?'),
         content: Text(
-          'Delete ${vehicle.licensePlate.isEmpty ? 'this vehicle' : vehicle.licensePlate}?',
+          'Deleting $label also retires its QR code. Any sticker already on '
+          'the windshield will stop working.',
         ),
         actions: [
           TextButton(
@@ -718,205 +579,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.alert),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
-    if (shouldDelete != true) {
-      return;
-    }
+    if (shouldDelete != true || !mounted) return;
 
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await _firestoreService.deleteVehicle(user.id, vehicle.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Vehicle deleted')));
+      showAppSnackBar(messenger, 'Vehicle deleted', kind: AppSnackKind.success);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      showAppSnackBar(messenger, 'Error: $e', kind: AppSnackKind.error);
     }
   }
 
-  void _showEditPhoneDialog(UserModel user) {
-    final initialPhone = user.phoneNumber.trim();
-    final phoneController = TextEditingController(text: initialPhone);
+  Future<void> _showEditPhoneSheet(UserModel user) async {
+    final messenger = ScaffoldMessenger.of(context);
 
-    showDialog(
+    final saved = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final hasChanges = phoneController.text.trim() != initialPhone;
-
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
-            title: const Text('Edit Phone Number'),
-            content: TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number',
-                hintText: '+1234567890',
-              ),
-              onChanged: (_) => setModalState(() {}),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: hasChanges
-                    ? () async {
-                        try {
-                          await _firestoreService.updateUserProfile(
-                            userId: _currentUser!.uid,
-                            phoneNumber: phoneController.text.trim(),
-                          );
-
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          Future.delayed(const Duration(seconds: 0), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Phone number updated'),
-                              ),
-                            );
-                          });
-                        } catch (e) {
-                          if (!mounted) return;
-                          Future.delayed(const Duration(seconds: 0), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          });
-                        }
-                      }
-                    : null,
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
+      isScrollControlled: true,
+      builder: (context) => _PhoneFormSheet(
+        initialPhone: user.phoneNumber,
+        onSave: (phone) => _firestoreService.updateUserProfile(
+          userId: user.id,
+          phoneNumber: phone,
+        ),
       ),
     );
+
+    if (saved == true && mounted) {
+      showAppSnackBar(
+        messenger,
+        'Phone number updated',
+        kind: AppSnackKind.success,
+      );
+    }
   }
 
-  void _showChangePasswordDialog() {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
+  Future<void> _showChangePasswordSheet() async {
+    final currentUser = _currentUser;
+    if (currentUser == null) return;
 
-    showDialog(
+    final messenger = ScaffoldMessenger.of(context);
+
+    final saved = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final hasChanges =
-              currentPasswordController.text.isNotEmpty ||
-              newPasswordController.text.isNotEmpty ||
-              confirmPasswordController.text.isNotEmpty;
-
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
-            title: const Text('Change Password'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: currentPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Current Password',
-                    ),
-                    onChanged: (_) => setModalState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: newPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'New Password',
-                    ),
-                    onChanged: (_) => setModalState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: confirmPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm Password',
-                    ),
-                    onChanged: (_) => setModalState(() {}),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: hasChanges
-                    ? () async {
-                        if (newPasswordController.text !=
-                            confirmPasswordController.text) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Passwords do not match'),
-                            ),
-                          );
-                          return;
-                        }
-
-                        try {
-                          // Re-authenticate first
-                          final credential = EmailAuthProvider.credential(
-                            email: _currentUser!.email!,
-                            password: currentPasswordController.text,
-                          );
-                          await _currentUser.reauthenticateWithCredential(
-                            credential,
-                          );
-
-                          // Update password
-                          await _authService.updatePassword(
-                            newPassword: newPasswordController.text,
-                          );
-
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          Future.delayed(const Duration(seconds: 0), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Password updated successfully'),
-                              ),
-                            );
-                          });
-                        } catch (e) {
-                          if (!mounted) return;
-                          Future.delayed(const Duration(seconds: 0), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          });
-                        }
-                      }
-                    : null,
-                child: const Text('Update'),
-              ),
-            ],
+      isScrollControlled: true,
+      builder: (context) => _PasswordFormSheet(
+        onSave: (currentPassword, newPassword) async {
+          final credential = EmailAuthProvider.credential(
+            email: currentUser.email!,
+            password: currentPassword,
           );
+          await currentUser.reauthenticateWithCredential(credential);
+          await _authService.updatePassword(newPassword: newPassword);
         },
       ),
     );
+
+    if (saved == true && mounted) {
+      showAppSnackBar(messenger, 'Password updated', kind: AppSnackKind.success);
+    }
   }
 
   Future<void> _showDeleteAccountDialog() async {
@@ -927,6 +657,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (!mounted || password == null) return;
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     try {
       final credential = EmailAuthProvider.credential(
         email: _currentUser!.email!,
@@ -935,15 +668,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _authService.deleteAccount(credential: credential);
 
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
         (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      showAppSnackBar(messenger, 'Error: $e', kind: AppSnackKind.error);
     }
   }
 
@@ -951,10 +682,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        title: const Text('Sign out?'),
+        content: const Text(
+          'Your QR stickers keep working while you are signed out, but alerts '
+          'will not reach this phone until you sign back in.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -962,21 +694,680 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sign Out'),
+            child: const Text('Sign out'),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      await _authService.signOut();
+    if (confirm != true || !mounted) return;
 
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+    final navigator = Navigator.of(context);
+    await _authService.signOut();
+
+    if (!mounted) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.user,
+    required this.vehicleCount,
+    required this.onSignOut,
+  });
+
+  final UserModel user;
+  final int vehicleCount;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final email = user.email.trim();
+    final initial = email.isEmpty ? '?' : email[0].toUpperCase();
+
+    return HeroSurface(
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(AppRadius.hero),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Profile',
+                    style: AppText.titleLarge.copyWith(
+                      color: AppColors.onDark,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: onSignOut,
+                  icon: const Icon(Icons.logout_rounded),
+                  color: AppColors.onDark,
+                  tooltip: 'Sign out',
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+                boxShadow: AppShadows.hero,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                style: AppText.displayMedium.copyWith(
+                  color: AppColors.primary,
+                  fontSize: 36,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              email.isEmpty ? 'Your account' : email,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.titleMedium.copyWith(color: AppColors.onDark),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              alignment: WrapAlignment.center,
+              children: [
+                StatusPill(
+                  label: vehicleCount == 1
+                      ? '1 VEHICLE'
+                      : '$vehicleCount VEHICLES',
+                  color: AppColors.success,
+                  icon: Icons.directions_car_rounded,
+                  onDark: true,
+                ),
+                if (user.createdAt != null)
+                  StatusPill(
+                    label:
+                        'SINCE ${DateFormat('MMM y').format(user.createdAt!).toUpperCase()}',
+                    color: AppColors.primary,
+                    icon: Icons.event_rounded,
+                    onDark: true,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle card
+// ---------------------------------------------------------------------------
+
+class _VehicleCard extends StatelessWidget {
+  const _VehicleCard({
+    required this.vehicle,
+    required this.isPrimary,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onSetPrimary,
+  });
+
+  final VehicleModel vehicle;
+  final bool isPrimary;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onSetPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    final descriptor = [
+      vehicle.color,
+      vehicle.carModel,
+    ].where((part) => part.trim().isNotEmpty).join(' · ');
+
+    return AppCard(
+      onTap: onEdit,
+      borderColor: isPrimary
+          ? AppColors.success.withValues(alpha: 0.4)
+          : AppColors.border,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: vehicle.licensePlate.trim().isEmpty
+                    ? Text('Unnamed vehicle', style: AppText.titleMedium)
+                    : Align(
+                        alignment: Alignment.centerLeft,
+                        child: PlateBadge(
+                          plate: vehicle.licensePlate,
+                          height: 36,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_horiz_rounded,
+                  color: AppColors.textTertiary,
+                ),
+                tooltip: 'Vehicle options',
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      onEdit();
+                    case 'primary':
+                      onSetPrimary();
+                    case 'delete':
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Edit details')),
+                  if (!isPrimary)
+                    const PopupMenuItem(
+                      value: 'primary',
+                      child: Text('Make primary'),
+                    ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      'Delete',
+                      style: TextStyle(color: AppColors.alert),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            descriptor.isEmpty ? 'No details added yet' : descriptor,
+            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              StatusPill(
+                label: vehicle.isActive ? 'QR ACTIVE' : 'QR PAUSED',
+                color: vehicle.isActive
+                    ? AppColors.success
+                    : AppColors.textTertiary,
+                icon: vehicle.isActive
+                    ? Icons.qr_code_rounded
+                    : Icons.qr_code_scanner_rounded,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              if (isPrimary)
+                const StatusPill(
+                  label: 'PRIMARY',
+                  color: AppColors.primary,
+                  icon: Icons.star_rounded,
+                )
+              else
+                TextButton(
+                  onPressed: onSetPrimary,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: AppText.labelSmall,
+                  ),
+                  child: const Text('MAKE PRIMARY'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Form sheets
+// ---------------------------------------------------------------------------
+
+/// Shared chrome for the editing sheets: grabber, title, keyboard inset.
+class _FormSheet extends StatelessWidget {
+  const _FormSheet({
+    required this.title,
+    required this.children,
+    this.subtitle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.md,
+          AppSpacing.xl,
+          AppSpacing.xl,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SheetGrabber(),
+              Text(title, style: AppText.headlineMedium),
+              if (subtitle != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  subtitle!,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VehicleFormSheet extends StatefulWidget {
+  const _VehicleFormSheet({
+    required this.title,
+    required this.subtitle,
+    required this.initialColor,
+    required this.initialModel,
+    required this.initialPlate,
+    required this.onSave,
+  });
+
+  final String title;
+  final String subtitle;
+  final String initialColor;
+  final String initialModel;
+  final String initialPlate;
+  final Future<void> Function(String color, String model, String plate) onSave;
+
+  @override
+  State<_VehicleFormSheet> createState() => _VehicleFormSheetState();
+}
+
+class _VehicleFormSheetState extends State<_VehicleFormSheet> {
+  late final String _normalisedInitialPlate =
+      VehicleRegistrationValidator.normalize(widget.initialPlate);
+  late final TextEditingController _plateController = TextEditingController(
+    text: _normalisedInitialPlate,
+  );
+  late final TextEditingController _colorController = TextEditingController(
+    text: widget.initialColor.trim(),
+  );
+  late final TextEditingController _modelController = TextEditingController(
+    text: widget.initialModel.trim(),
+  );
+
+  String? _plateError;
+  String? _submitError;
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _plateController.dispose();
+    _colorController.dispose();
+    _modelController.dispose();
+    super.dispose();
+  }
+
+  bool get _hasChanges {
+    return _colorController.text.trim() != widget.initialColor.trim() ||
+        _modelController.text.trim() != widget.initialModel.trim() ||
+        VehicleRegistrationValidator.normalize(_plateController.text) !=
+            _normalisedInitialPlate;
+  }
+
+  Future<void> _submit() async {
+    final plate = VehicleRegistrationValidator.normalize(
+      _plateController.text,
+    );
+
+    if (plate.isEmpty) {
+      setState(() => _plateError = 'Enter your registration number');
+      return;
     }
+    if (!VehicleRegistrationValidator.isValid(plate)) {
+      setState(() => _plateError = 'That does not look like a valid number');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _plateError = null;
+      _submitError = null;
+    });
+
+    try {
+      await widget.onSave(
+        _colorController.text.trim(),
+        _modelController.text.trim(),
+        plate,
+      );
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _submitError = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _FormSheet(
+      title: widget.title,
+      subtitle: widget.subtitle,
+      children: [
+        TextField(
+          controller: _plateController,
+          textCapitalization: TextCapitalization.characters,
+          textInputAction: TextInputAction.next,
+          autocorrect: false,
+          inputFormatters: [UpperCaseTextFormatter()],
+          decoration: InputDecoration(
+            labelText: 'Registration number',
+            hintText: 'KA01AB1234',
+            prefixIcon: const Icon(Icons.confirmation_number_outlined),
+            errorText: _plateError,
+          ),
+          onChanged: (_) => setState(() => _plateError = null),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TextField(
+          controller: _colorController,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            labelText: 'Colour',
+            hintText: 'White',
+            prefixIcon: Icon(Icons.palette_outlined),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TextField(
+          controller: _modelController,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+          decoration: const InputDecoration(
+            labelText: 'Make and model',
+            hintText: 'Maruti Swift',
+            prefixIcon: Icon(Icons.directions_car_outlined),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Colour and model help whoever finds your vehicle confirm they are '
+          'looking at the right one.',
+          style: AppText.bodySmall.copyWith(color: AppColors.textTertiary),
+        ),
+        if (_submitError != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            _submitError!,
+            style: AppText.bodySmall.copyWith(color: AppColors.alert),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        SizedBox(
+          height: 54,
+          child: ElevatedButton(
+            onPressed: (!_hasChanges || _isSaving) ? null : _submit,
+            child: _isSaving
+                ? const _ButtonSpinner()
+                : const Text('Save vehicle'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PhoneFormSheet extends StatefulWidget {
+  const _PhoneFormSheet({required this.initialPhone, required this.onSave});
+
+  final String initialPhone;
+  final Future<void> Function(String phone) onSave;
+
+  @override
+  State<_PhoneFormSheet> createState() => _PhoneFormSheetState();
+}
+
+class _PhoneFormSheetState extends State<_PhoneFormSheet> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialPhone.trim(),
+  );
+  bool _isSaving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(_controller.text.trim());
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasChanges = _controller.text.trim() != widget.initialPhone.trim();
+
+    return _FormSheet(
+      title: 'Phone number',
+      subtitle:
+          'Used only for account recovery. It is never shown to anyone who '
+          'scans your QR code.',
+      children: [
+        TextField(
+          controller: _controller,
+          keyboardType: TextInputType.phone,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => hasChanges ? _submit() : null,
+          decoration: const InputDecoration(
+            labelText: 'Phone number',
+            hintText: '+91 98765 43210',
+            prefixIcon: Icon(Icons.phone_outlined),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            _error!,
+            style: AppText.bodySmall.copyWith(color: AppColors.alert),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        SizedBox(
+          height: 54,
+          child: ElevatedButton(
+            onPressed: (!hasChanges || _isSaving) ? null : _submit,
+            child: _isSaving ? const _ButtonSpinner() : const Text('Save'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PasswordFormSheet extends StatefulWidget {
+  const _PasswordFormSheet({required this.onSave});
+
+  final Future<void> Function(String currentPassword, String newPassword)
+  onSave;
+
+  @override
+  State<_PasswordFormSheet> createState() => _PasswordFormSheetState();
+}
+
+class _PasswordFormSheetState extends State<_PasswordFormSheet> {
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
+
+  bool _isSaving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_newController.text.length < 6) {
+      setState(() => _error = 'Use at least 6 characters');
+      return;
+    }
+    if (_newController.text != _confirmController.text) {
+      setState(() => _error = 'The new passwords do not match');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    try {
+      await widget.onSave(_currentController.text, _newController.text);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit =
+        _currentController.text.isNotEmpty &&
+        _newController.text.isNotEmpty &&
+        _confirmController.text.isNotEmpty;
+
+    return _FormSheet(
+      title: 'Change password',
+      subtitle: 'You will stay signed in on this device.',
+      children: [
+        TextField(
+          controller: _currentController,
+          obscureText: true,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            labelText: 'Current password',
+            prefixIcon: Icon(Icons.lock_outline_rounded),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TextField(
+          controller: _newController,
+          obscureText: true,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            labelText: 'New password',
+            prefixIcon: Icon(Icons.lock_reset_rounded),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TextField(
+          controller: _confirmController,
+          obscureText: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => canSubmit ? _submit() : null,
+          decoration: const InputDecoration(
+            labelText: 'Confirm new password',
+            prefixIcon: Icon(Icons.lock_reset_rounded),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            _error!,
+            style: AppText.bodySmall.copyWith(color: AppColors.alert),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        SizedBox(
+          height: 54,
+          child: ElevatedButton(
+            onPressed: (!canSubmit || _isSaving) ? null : _submit,
+            child: _isSaving
+                ? const _ButtonSpinner()
+                : const Text('Update password'),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1000,7 +1391,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   void _submit() {
     final password = _passwordController.text.trim();
     if (password.isEmpty) {
-      setState(() => _errorText = 'Please enter your password');
+      setState(() => _errorText = 'Enter your password to confirm');
       return;
     }
     Navigator.pop(context, password);
@@ -1009,22 +1400,27 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
-      title: const Text('Delete Account'),
+      title: const Text('Delete account?'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Are you sure you want to delete your account? This action cannot be undone. All your data including QR code and notifications will be permanently deleted.',
+            Text(
+              'This permanently deletes your account, every vehicle, every QR '
+              'code and every alert. Stickers already on your windshield will '
+              'stop working. This cannot be undone.',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             TextField(
               controller: _passwordController,
               obscureText: true,
+              autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Current Password',
+                labelText: 'Current password',
                 errorText: _errorText,
               ),
               onSubmitted: (_) => _submit(),
@@ -1039,9 +1435,67 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
         ),
         TextButton(
           onPressed: _submit,
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          style: TextButton.styleFrom(foregroundColor: AppColors.alert),
+          child: const Text('Delete forever'),
         ),
       ],
+    );
+  }
+}
+
+class _ButtonSpinner extends StatelessWidget {
+  const _ButtonSpinner();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 20,
+      height: 20,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(AppColors.onDark),
+      ),
+    );
+  }
+}
+
+/// Registration numbers are always stored and displayed uppercase.
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
+  }
+}
+
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: const [
+          AppSkeleton(height: 250, radius: 0),
+          Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppSkeleton(height: 96),
+                SizedBox(height: AppSpacing.lg),
+                AppSkeleton(height: 150),
+                SizedBox(height: AppSpacing.lg),
+                AppSkeleton(height: 120),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
