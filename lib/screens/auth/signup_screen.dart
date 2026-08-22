@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
+import 'package:flutter/services.dart';
+
 import '../../models/user_model.dart';
 import '../../models/vehicle_model.dart';
-import '../legal_documents_screen.dart';
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/vehicle_registration_validator.dart';
+import '../../widgets/ui_kit.dart';
+import '../legal_documents_screen.dart';
+import 'login_screen.dart' show AuthBrandHeader, AuthButtonSpinner, AuthValidators;
 import 'verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -46,17 +51,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
       final licensePlate = VehicleRegistrationValidator.normalize(
         _carLicenseController.text,
       );
-      final carDetails = {
-        'color': _carColorController.text.trim(),
-        'carModel': _carModelController.text.trim(),
-        'licensePlate': licensePlate,
-        'assetNumber': licensePlate,
-      };
 
       final credential = await _authService.signUp(
         email: _emailController.text.trim(),
@@ -73,10 +74,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
           vehicle: VehicleModel(
             id: '',
             userId: userId,
-            color: (carDetails['color'] ?? '').toString(),
-            carModel: (carDetails['carModel'] ?? '').toString(),
-            licensePlate: (carDetails['licensePlate'] ?? '').toString(),
-            assetNumber: (carDetails['assetNumber'] ?? '').toString(),
+            color: _carColorController.text.trim(),
+            carModel: _carModelController.text.trim(),
+            licensePlate: licensePlate,
+            assetNumber: licensePlate,
           ),
           setPrimaryIfMissing: true,
           syncLegacyUserFields: true,
@@ -105,287 +106,331 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await _authService.sendEmailVerification();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-          );
+          showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
         }
       }
 
-      // Navigate to verify email screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
+      if (!mounted) return;
+      navigator.pushReplacement(
+        MaterialPageRoute<void>(
           builder: (_) =>
               VerifyEmailScreen(email: _emailController.text.trim()),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _openLegalDocuments() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const LegalDocumentsScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const LegalDocumentsScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Title
-                const Text(
-                  'Create Account',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                const Text(
-                  'Sign up to get your QR code',
-                  style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-                ),
-                const SizedBox(height: 32),
-
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Email *',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Phone field (optional)
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number (Optional)',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                    hintText: '+1234567890',
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Registration number field
-                TextFormField(
-                  controller: _carLicenseController,
-                  textCapitalization: TextCapitalization.characters,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Registration Number *',
-                    prefixIcon: Icon(Icons.confirmation_number_outlined),
-                    hintText: 'e.g., PB65AM0008',
-                  ),
-                  validator: VehicleRegistrationValidator.validationError,
-                ),
-                const SizedBox(height: 16),
-
-                // Car color field
-                TextFormField(
-                  controller: _carColorController,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Car Color *',
-                    prefixIcon: Icon(Icons.palette_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your car color';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Car model field
-                TextFormField(
-                  controller: _carModelController,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Car Model *',
-                    prefixIcon: Icon(Icons.directions_car_outlined),
-                    hintText: 'e.g., Toyota Camry',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your car model';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Password *',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Confirm password field
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _handleSignUp(),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password *',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(
-                          () => _obscureConfirmPassword =
-                              !_obscureConfirmPassword,
-                        );
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-
-                // Sign up button
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignUp,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+      backgroundColor: AppColors.surface,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AuthBrandHeader(
+              title: 'Create your account',
+              subtitle:
+                  'Two minutes, and your vehicle becomes reachable '
+                  'without giving your number to anyone.',
+              showLogo: false,
+              onBack: () => Navigator.pop(context),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    EntranceFade(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SectionHeader(
+                            overline: 'Step 1 of 2',
+                            title: 'Your account',
+                          ),
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.email],
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.mail_outline_rounded),
+                            ),
+                            validator: AuthValidators.email,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              helperText: 'At least 6 characters',
+                              prefixIcon:
+                                  const Icon(Icons.lock_outline_rounded),
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_rounded
+                                      : Icons.visibility_rounded,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
                               ),
                             ),
-                          )
-                        : const Text('Create Account'),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                            validator: AuthValidators.password,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirmPassword,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm password',
+                              prefixIcon:
+                                  const Icon(Icons.lock_reset_rounded),
+                              suffixIcon: IconButton(
+                                tooltip: _obscureConfirmPassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                icon: Icon(
+                                  _obscureConfirmPassword
+                                      ? Icons.visibility_off_rounded
+                                      : Icons.visibility_rounded,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscureConfirmPassword =
+                                      !_obscureConfirmPassword,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Confirm your password';
+                              }
+                              if (value != _passwordController.text) {
+                                return 'The passwords do not match';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone number (optional)',
+                              helperText:
+                                  'For account recovery only. Never shared '
+                                  'with anyone who scans your code.',
+                              helperMaxLines: 2,
+                              prefixIcon: Icon(Icons.phone_outlined),
+                              hintText: '+91 98765 43210',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                // Terms text
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 0,
-                  runSpacing: 0,
-                  children: [
-                    Text(
-                      'By creating an account, you agree to our ',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      textAlign: TextAlign.center,
-                    ),
-                    TextButton(
-                      onPressed: _openLegalDocuments,
-                      style: TextButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: EdgeInsets.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    const SizedBox(height: AppSpacing.xxl),
+
+                    EntranceFade(
+                      delay: const Duration(milliseconds: 80),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SectionHeader(
+                            overline: 'Step 2 of 2',
+                            title: 'Your vehicle',
+                          ),
+                          TextFormField(
+                            controller: _carLicenseController,
+                            textCapitalization: TextCapitalization.characters,
+                            textInputAction: TextInputAction.next,
+                            autocorrect: false,
+                            inputFormatters: [_UpperCaseFormatter()],
+                            decoration: const InputDecoration(
+                              labelText: 'Registration number',
+                              prefixIcon: Icon(
+                                Icons.confirmation_number_outlined,
+                              ),
+                              hintText: 'KA01AB1234',
+                            ),
+                            validator:
+                                VehicleRegistrationValidator.validationError,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          TextFormField(
+                            controller: _carColorController,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Colour',
+                              prefixIcon: Icon(Icons.palette_outlined),
+                              hintText: 'White',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Enter your vehicle colour';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          TextFormField(
+                            controller: _carModelController,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _handleSignUp(),
+                            decoration: const InputDecoration(
+                              labelText: 'Make and model',
+                              prefixIcon: Icon(Icons.directions_car_outlined),
+                              hintText: 'Maruti Swift',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Enter your vehicle model';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          _PrivacyNote(),
+                        ],
                       ),
-                      child: const Text('Terms of Service'),
                     ),
-                    Text(
-                      ' and ',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      textAlign: TextAlign.center,
-                    ),
-                    TextButton(
-                      onPressed: _openLegalDocuments,
-                      style: TextButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: EdgeInsets.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+
+                    const SizedBox(height: AppSpacing.xxl),
+
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _handleSignUp,
+                        child: _isLoading
+                            ? const AuthButtonSpinner()
+                            : const Text('Create account'),
                       ),
-                      child: const Text('Privacy Policy'),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'By creating an account you agree to our ',
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        _InlineLink(
+                          label: 'Terms of Service',
+                          onTap: _openLegalDocuments,
+                        ),
+                        Text(
+                          ' and ',
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        _InlineLink(
+                          label: 'Privacy Policy',
+                          onTap: _openLegalDocuments,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
+  }
+}
+
+class _PrivacyNote extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      color: AppColors.infoSurface,
+      borderColor: AppColors.infoBorder,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.visibility_off_rounded,
+            size: 18,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              'Only your vehicle colour, model and number appear to someone '
+              'who scans your code — so they know they have the right car. '
+              'Your contact details never do.',
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineLink extends StatelessWidget {
+  const _InlineLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        label,
+        style: AppText.bodySmall.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+          decoration: TextDecoration.underline,
+          decorationColor: AppColors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+class _UpperCaseFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
   }
 }

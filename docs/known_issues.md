@@ -67,13 +67,18 @@ and call `.length`. `streamUnreadNotificationCount` streams every unread doc jus
 to count them, and it is attached at the top of `HomeScreen.build`, so it stays
 open the whole session. Use aggregate `count()` queries instead.
 
-## 6. Thin test coverage
+## 6. Thin test coverage — PARTLY CLOSED (Aug 2026)
 
-Only `test/notification_payload_test.dart` is meaningful; `widget_test.dart` is
-the Flutter counter template. `QrPayloadBuilder` and
-`VehicleRegistrationValidator` are pure functions with real edge cases (Bharat
-series plates, short-route vs query fallback) and should be covered before the
-next QR change.
+`QrPayloadBuilder` and `VehicleRegistrationValidator` are now covered by
+`test/qr_payload_builder_test.dart` and
+`test/vehicle_registration_validator_test.dart`, including Bharat-series plates
+and the short-route vs query fallback. `test/ui_kit_layout_test.dart` pumps the
+shared design-system components at 320dp across 1.0x–2.0x text scale and fails
+on any overflow.
+
+Still open: no coverage of the screens themselves, because they construct
+`FirebaseAuth.instance.currentUser` and Firestore streams at build time. Making
+them testable needs an injection seam in `FirestoreService`/`AuthService`.
 
 ## 7. Legacy dual-write is still on
 
