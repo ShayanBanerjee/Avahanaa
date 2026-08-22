@@ -89,19 +89,17 @@ class QrHeroPlinth extends StatelessWidget {
     required this.data,
     required this.isActive,
     this.size = 200,
-    this.heroTag,
   });
 
   final String data;
   final bool isActive;
   final double size;
-  final Object? heroTag;
 
   @override
   Widget build(BuildContext context) {
     final accent = isActive ? AppColors.success : AppColors.textTertiary;
 
-    Widget code = Container(
+    final code = Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -110,15 +108,6 @@ class QrHeroPlinth extends StatelessWidget {
       ),
       child: AvahanaaQrView(data: data, size: size),
     );
-
-    if (heroTag != null) {
-      code = Hero(
-        tag: heroTag!,
-        // Keep the QR crisp mid-flight rather than letting it stretch.
-        flightShuttleBuilder: (_, _, _, _, _) => code,
-        child: code,
-      );
-    }
 
     return Stack(
       alignment: Alignment.center,

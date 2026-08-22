@@ -159,6 +159,12 @@ abstract final class AppFonts {
   /// Body, labels and anything dense. Inter is the most legible option at
   /// 12–14sp on a phone held at arm's length.
   static const String text = 'Inter';
+
+  /// Kannada, for the printed sticker only. This ships in Bangalore, and the
+  /// person standing at the car may not read English. Bundled (rather than
+  /// relying on the system font) because a printed artifact must render
+  /// identically on every device.
+  static const String kannada = 'NotoSansKannada';
 }
 
 /// Both font families ship as variable fonts, so weight is applied through the

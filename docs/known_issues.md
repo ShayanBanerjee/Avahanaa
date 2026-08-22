@@ -22,6 +22,16 @@ Fix: point the manifest at the current critical channel, and/or make the sender
 emit data-only pushes so the app fully controls presentation. The two must be
 decided together with the out-of-repo sender.
 
+## 2b. Legacy sticker artwork is bundled but unused (Aug 2026)
+
+`assets/images/qr_template.svg` (230KB) was the old composited sticker. The
+sticker is now drawn on a canvas by `lib/utils/sticker_renderer.dart`, and
+nothing references the SVG. The `flutter_svg` dependency was removed with it.
+
+The file is deliberately left in place rather than deleted — it is the owner's
+artwork and restoring the old design should stay a one-line decision. If it is
+not coming back, delete it and the app bundle drops 230KB.
+
 ## 2. The alarm sound is shipped but unused
 
 `assets/audio/avahanaa_alarm.wav` is bundled via `pubspec.yaml` and referenced

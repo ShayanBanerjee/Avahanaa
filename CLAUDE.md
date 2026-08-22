@@ -56,7 +56,7 @@ lib/
     home_screen.dart         Bottom nav shell + home tab (largest screen file)
     notifications_screen.dart
     profile_screen.dart      Vehicle list, account settings (largest file, 1047 lines)
-    qr_code_screen.dart      QR render, SVG sticker template, share/save
+    qr_code_screen.dart      Sticker studio: style picker, live preview, share
     legal_documents_screen.dart
   services/
     auth_service.dart        Sign up/in/out, account deletion, FCM token writes
@@ -68,6 +68,7 @@ lib/
     app_theme.dart           ALL design tokens + ThemeData (single source)
   utils/
     qr_payload_builder.dart  Builds the URL encoded into the QR
+    sticker_renderer.dart    Canvas-drawn printable sticker (preview + export)
     notification_visuals.dart  Alert reason -> icon, colour, severity, guidance
     qr_encryption.dart       AES helper — CURRENTLY UNUSED, see Known issues
     vehicle_registration_validator.dart  Indian plate regex (standard + Bharat series)
@@ -78,8 +79,10 @@ lib/
     admob_banner.dart
 docs/                        Architecture and contract docs — read before changing behaviour
 assets/
-  images/qr_template.svg     The printable sticker artwork; QR is composited into a slot
+  fonts/                     Inter, Plus Jakarta Sans, Noto Sans Kannada (subset)
+  images/qr_template.svg     Legacy sticker artwork — NO LONGER USED, see Known issues
   audio/avahanaa_alarm.wav   Alarm sound — CURRENTLY UNUSED, see Known issues
+tool/verify_sticker_scan.py  Decodes exported stickers under simulated scan conditions
 test/                        Only notification_payload_test.dart is meaningful
 ```
 

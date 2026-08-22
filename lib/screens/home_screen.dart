@@ -15,10 +15,6 @@ import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'qr_code_screen.dart';
 
-/// Tag shared between the home QR plinth and the full QR screen so the code
-/// flies between them instead of cross-fading.
-const String kQrHeroTag = 'avahanaa-qr-hero';
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -645,12 +641,7 @@ class _QrCard extends StatelessWidget {
             style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xl),
-          QrHeroPlinth(
-            data: payload,
-            isActive: isLive,
-            size: 180,
-            heroTag: kQrHeroTag,
-          ),
+          QrHeroPlinth(data: payload, isActive: isLive, size: 180),
           const SizedBox(height: AppSpacing.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
