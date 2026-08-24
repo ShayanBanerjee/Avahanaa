@@ -98,19 +98,36 @@ cleanup in `docs/multi_vehicle_schema_migration_plan.md` has not run. Until it
 does, a user's legacy fields reflect whichever vehicle was touched last, which
 is misleading if anything reads them.
 
-## 8. Analyzer baseline is 20 info-level lints
+## 8. Analyzer baseline is zero — treat any lint as a regression
 
-Not zero. `flutter analyze` reports 20 issues, no errors or warnings. The ones
-worth actually fixing:
+`flutter analyze` reports no errors, no warnings and no lints. It did not
+always: the baseline was 20 info-level issues, including
+`use_build_context_synchronously` clusters that were genuine async-gap bugs and
+a deprecated `Share.shareXFiles` call on the QR sharing path. Those were
+cleared during the v1.1.0 UI rebuild.
 
-- `use_build_context_synchronously` across `profile_screen.dart` (lines 679-906),
-  `signup_screen.dart:115`, `qr_code_screen.dart:379,395`. These are genuine
-  async-gap bugs waiting to happen, not style nits — a dialog dismissed during
-  an await can crash or act on a dead context.
-- `Share.shareXFiles` in `qr_code_screen.dart:389` is deprecated; `share_plus`
-  now wants `SharePlus.instance.share()`. This is on the QR sharing path, which
-  is a core flow.
-- `withOpacity` deprecations in `verify_email_screen.dart`, `profile_screen.dart`,
-  `qr_code_screen.dart` — mechanical, replace with `withValues()`.
+The count is now a ratchet at zero. A single new info-level lint is a
+regression, not a rounding error.
 
-Treat the current count as a ratchet: do not increase it.
+## 9. Changing paper inside the Android print dialog wedges the preview
+
+`printing` 5.14.3 forwards Android's `PrintDocumentAdapter.onLayout` to Dart
+exactly once, when the job starts. Changing the paper size or the orientation
+inside the system print dialog never reaches the Dart callback, so no new
+document is produced and the spooler sits on "Preparing preview…"
+indefinitely. Reproduced on an API 37 emulator: the first layout logs start and
+completion, the second never fires at all.
+
+The app works around it rather than fixing it, because it cannot be fixed from
+this side:
+
+- The sticker studio owns paper size and copies-per-sheet, with a live page
+  preview built from the same `SheetPlan` the PDF uses.
+- `printStickerSheet` passes `dynamicLayout: false`, declaring the document
+  fixed for the format it was handed.
+
+Upgrading the plugin is currently blocked: `printing` 5.15.0 depends on
+`pdf ^3.13.0` → `xml ^7.0.1`, which conflicts with
+`flutter_local_notifications ^19.5.0`. That package carries the alert
+escalation path, so it wins. Revisit when `flutter_local_notifications` moves
+to `xml ^7`.

@@ -3,6 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../theme/app_theme.dart';
 import 'metal.dart';
+import 'ui_kit.dart';
 
 /// The one place QR appearance is defined.
 ///
@@ -218,6 +219,314 @@ class _BreathingRingState extends State<BreathingRing>
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The panel
+// ---------------------------------------------------------------------------
+
+/// One action under the QR panel.
+@immutable
+class QrPanelAction {
+  const QrPanelAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+}
+
+/// The QR presented as the centrepiece of a screen.
+///
+/// [QrHeroPlinth] is the object; this is the case it sits in. A rail across
+/// the top says what the code is and whether it is live, the plinth stands in
+/// a recessed well, the vehicle it belongs to is named underneath, and the
+/// things you can do with it sit on a separate shelf at the bottom.
+///
+/// The separation matters: the well is quiet and pale so the black-on-white
+/// code is the highest-contrast thing on the screen, and the actions are
+/// visually below the object rather than floating over it, so nothing competes
+/// with the code for the eye.
+class QrShowcasePanel extends StatelessWidget {
+  const QrShowcasePanel({
+    super.key,
+    required this.data,
+    required this.isActive,
+    this.plate = '',
+    this.descriptor = '',
+    this.title = 'Your windshield code',
+    this.codeSize = 176,
+    this.actions = const <QrPanelAction>[],
+    this.onTap,
+  });
+
+  final String data;
+  final bool isActive;
+  final String plate;
+  final String descriptor;
+  final String title;
+  final double codeSize;
+  final List<QrPanelAction> actions;
+
+  /// Opens the sticker studio. The whole plinth is the target.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isActive ? AppColors.success : AppColors.warning;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.heroAll,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.hero,
+      ),
+      child: ClipRRect(
+        borderRadius: AppRadius.heroAll,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Rail(title: title, isActive: isActive, accent: accent),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                children: [
+                  _Well(
+                    onTap: onTap,
+                    child: QrHeroPlinth(
+                      data: data,
+                      isActive: isActive,
+                      size: codeSize,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _Identity(plate: plate, descriptor: descriptor),
+                ],
+              ),
+            ),
+            if (actions.isNotEmpty) _Shelf(actions: actions),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Rail extends StatelessWidget {
+  const _Rail({
+    required this.title,
+    required this.isActive,
+    required this.accent,
+  });
+
+  final String title;
+  final bool isActive;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('SCAN TO ALERT ME', style: AppText.overline),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.titleLarge,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          StatusPill(
+            label: isActive ? 'LIVE' : 'PAUSED',
+            color: accent,
+            icon: isActive
+                ? Icons.shield_rounded
+                : Icons.pause_circle_outline_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The recessed stage the plinth stands on.
+class _Well extends StatelessWidget {
+  const _Well({required this.child, this.onTap});
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final stage = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.heroAll,
+        border: Border.all(color: AppColors.border),
+        // A pale vertical wash, lit from the top, so the plinth reads as
+        // standing in the well rather than pasted onto it.
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.surfaceMuted, AppColors.background],
+        ),
+      ),
+      child: Center(child: child),
+    );
+
+    if (onTap == null) return stage;
+
+    return PressableScale(
+      scale: 0.985,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.heroAll,
+          child: stage,
+        ),
+      ),
+    );
+  }
+}
+
+/// Plate and vehicle description, under the code.
+class _Identity extends StatelessWidget {
+  const _Identity({required this.plate, required this.descriptor});
+
+  final String plate;
+  final String descriptor;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPlate = plate.trim().isNotEmpty;
+    final hasDescriptor = descriptor.trim().isNotEmpty;
+    if (!hasPlate && !hasDescriptor) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        if (hasPlate) PlateBadge(plate: plate, height: 36),
+        if (hasPlate && hasDescriptor) const SizedBox(height: AppSpacing.sm),
+        if (hasDescriptor)
+          Text(
+            descriptor.trim(),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+          ),
+      ],
+    );
+  }
+}
+
+/// The action shelf. Sits on its own tinted band under a hairline, so it reads
+/// as a set of controls rather than as more of the card.
+class _Shelf extends StatelessWidget {
+  const _Shelf({required this.actions});
+
+  final List<QrPanelAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < actions.length; i++) ...[
+            if (i > 0)
+              const SizedBox(
+                height: 28,
+                child: VerticalDivider(width: 1, color: AppColors.border),
+              ),
+            Expanded(child: _ShelfButton(action: actions[i])),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ShelfButton extends StatelessWidget {
+  const _ShelfButton({required this.action});
+
+  final QrPanelAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = action.onPressed != null;
+    final colour = enabled ? AppColors.primary : AppColors.textTertiary;
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: action.label,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: action.onPressed,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.md,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(action.icon, size: 18, color: colour),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    action.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.labelMedium.copyWith(color: colour),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

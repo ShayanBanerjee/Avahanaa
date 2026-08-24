@@ -131,11 +131,29 @@ preview (`CustomPaint`) and the exported PNG (`renderStickerPng`) both run it.
 There is therefore no way for the preview to disagree with the print file —
 change the painter and both move together.
 
-Three styles ship: `signature` (brand header on white, the default), `bold`
-(full gradient panel), and `minimal` (black and white, the most scan-forgiving
-and the cheapest to print). All geometry is expressed as a fraction of the
-sticker width, so a design scales from a 100px chip thumbnail to a 1748px print
-master with no relayout.
+A design is a **layout** crossed with a **theme**, and the two are separate so
+adding a look is a row of colours rather than a new branch in the painter:
+
+- `StickerLayout.banner` — colour band across the top, rest on bare paper.
+- `StickerLayout.panel` — full-bleed colour with a floating white card.
+- `StickerLayout.plain` — ink and rules only, no filled areas.
+
+`StickerTheme` supplies the sheet, ink, muted ink, accent, band ramp and card
+colour for one of those layouts, and `StickerStyle` is the stable identity that
+pairs a label and description with a theme. Eight ship: `signature`, `bold`,
+`minimal`, `midnight`, `ember`, `emerald`, `indigo`, `ivory`.
+
+When adding a theme:
+
+- Any band carrying white text must be dark enough to hold it. Two of the
+  candidates that looked obviously fine measured under 4.5:1.
+- Keep band ramps to two or three flat stops. A five-stop metallic ramp bands
+  and muddies on a consumer printer.
+- `StickerTheme.floodsInk` is true for anything that floods the sheet, and the
+  picker surfaces it — nobody should discover the ink cost at the counter.
+
+All geometry is expressed as a fraction of the sticker width, so a design
+scales from a 100px chip thumbnail to a 1748px print master with no relayout.
 
 The sheet is ISO A-ratio (`kStickerAspectRatio`), so it prints to A5 or A6 with
 no cropping and no wasted margin.
@@ -162,8 +180,37 @@ Sticker-specific rules, all of which trump aesthetics:
   python3 tool/verify_sticker_scan.py /tmp/stickers
   ```
 
-  That decodes every style under downscaling, blur, tilt, glare and noise. A
-  Google Lens check on a real print is still worth doing on top of it.
+  That decodes every style under downscaling, blur, tilt, glare and noise. The
+  style list is discovered from the rendered PNGs, so a theme added in Dart is
+  verified without editing the script. A Google Lens check on a real print is
+  still worth doing on top of it.
+
+### Getting it onto paper
+
+`lib/utils/sticker_sheet.dart` is the layer between the sticker tile and a
+printer. `SheetPlan.compute` takes whatever page dimensions it is handed and
+picks the grid that prints the **largest** sticker — every factorisation of the
+copy count is tried, because on a portrait page two A-ratio tiles stack and
+four tile 2x2, and guessing wastes a third of the sheet.
+
+`printStickerSheet` builds the sheet inside the print dialog's `onLayout`
+callback, so the page handed over always matches the paper that was asked for.
+The studio's page preview is drawn from the same `SheetPlan`, so what is on
+screen is what comes out — including the margin, which is the part people are
+surprised by.
+
+**Paper and copies-per-sheet belong in the app, not in the system dialog.**
+`printing` 5.14.3 forwards Android's `onLayout` to Dart only once, at job
+start. Change the paper or orientation inside the system dialog and the request
+never reaches us — the spooler waits forever on "Preparing preview…". Verified
+on an API 37 emulator. The job is therefore declared `dynamicLayout: false`,
+and the studio owns those choices with its own preview. Do not "simplify" that
+by deferring to the dialog. Upgrading is not the way out either: `printing`
+5.15.0 needs `xml ^7`, which `flutter_local_notifications` — the package the
+whole alert path runs on — cannot coexist with.
+
+Crop marks sit *outside* the sticker bounds. Nothing is ever drawn across the
+sheet, because a cut line through a quiet zone is a code that does not scan.
 
 ## Accessibility
 

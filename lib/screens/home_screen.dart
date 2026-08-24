@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
@@ -7,11 +8,14 @@ import '../models/vehicle_model.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
+import '../utils/sticker_renderer.dart';
+import '../utils/sticker_sheet.dart';
 import '../widgets/admob_banner.dart';
 import '../widgets/hero_header.dart';
 import '../widgets/metal.dart';
 import '../widgets/qr_visual.dart';
 import '../widgets/ui_kit.dart';
+import '../widgets/vehicle_panel.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'qr_code_screen.dart';
@@ -423,11 +427,6 @@ class _HomeHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final descriptor = [
-      vehicle.color,
-      vehicle.carModel,
-    ].where((part) => part.trim().isNotEmpty).join(' ');
-
     return HeroSurface(
       borderRadius: const BorderRadius.vertical(
         bottom: Radius.circular(AppRadius.hero),
@@ -481,116 +480,17 @@ class _HomeHero extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            if (vehicles.length > 1) ...[
-              _VehicleSwitcher(
-                vehicles: vehicles,
-                selected: vehicle,
-                onSelect: onSelectVehicle,
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
-
-            HeroGlassPanel(
-              child: Row(
-                children: [
-                  Flexible(child: PlateBadge(plate: vehicle.licensePlate)),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          descriptor.isEmpty ? 'Your vehicle' : descriptor,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.titleSmall.copyWith(
-                            color: AppColors.onDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isLive
-                              ? 'Anyone can alert you. No one sees your number.'
-                              : 'Scans are not reaching you right now.',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.bodySmall.copyWith(
-                            color: AppColors.onDarkMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            // The vehicle itself, not a control that names one. With more than
+            // one car this becomes a swipeable rail that says where you are in
+            // the fleet.
+            VehicleCarousel(
+              vehicles: vehicles,
+              selected: vehicle,
+              isLive: isLive,
+              onSelect: onSelectVehicle,
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Horizontal chips for accounts with more than one vehicle. Selection is
-/// view-only — it never rewrites `primaryVehicleId`.
-class _VehicleSwitcher extends StatelessWidget {
-  const _VehicleSwitcher({
-    required this.vehicles,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final List<VehicleModel> vehicles;
-  final VehicleModel selected;
-  final ValueChanged<VehicleModel> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: vehicles.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final item = vehicles[index];
-          final isSelected = item.id == selected.id;
-          final label = item.licensePlate.trim().isEmpty
-              ? 'Vehicle ${index + 1}'
-              : item.licensePlate.trim().toUpperCase();
-
-          return Semantics(
-            button: true,
-            selected: isSelected,
-            child: Material(
-              color: isSelected
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(999),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(999),
-                onTap: isSelected ? null : () => onSelect(item),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ),
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: AppText.labelMedium.copyWith(
-                        color: isSelected
-                            ? AppColors.primaryDeep
-                            : AppColors.onDark,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }
@@ -600,7 +500,14 @@ class _VehicleSwitcher extends StatelessWidget {
 // Cards
 // ---------------------------------------------------------------------------
 
-class _QrCard extends StatelessWidget {
+/// The QR, presented as the object the whole product is about.
+///
+/// Everything an owner does with the code lives on this one panel: look at it,
+/// print it, hand the link to someone, or open the studio to restyle it. The
+/// print action goes straight to the system print dialog with a sensible sheet
+/// — A4, one sticker — because the common case is "I want this on paper now",
+/// and the dialog is where paper size and printer get chosen anyway.
+class _QrCard extends StatefulWidget {
   const _QrCard({
     required this.user,
     required this.vehicle,
@@ -614,54 +521,91 @@ class _QrCard extends StatelessWidget {
   final bool isLive;
 
   @override
+  State<_QrCard> createState() => _QrCardState();
+}
+
+class _QrCardState extends State<_QrCard> {
+  bool _isPrinting = false;
+
+  String get _descriptor => [
+    widget.vehicle.color,
+    widget.vehicle.carModel,
+  ].where((part) => part.trim().isNotEmpty).join(' ');
+
+  StickerSpec get _spec => StickerSpec(
+    qrData: widget.payload,
+    plate: widget.vehicle.licensePlate,
+    descriptor: _descriptor,
+  );
+
+  @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute<void>(
-            builder: (_) => QRCodeScreen(user: user, vehicle: vehicle),
-          ),
-        );
-      },
-      child: Column(
-        children: [
-          Text('Your windshield code', style: AppText.headlineMedium),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            isLive
-                ? 'Scannable with any phone camera — no app needed'
-                : 'Currently paused. Scans will not reach you.',
-            textAlign: TextAlign.center,
-            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          QrHeroPlinth(data: payload, isActive: isLive, size: 180),
-          const SizedBox(height: AppSpacing.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.open_in_full_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Tap to print or share',
-                style: AppText.labelMedium.copyWith(color: AppColors.primary),
-              ),
-            ],
-          ),
-        ],
+    return QrShowcasePanel(
+      data: widget.payload,
+      isActive: widget.isLive,
+      plate: widget.vehicle.licensePlate,
+      descriptor: _descriptor,
+      onTap: _openStudio,
+      actions: [
+        QrPanelAction(
+          icon: Icons.print_rounded,
+          label: _isPrinting ? 'Preparing…' : 'Print',
+          onPressed: _isPrinting ? null : _printSheet,
+        ),
+        QrPanelAction(
+          icon: Icons.link_rounded,
+          label: 'Copy link',
+          onPressed: _copyLink,
+        ),
+        QrPanelAction(
+          icon: Icons.auto_awesome_rounded,
+          label: 'Design',
+          onPressed: _openStudio,
+        ),
+      ],
+    );
+  }
+
+  void _openStudio() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            QRCodeScreen(user: widget.user, vehicle: widget.vehicle),
       ),
     );
+  }
+
+  void _copyLink() {
+    Clipboard.setData(ClipboardData(text: widget.payload));
+    showAppSnackBar(
+      ScaffoldMessenger.of(context),
+      'Scan link copied',
+      kind: AppSnackKind.success,
+    );
+  }
+
+  Future<void> _printSheet() async {
+    // Captured before the first await — the home tab rebuilds on every
+    // Firestore tick and this widget may be gone by the time printing returns.
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isPrinting = true);
+
+    try {
+      await printStickerSheet(
+        spec: _spec,
+        paper: SheetPaper.a4,
+        jobName: 'Avahanaa sticker ${widget.vehicle.licensePlate}'.trim(),
+      );
+    } catch (_) {
+      showAppSnackBar(
+        messenger,
+        'Could not open the printer. Try Design to save the sheet instead.',
+        kind: AppSnackKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
+    }
   }
 }
 
@@ -739,7 +683,10 @@ class _HowItWorksCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(overline: 'Getting set up', title: 'How it works'),
+          const SectionHeader(
+            overline: 'Getting set up',
+            title: 'How it works',
+          ),
           const NumberedStep(
             number: '1',
             title: 'Print the sticker',
@@ -891,9 +838,7 @@ class _CriticalAlertBanner extends StatelessWidget {
                     detail,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.bodyLarge.copyWith(
-                      color: AppColors.onDark,
-                    ),
+                    style: AppText.bodyLarge.copyWith(color: AppColors.onDark),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -972,7 +917,11 @@ class _PreparingView extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 3),
             ),
             const SizedBox(height: AppSpacing.xl),
-            Text(title, textAlign: TextAlign.center, style: AppText.headlineMedium),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: AppText.headlineMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               subtitle,
@@ -1005,7 +954,7 @@ class _HomeSkeleton extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: const [
-                AppSkeleton(height: 340),
+                AppSkeleton(height: 480),
                 SizedBox(height: AppSpacing.lg),
                 AppSkeleton(height: 120),
                 SizedBox(height: AppSpacing.lg),
@@ -1127,7 +1076,11 @@ class _NavItem extends StatelessWidget {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Icon(isActive ? activeIcon : icon, color: color, size: 24),
+                      Icon(
+                        isActive ? activeIcon : icon,
+                        color: color,
+                        size: 24,
+                      ),
                       if (badgeCount > 0)
                         Positioned(
                           right: -9,

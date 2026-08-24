@@ -19,7 +19,21 @@ import cv2
 import numpy as np
 
 EXPECTED = "https://avahanaa.com/n/qr-abc123def456"
-STYLES = ["signature", "bold", "minimal"]
+
+# Discovered from the directory rather than hardcoded: the sticker test writes
+# one PNG per StickerStyle, and a theme added in Dart has to be verified here
+# without anyone remembering to edit this list.
+import glob, os
+
+
+def discover_styles(directory):
+    names = sorted(
+        os.path.basename(p)[len("sticker-"):-len(".png")]
+        for p in glob.glob(os.path.join(directory, "sticker-*.png"))
+    )
+    if not names:
+        sys.exit(f"No sticker-*.png found in {directory}. Run the render test first.")
+    return names
 
 det = cv2.QRCodeDetector()
 
@@ -77,6 +91,9 @@ CASES = [
 ]
 
 failures = 0
+STYLES = discover_styles(sys.argv[1])
+print(f"Verifying {len(STYLES)} styles: {', '.join(STYLES)}")
+
 for style in STYLES:
     path = f"{sys.argv[1]}/sticker-{style}.png"
     base = cv2.imread(path, cv2.IMREAD_COLOR)

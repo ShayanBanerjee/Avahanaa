@@ -1,5 +1,9 @@
+import 'package:avahanaa/models/vehicle_model.dart';
 import 'package:avahanaa/theme/app_theme.dart';
+import 'package:avahanaa/widgets/hero_header.dart';
+import 'package:avahanaa/widgets/qr_visual.dart';
 import 'package:avahanaa/widgets/ui_kit.dart';
+import 'package:avahanaa/widgets/vehicle_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -173,6 +177,75 @@ void main() {
         expectNoOverflow(tester);
       });
 
+      testWidgets('the vehicle carousel survives a full fleet', (tester) async {
+        await pumpAtScale(
+          tester,
+          HeroSurface(
+            child: VehicleCarousel(
+              vehicles: _fleet,
+              selected: _fleet.first,
+              isLive: true,
+              onSelect: (_) {},
+            ),
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+        expect(find.text('Vehicle 1 of 3'), findsOneWidget);
+      });
+
+      testWidgets('a single vehicle renders without the position rail', (
+        tester,
+      ) async {
+        await pumpAtScale(
+          tester,
+          HeroSurface(
+            child: VehicleCarousel(
+              vehicles: <VehicleModel>[_fleet.first],
+              selected: _fleet.first,
+              isLive: false,
+              onSelect: (_) {},
+            ),
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+        expect(find.textContaining('Vehicle 1 of'), findsNothing);
+      });
+
+      testWidgets('the QR panel fits with all three actions', (tester) async {
+        await pumpAtScale(
+          tester,
+          QrShowcasePanel(
+            data: 'https://avahanaa.com/n/qr-abc123def456',
+            isActive: true,
+            plate: 'KA01AB1234',
+            descriptor: 'White Maruti Swift Dzire VXi',
+            codeSize: 150,
+            actions: [
+              QrPanelAction(
+                icon: Icons.print_rounded,
+                label: 'Print',
+                onPressed: () {},
+              ),
+              QrPanelAction(
+                icon: Icons.link_rounded,
+                label: 'Copy link',
+                onPressed: () {},
+              ),
+              QrPanelAction(
+                icon: Icons.auto_awesome_rounded,
+                label: 'Design',
+                onPressed: () {},
+              ),
+            ],
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+        expect(find.text('LIVE'), findsOneWidget);
+      });
+
       testWidgets('AppEmptyState fits with an action button', (tester) async {
         await pumpAtScale(
           tester,
@@ -236,3 +309,17 @@ void main() {
     });
   });
 }
+
+/// Three vehicles with awkward values: a long descriptor, an empty one, and a
+/// plate that is missing entirely.
+final List<VehicleModel> _fleet = <VehicleModel>[
+  VehicleModel(
+    id: 'v1',
+    userId: 'u1',
+    color: 'Pearl White',
+    carModel: 'Maruti Suzuki Swift Dzire VXi',
+    licensePlate: 'KA01AB1234',
+  ),
+  VehicleModel(id: 'v2', userId: 'u1', licensePlate: 'KA05MN9012'),
+  VehicleModel(id: 'v3', userId: 'u1', color: 'Black', carModel: 'Thar'),
+];
