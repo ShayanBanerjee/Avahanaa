@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'metal.dart';
 
-/// The brand gradient surface used by the home and profile headers.
+/// The brand surface used by the home, profile and auth headers.
 ///
-/// The design system fixes the gradient at primary → success. Flat, that reads
-/// cheap at this size, so two soft radial glows are layered over it: a white
-/// highlight top-left and a deep-blue vignette bottom-right. The result has
-/// depth while still being, unambiguously, the same gradient as the splash.
+/// The design system fixes the gradient at primary → success. Rendered as a
+/// flat two-stop it reads cheap at this size, so it is built as a metal ramp
+/// ([MetalPalette.brand]) that still starts at primary and ends on the success
+/// green — same gradient, machined. Two soft radial glows sit over it for a
+/// light source, and a specular band sweeps across on entrance.
 class HeroSurface extends StatelessWidget {
   const HeroSurface({
     super.key,
@@ -19,26 +21,25 @@ class HeroSurface extends StatelessWidget {
       AppSpacing.xxl,
     ),
     this.borderRadius,
-    this.colors = AppColors.heroGradient,
+    this.palette = MetalPalette.brand,
+    this.sheen = true,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final BorderRadiusGeometry? borderRadius;
-  final List<Color> colors;
+  final MetalPalette palette;
+
+  /// Set false for surfaces where a moving highlight would compete with the
+  /// content — panic-mode banners, for instance.
+  final bool sheen;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    final surface = ClipRRect(
       borderRadius: borderRadius ?? BorderRadius.zero,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: colors,
-          ),
-        ),
+        decoration: BoxDecoration(gradient: palette.gradient()),
         child: Stack(
           children: [
             // Highlight — gives the top-left corner a light source.
@@ -59,11 +60,26 @@ class HeroSurface extends StatelessWidget {
                 color: AppColors.primaryDeep.withValues(alpha: 0.42),
               ),
             ),
+            // A hairline of light along the top edge, so the surface reads as
+            // milled rather than printed.
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 1,
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: Colors.white.withValues(alpha: 0.28),
+                ),
+              ),
+            ),
             Padding(padding: padding, child: child),
           ],
         ),
       ),
     );
+
+    return sheen ? SheenSweep(child: surface) : surface;
   }
 }
 

@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
 import '../widgets/admob_banner.dart';
 import '../widgets/hero_header.dart';
+import '../widgets/metal.dart';
 import '../widgets/qr_visual.dart';
 import '../widgets/ui_kit.dart';
 import 'notifications_screen.dart';
@@ -849,11 +850,9 @@ class _CriticalAlertBanner extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: AppRadius.heroAll,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: AppColors.alertGradient,
-              ),
+              // Machined, but a shallow ramp: this is panic mode, and the
+              // white text on it must never lose contrast.
+              gradient: MetalPalette.alert.gradient(),
               boxShadow: AppShadows.glow(AppColors.alert),
             ),
             child: Padding(

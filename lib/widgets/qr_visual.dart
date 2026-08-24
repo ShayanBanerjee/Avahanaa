@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../theme/app_theme.dart';
+import 'metal.dart';
 
 /// The one place QR appearance is defined.
 ///
@@ -81,8 +82,12 @@ class AvahanaaQrView extends StatelessWidget {
   }
 }
 
-/// The QR presented as a hero object: a white plinth with a status ring that
-/// breathes while the code is live.
+/// The QR presented as a hero object.
+///
+/// The code sits on pure white inside a machined bezel, framed by scanner
+/// corner brackets, with a status ring breathing behind it while it is live.
+/// Every one of those treatments stays *outside* the quiet zone — the bezel is
+/// the jewellery, the code underneath is untouched black on white.
 class QrHeroPlinth extends StatelessWidget {
   const QrHeroPlinth({
     super.key,
@@ -99,14 +104,47 @@ class QrHeroPlinth extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = isActive ? AppColors.success : AppColors.textTertiary;
 
+    // Bezel: a machined graphite ring around a recessed white well.
+    //
+    // The ring is dark on purpose. An earlier silver version vanished against
+    // the white card behind it — a near-white metal ramp has nothing to shade
+    // against, so it read as haze rather than as an edge.
+    //
+    // The well's padding is sized as a fraction of the code, not a fixed
+    // number: the QR spec wants at least four modules of clear white around
+    // the symbol, and at 180px that is ~28px, well over the 16px a standard
+    // card inset would have given it.
+    final quietZone = size * 0.16;
+
     final code = Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: AppRadius.heroAll,
-        border: Border.all(color: AppColors.border),
+        gradient: MetalPalette.graphite.gradient(),
+        boxShadow: Metal.lift(MetalPalette.graphite.depth),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.22),
+          width: 1,
+        ),
       ),
-      child: AvahanaaQrView(data: data, size: size),
+      child: Container(
+        padding: EdgeInsets.all(quietZone),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.hero - 7),
+          // Inner shade at the top edge makes the well read as recessed into
+          // the metal rather than sitting on top of it.
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 5,
+              spreadRadius: -1,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: AvahanaaQrView(data: data, size: size),
+      ),
     );
 
     return Stack(
@@ -117,7 +155,13 @@ class QrHeroPlinth extends StatelessWidget {
           BreathingRing(color: accent, size: size + 96)
         else
           const SizedBox.shrink(),
-        code,
+        ReticleFrame(
+          color: accent,
+          gap: 13,
+          length: 26,
+          thickness: 3,
+          child: SheenSweep(intensity: 0.10, child: code),
+        ),
       ],
     );
   }
