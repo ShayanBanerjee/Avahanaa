@@ -35,7 +35,7 @@ identity.
 
 ## Current state
 
-- Flutter app, published on Google Play, currently at `version: 1.0.0+9`
+- Flutter app, published on Google Play, currently at `version: 1.2.0+11`
   (`pubspec.yaml`). It has passed Play review, including a round of scrutiny on
   the notification behaviour — do not casually reintroduce anything that was
   softened to get through review without reading
@@ -56,7 +56,7 @@ lib/
     home_screen.dart         Bottom nav shell + home tab (largest screen file)
     notifications_screen.dart
     profile_screen.dart      Vehicle list, account settings (largest file, 1047 lines)
-    qr_code_screen.dart      Sticker studio: style picker, live preview, share
+    qr_code_screen.dart      Sticker studio: theme picker, sheet layout, print
     legal_documents_screen.dart
   services/
     auth_service.dart        Sign up/in/out, account deletion, FCM token writes
@@ -68,14 +68,16 @@ lib/
     app_theme.dart           ALL design tokens + ThemeData (single source)
   utils/
     qr_payload_builder.dart  Builds the URL encoded into the QR
-    sticker_renderer.dart    Canvas-drawn printable sticker (preview + export)
+    sticker_renderer.dart    Canvas-drawn themeable sticker (preview + export)
+    sticker_sheet.dart       Lays stickers onto a page; PDF + system print dialog
     notification_visuals.dart  Alert reason -> icon, colour, severity, guidance
     qr_encryption.dart       AES helper — CURRENTLY UNUSED, see Known issues
     vehicle_registration_validator.dart  Indian plate regex (standard + Bharat series)
   widgets/
     ui_kit.dart              Shared components (cards, rows, empty states, ...)
     hero_header.dart         Brand gradient surface + glass panel
-    qr_visual.dart           Canonical QR styling and the QR hero plinth
+    qr_visual.dart           Canonical QR styling, hero plinth, showcase panel
+    vehicle_panel.dart       The swipeable vehicle rail on the home hero
     admob_banner.dart
 docs/                        Architecture and contract docs — read before changing behaviour
 assets/
@@ -171,8 +173,12 @@ background isolate can cancel them without reading state.
   Radius 12 for inputs/buttons, 16 for cards, 24 for hero surfaces.
 - Shared components live in `lib/widgets/ui_kit.dart` (cards, list rows, empty
   states, stat tiles, plate badge, skeletons, snackbars), `hero_header.dart`
-  (the brand gradient surface) and `qr_visual.dart` (the single definition of
-  how a QR is drawn). Compose these instead of hand-rolling containers.
+  (the brand gradient surface), `qr_visual.dart` (the single definition of how
+  a QR is drawn, plus `QrShowcasePanel`) and `vehicle_panel.dart` (the home
+  hero's vehicle rail). Compose these instead of hand-rolling containers.
+- **Sticker designs are data, not code paths.** A look is a `StickerTheme`
+  (colours) on a `StickerLayout` (geometry) in `sticker_renderer.dart`. Add a
+  row, never a new `case` in the painter — and never colour the code itself.
 - Fonts are bundled: **Inter** for body/labels, **Plus Jakarta Sans** for
   display. Both are variable fonts, so `AppText` sets `fontVariations` as well
   as `fontWeight` — setting only `fontWeight` renders at the default axis
@@ -186,10 +192,14 @@ background isolate can cancel them without reading state.
 ## Commands
 
 ```bash
-flutter analyze                 # baseline: 20 info-level lints, 0 errors/warnings
+flutter analyze                 # baseline: zero issues — a new lint is a regression
 flutter test
 flutter run
 flutter build appbundle --release   # needs android/key.properties (gitignored)
+
+# Scan-verify the printable sticker after any change to its painter or themes.
+STICKER_OUT=/tmp/stickers flutter test test/sticker_renderer_test.dart
+python3 tool/verify_sticker_scan.py /tmp/stickers
 ```
 
 The analyze baseline as of Aug 2026 is **zero issues** — zero errors, zero
@@ -233,8 +243,4 @@ Kept in `docs/known_issues.md` with detail. The short list:
 4. No `firestore.rules` or `firestore.indexes.json` in this repo, and
    `firebase.json` has no rules/indexes/hosting config. Security rules are
    managed out-of-band, which means they are unreviewed here.
-5. `test/` covers only the notification payload parser. The QR payload builder
-   and plate validator are pure functions and trivially testable.
-6. 20 info-level analyzer lints, including three
-   `use_build_context_synchronously` clusters in `profile_screen.dart` that are
-   real async-gap risks, and a deprecated `share_plus` API call.
+5. `assets/images/qr_template.svg` is legacy artwork that nothing references.

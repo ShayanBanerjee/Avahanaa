@@ -8,6 +8,17 @@
 ///
 /// All geometry is expressed as a fraction of the sticker width, so a design
 /// scales from a 120px thumbnail to a 2000px print master with no relayout.
+///
+/// ## Themes
+///
+/// A sticker is a [StickerLayout] (where the ink goes) plus a [StickerTheme]
+/// (what colour it is). Those are separate on purpose: three layouts times a
+/// palette table gives every theme below without a new branch in the painter,
+/// so adding a look is a row of colours rather than a new `case`.
+///
+/// One thing never varies, whatever the theme: the code is pure black on pure
+/// white inside a generous quiet zone. Themes colour the *sheet*, never the
+/// symbol — see [_drawQrBlock].
 library;
 
 import 'dart:math' as math;
@@ -19,30 +30,184 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/qr_visual.dart';
 
+// ---------------------------------------------------------------------------
+// Themes
+// ---------------------------------------------------------------------------
+
+/// Where the ink goes. Colour is [StickerTheme]'s job, not this one's.
+enum StickerLayout {
+  /// A colour band across the top, everything else on the bare sheet.
+  banner,
+
+  /// Full-bleed colour with a floating card holding the message and the code.
+  panel,
+
+  /// Ink on paper, ruled top and bottom. No filled areas at all, so it costs
+  /// almost nothing to print and survives a cheap printer.
+  plain,
+}
+
+/// The palette and layout behind one sticker design.
+///
+/// Every colour here lands on paper, so the values are chosen for a consumer
+/// printer rather than for a screen: flat two- and three-stop ramps (a
+/// five-stop metallic ramp bands and muddies), and any band carrying white
+/// text is dark enough to hold it.
+@immutable
+class StickerTheme {
+  const StickerTheme({
+    required this.layout,
+    required this.band,
+    this.sheet = const Color(0xFFFFFFFF),
+    this.ink = const Color(0xFF111827),
+    this.mutedInk = const Color(0xFF4B5563),
+    this.accent = AppColors.primaryDeep,
+    this.onBand = const Color(0xFFFFFFFF),
+    this.card = const Color(0xFFFFFFFF),
+    this.rule = const Color(0xFF111827),
+  });
+
+  /// A design with no filled areas — cheapest to print, most forgiving to scan.
+  const StickerTheme.plain({
+    Color ink = const Color(0xFF000000),
+    this.sheet = const Color(0xFFFFFFFF),
+    Color? accent,
+    Color? mutedInk,
+  }) : layout = StickerLayout.plain,
+       band = const <Color>[Color(0xFF000000)],
+       ink = ink,
+       mutedInk = mutedInk ?? ink,
+       accent = accent ?? ink,
+       onBand = const Color(0xFFFFFFFF),
+       card = const Color(0xFFFFFFFF),
+       rule = ink;
+
+  final StickerLayout layout;
+
+  /// The sheet's colour field: the header band for [StickerLayout.banner], the
+  /// full-bleed backdrop for [StickerLayout.panel]. Two or three stops.
+  final List<Color> band;
+
+  /// Paper colour. Almost always white — a printer cannot print white, so a
+  /// tinted sheet means a full-bleed flood of ink.
+  final Color sheet;
+
+  /// Headline colour on the sheet (or on [card] for a panel design).
+  final Color ink;
+
+  /// Supporting copy.
+  final Color mutedInk;
+
+  /// The Kannada line and the domain footer.
+  final Color accent;
+
+  /// Text sitting directly on [band].
+  final Color onBand;
+
+  /// The floating card in a panel design.
+  final Color card;
+
+  /// Rules in a plain design.
+  final Color rule;
+
+  /// True when the design floods the sheet with colour. Surfaced in the
+  /// picker so nobody discovers it at the print shop.
+  bool get floodsInk =>
+      layout == StickerLayout.panel || sheet != const Color(0xFFFFFFFF);
+}
+
 /// Sticker designs the owner can choose between.
+///
+/// The enum is the stable identity (it names the exported file and could be
+/// persisted later); everything visual lives in [theme], so a design changes
+/// without the value moving.
 enum StickerStyle {
   /// Brand header band on white. The default.
-  signature,
+  signature(
+    'Signature',
+    'Branded header on white paper',
+    StickerTheme(layout: StickerLayout.banner, band: AppColors.heroGradient),
+  ),
 
   /// Full-bleed brand gradient with a floating white code card.
-  bold,
+  bold(
+    'Bold',
+    'High-visibility colour panel — uses a lot of ink',
+    StickerTheme(layout: StickerLayout.panel, band: AppColors.heroGradient),
+  ),
 
   /// Black on white, nothing else. Cheapest to print and the most forgiving
   /// to scan, which makes it the right answer for a windscreen that lives
   /// outdoors.
-  minimal;
+  minimal(
+    'Minimal',
+    'Black and white — best for scanning',
+    StickerTheme.plain(),
+  ),
 
-  String get label => switch (this) {
-    StickerStyle.signature => 'Signature',
-    StickerStyle.bold => 'Bold',
-    StickerStyle.minimal => 'Minimal',
-  };
+  /// Graphite panel. Reads as hardware rather than as a leaflet.
+  midnight(
+    'Midnight',
+    'Deep graphite panel with a white code card',
+    StickerTheme(
+      layout: StickerLayout.panel,
+      band: <Color>[Color(0xFF39424F), Color(0xFF212836), Color(0xFF12171F)],
+      accent: Color(0xFF1F2937),
+    ),
+  ),
 
-  String get description => switch (this) {
-    StickerStyle.signature => 'Branded header on white paper',
-    StickerStyle.bold => 'High-visibility colour panel',
-    StickerStyle.minimal => 'Black and white — best for scanning',
-  };
+  /// Rust and amber. The one that still catches an eye at dusk, when a blue
+  /// sheet behind glass goes flat.
+  ember(
+    'Ember',
+    'Warm rust header — easiest to spot at dusk',
+    StickerTheme(
+      layout: StickerLayout.banner,
+      band: <Color>[Color(0xFFC2410C), Color(0xFF9A3412), Color(0xFF7C2D12)],
+      accent: Color(0xFF9A3412),
+    ),
+  ),
+
+  /// Deep anodised green — the "everything is fine" end of the palette.
+  emerald(
+    'Emerald',
+    'Calm green header on white paper',
+    StickerTheme(
+      layout: StickerLayout.banner,
+      band: <Color>[Color(0xFF0B845C), Color(0xFF077353), Color(0xFF045C43)],
+      accent: Color(0xFF045C43),
+    ),
+  ),
+
+  /// Indigo panel. Formal, and the closest thing here to an office document.
+  indigo(
+    'Indigo',
+    'Indigo panel — uses a lot of ink',
+    StickerTheme(
+      layout: StickerLayout.panel,
+      band: <Color>[Color(0xFF4338CA), Color(0xFF3730A3), Color(0xFF312E81)],
+      accent: Color(0xFF312E81),
+    ),
+  ),
+
+  /// Warm paper, espresso ink. Plain-layout economics with a softer face than
+  /// [minimal] — the code still sits on its own white tile.
+  ivory(
+    'Ivory',
+    'Warm cream paper with espresso ink',
+    StickerTheme.plain(
+      sheet: Color(0xFFF7F1E6),
+      ink: Color(0xFF3B2F2A),
+      mutedInk: Color(0xFF5C4B42),
+      accent: Color(0xFF7C4A22),
+    ),
+  );
+
+  const StickerStyle(this.label, this.description, this.theme);
+
+  final String label;
+  final String description;
+  final StickerTheme theme;
 }
 
 /// Everything the sticker needs to draw itself.
@@ -57,13 +222,25 @@ class StickerSpec {
 
   final String qrData;
   final String plate;
+
+  /// "White Maruti Swift" — what the person standing at the car sees. Printed
+  /// under the plate so a scanner can confirm they are at the right vehicle
+  /// before they send an alert.
   final String descriptor;
+
   final StickerStyle style;
 
-  StickerSpec copyWith({StickerStyle? style}) => StickerSpec(
-    qrData: qrData,
-    plate: plate,
-    descriptor: descriptor,
+  StickerTheme get theme => style.theme;
+
+  StickerSpec copyWith({
+    StickerStyle? style,
+    String? qrData,
+    String? plate,
+    String? descriptor,
+  }) => StickerSpec(
+    qrData: qrData ?? this.qrData,
+    plate: plate ?? this.plate,
+    descriptor: descriptor ?? this.descriptor,
     style: style ?? this.style,
   );
 }
@@ -106,13 +283,14 @@ class StickerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    switch (spec.style) {
-      case StickerStyle.signature:
-        _paintSignature(canvas, size);
-      case StickerStyle.bold:
-        _paintBold(canvas, size);
-      case StickerStyle.minimal:
-        _paintMinimal(canvas, size);
+    final theme = spec.theme;
+    switch (theme.layout) {
+      case StickerLayout.banner:
+        _paintBanner(canvas, size, theme);
+      case StickerLayout.panel:
+        _paintPanel(canvas, size, theme);
+      case StickerLayout.plain:
+        _paintPlain(canvas, size, theme);
     }
   }
 
@@ -125,30 +303,19 @@ class StickerPainter extends CustomPainter {
         old.qrImage != qrImage;
   }
 
-  // -- Styles -------------------------------------------------------------
+  // -- Layouts ------------------------------------------------------------
 
-  void _paintSignature(Canvas canvas, Size size) {
+  void _paintBanner(Canvas canvas, Size size, StickerTheme theme) {
     final w = size.width;
     final h = size.height;
     final margin = w * 0.06;
 
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, w, h),
-      Paint()..color = Colors.white,
-    );
+    _fillSheet(canvas, size, theme);
 
     // Brand band across the top.
     final bandHeight = h * 0.115;
     final bandRect = Rect.fromLTWH(0, 0, w, bandHeight);
-    canvas.drawRect(
-      bandRect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: AppColors.heroGradient,
-        ).createShader(bandRect),
-    );
+    canvas.drawRect(bandRect, Paint()..shader = _bandShader(theme, bandRect));
 
     _drawText(
       canvas,
@@ -159,7 +326,7 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.088,
         fontWeight: FontWeight.w800,
         fontVariations: const [ui.FontVariation('wght', 800)],
-        color: Colors.white,
+        color: theme.onBand,
         letterSpacing: w * 0.014,
         height: 1.0,
       ),
@@ -177,7 +344,7 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.086,
         fontWeight: FontWeight.w800,
         fontVariations: const [ui.FontVariation('wght', 800)],
-        color: const Color(0xFF111827),
+        color: theme.ink,
         height: 1.12,
         letterSpacing: w * 0.002,
       ),
@@ -192,7 +359,7 @@ class StickerPainter extends CustomPainter {
       style: TextStyle(
         fontFamily: AppFonts.kannada,
         fontSize: w * 0.055,
-        color: AppColors.primaryDeep,
+        color: theme.accent,
         height: 1.35,
       ),
       maxWidth: w - margin * 2,
@@ -209,23 +376,22 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.045,
         fontWeight: FontWeight.w700,
         fontVariations: const [ui.FontVariation('wght', 700)],
-        color: AppColors.primary,
+        color: theme.accent,
         letterSpacing: w * 0.002,
       ),
       maxWidth: w - margin * 2,
     );
 
-    bottom -= h * 0.022;
-    if (spec.plate.trim().isNotEmpty) {
-      final plateHeight = w * 0.115;
-      _drawPlate(
-        canvas,
-        center: Offset(w / 2, bottom - plateHeight / 2),
-        height: plateHeight,
-        maxWidth: w - margin * 2,
-      );
-      bottom -= plateHeight + h * 0.016;
-    }
+    bottom -= h * 0.016;
+    bottom = _drawVehicleBlock(
+      canvas,
+      bottom: bottom,
+      width: w,
+      height: h,
+      maxWidth: w - margin * 2,
+      plateHeight: w * 0.115,
+      theme: theme,
+    );
 
     bottom -= h * 0.004;
     bottom = _drawTextUp(
@@ -235,7 +401,7 @@ class StickerPainter extends CustomPainter {
       style: TextStyle(
         fontFamily: AppFonts.text,
         fontSize: w * 0.042,
-        color: const Color(0xFF4B5563),
+        color: theme.mutedInk,
         height: 1.3,
       ),
       maxWidth: w - margin * 2,
@@ -243,26 +409,23 @@ class StickerPainter extends CustomPainter {
 
     _drawQrBlock(
       canvas,
-      available: Rect.fromLTRB(margin, y + h * 0.02, w - margin, bottom - h * 0.02),
+      available: Rect.fromLTRB(
+        margin,
+        y + h * 0.02,
+        w - margin,
+        bottom - h * 0.02,
+      ),
       framed: true,
     );
   }
 
-  void _paintBold(Canvas canvas, Size size) {
+  void _paintPanel(Canvas canvas, Size size, StickerTheme theme) {
     final w = size.width;
     final h = size.height;
     final margin = w * 0.055;
 
     final backdrop = Rect.fromLTWH(0, 0, w, h);
-    canvas.drawRect(
-      backdrop,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppColors.heroGradient,
-        ).createShader(backdrop),
-    );
+    canvas.drawRect(backdrop, Paint()..shader = _bandShader(theme, backdrop));
 
     _drawText(
       canvas,
@@ -273,21 +436,21 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.075,
         fontWeight: FontWeight.w800,
         fontVariations: const [ui.FontVariation('wght', 800)],
-        color: Colors.white,
+        color: theme.onBand,
         letterSpacing: w * 0.016,
         height: 1.0,
       ),
       maxWidth: w - margin * 2,
     );
 
-    // White card holds the headline and the code, so the code always sits on
+    // The card holds the headline and the code, so the code always sits on
     // pure white no matter how saturated the background is.
     final cardTop = h * 0.135;
     final cardBottom = h - h * 0.115;
     final cardRect = Rect.fromLTRB(margin, cardTop, w - margin, cardBottom);
     canvas.drawRRect(
       RRect.fromRectAndRadius(cardRect, Radius.circular(w * 0.055)),
-      Paint()..color = Colors.white,
+      Paint()..color = theme.card,
     );
 
     final inner = w * 0.055;
@@ -302,7 +465,7 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.082,
         fontWeight: FontWeight.w800,
         fontVariations: const [ui.FontVariation('wght', 800)],
-        color: const Color(0xFF111827),
+        color: theme.ink,
         height: 1.12,
       ),
       maxWidth: cardRect.width - inner * 2,
@@ -316,23 +479,22 @@ class StickerPainter extends CustomPainter {
       style: TextStyle(
         fontFamily: AppFonts.kannada,
         fontSize: w * 0.05,
-        color: AppColors.primaryDeep,
+        color: theme.accent,
         height: 1.35,
       ),
       maxWidth: cardRect.width - inner * 2,
     );
 
     var bottom = cardBottom - inner * 0.9;
-    if (spec.plate.trim().isNotEmpty) {
-      final plateHeight = w * 0.108;
-      _drawPlate(
-        canvas,
-        center: Offset(w / 2, bottom - plateHeight / 2),
-        height: plateHeight,
-        maxWidth: cardRect.width - inner * 2,
-      );
-      bottom -= plateHeight + h * 0.014;
-    }
+    bottom = _drawVehicleBlock(
+      canvas,
+      bottom: bottom,
+      width: w,
+      height: h,
+      maxWidth: cardRect.width - inner * 2,
+      plateHeight: w * 0.108,
+      theme: theme,
+    );
 
     bottom = _drawTextUp(
       canvas,
@@ -341,7 +503,7 @@ class StickerPainter extends CustomPainter {
       style: TextStyle(
         fontFamily: AppFonts.text,
         fontSize: w * 0.04,
-        color: const Color(0xFF4B5563),
+        color: theme.mutedInk,
         height: 1.3,
       ),
       maxWidth: cardRect.width - inner * 2,
@@ -367,23 +529,20 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.042,
         fontWeight: FontWeight.w700,
         fontVariations: const [ui.FontVariation('wght', 700)],
-        color: Colors.white,
+        color: theme.onBand,
         letterSpacing: w * 0.004,
       ),
       maxWidth: w - margin * 2,
     );
   }
 
-  void _paintMinimal(Canvas canvas, Size size) {
+  void _paintPlain(Canvas canvas, Size size, StickerTheme theme) {
     final w = size.width;
     final h = size.height;
     final margin = w * 0.07;
-    const ink = Color(0xFF000000);
+    final ink = theme.ink;
 
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, w, h),
-      Paint()..color = Colors.white,
-    );
+    _fillSheet(canvas, size, theme);
 
     var y = h * 0.055;
     y = _drawText(
@@ -409,7 +568,7 @@ class StickerPainter extends CustomPainter {
       style: TextStyle(
         fontFamily: AppFonts.kannada,
         fontSize: w * 0.052,
-        color: ink,
+        color: theme.accent,
         height: 1.35,
       ),
       maxWidth: w - margin * 2,
@@ -420,7 +579,7 @@ class StickerPainter extends CustomPainter {
       Offset(margin, y),
       Offset(w - margin, y),
       Paint()
-        ..color = ink
+        ..color = theme.rule
         ..strokeWidth = w * 0.005,
     );
 
@@ -434,13 +593,31 @@ class StickerPainter extends CustomPainter {
         fontSize: w * 0.042,
         fontWeight: FontWeight.w700,
         fontVariations: const [ui.FontVariation('wght', 700)],
-        color: ink,
+        color: theme.accent,
         letterSpacing: w * 0.004,
       ),
       maxWidth: w - margin * 2,
     );
 
+    // Stacked bottom-up, so the descriptor is drawn first to end up *under*
+    // the plate — the same reading order the banner and panel layouts use.
     bottom -= h * 0.014;
+    if (spec.descriptor.trim().isNotEmpty) {
+      bottom = _drawTextUp(
+        canvas,
+        spec.descriptor.trim(),
+        bottomCenter: Offset(w / 2, bottom),
+        style: TextStyle(
+          fontFamily: AppFonts.text,
+          fontSize: w * 0.036,
+          color: theme.mutedInk,
+          height: 1.25,
+        ),
+        maxWidth: w - margin * 2,
+      );
+      bottom -= h * 0.006;
+    }
+
     if (spec.plate.trim().isNotEmpty) {
       bottom = _drawTextUp(
         canvas,
@@ -457,7 +634,7 @@ class StickerPainter extends CustomPainter {
         ),
         maxWidth: w - margin * 2,
       );
-      bottom -= h * 0.01;
+      bottom -= h * 0.004;
     }
 
     bottom = _drawTextUp(
@@ -467,7 +644,7 @@ class StickerPainter extends CustomPainter {
       style: TextStyle(
         fontFamily: AppFonts.text,
         fontSize: w * 0.042,
-        color: ink,
+        color: theme.mutedInk,
         height: 1.3,
       ),
       maxWidth: w - margin * 2,
@@ -478,7 +655,7 @@ class StickerPainter extends CustomPainter {
       Offset(margin, bottom),
       Offset(w - margin, bottom),
       Paint()
-        ..color = ink
+        ..color = theme.rule
         ..strokeWidth = w * 0.005,
     );
 
@@ -496,13 +673,87 @@ class StickerPainter extends CustomPainter {
 
   // -- Primitives ---------------------------------------------------------
 
+  void _fillSheet(Canvas canvas, Size size, StickerTheme theme) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = theme.sheet,
+    );
+  }
+
+  /// A flat ramp across [rect]. Tolerates a one-colour band so a theme can
+  /// declare a solid field without repeating itself.
+  Shader _bandShader(StickerTheme theme, Rect rect) {
+    final colors = theme.band.length >= 2
+        ? theme.band
+        : <Color>[theme.band.first, theme.band.first];
+    return LinearGradient(
+      begin: theme.layout == StickerLayout.panel
+          ? Alignment.topLeft
+          : Alignment.centerLeft,
+      end: theme.layout == StickerLayout.panel
+          ? Alignment.bottomRight
+          : Alignment.centerRight,
+      colors: colors,
+    ).createShader(rect);
+  }
+
+  /// Plate, then the vehicle descriptor beneath it, stacked upwards from
+  /// [bottom]. Returns the top edge of whatever it drew.
+  double _drawVehicleBlock(
+    Canvas canvas, {
+    required double bottom,
+    required double width,
+    required double height,
+    required double maxWidth,
+    required double plateHeight,
+    required StickerTheme theme,
+  }) {
+    var top = bottom;
+
+    if (spec.descriptor.trim().isNotEmpty) {
+      top = _drawTextUp(
+        canvas,
+        spec.descriptor.trim(),
+        bottomCenter: Offset(width / 2, top),
+        style: TextStyle(
+          fontFamily: AppFonts.text,
+          fontSize: width * 0.036,
+          color: theme.mutedInk,
+          height: 1.25,
+        ),
+        maxWidth: maxWidth,
+      );
+      top -= height * 0.008;
+    }
+
+    if (spec.plate.trim().isNotEmpty) {
+      _drawPlate(
+        canvas,
+        center: Offset(width / 2, top - plateHeight / 2),
+        height: plateHeight,
+        maxWidth: maxWidth,
+      );
+      top -= plateHeight + height * 0.014;
+    }
+
+    return top;
+  }
+
   /// Paints the code centred in [available], on white, with a quiet zone.
   ///
   /// The quiet zone is not decoration. A QR needs clear white around it or the
   /// scanner cannot find its bounds, and on a windscreen — behind glass, at an
   /// angle, in glare — it is the first thing that fails. It is sized generously
   /// here and nothing is ever drawn inside it.
-  void _drawQrBlock(Canvas canvas, {required Rect available, required bool framed}) {
+  ///
+  /// Note what this method does *not* take: a theme. The tile is white and the
+  /// modules are black on every design, including the ones with a tinted
+  /// sheet. Themes colour the paper around the code, never the code.
+  void _drawQrBlock(
+    Canvas canvas, {
+    required Rect available,
+    required bool framed,
+  }) {
     if (available.width <= 0 || available.height <= 0) return;
 
     final side = math.min(available.width, available.height);
@@ -540,12 +791,7 @@ class StickerPainter extends CustomPainter {
     if (image != null) {
       canvas.drawImageRect(
         image,
-        Rect.fromLTWH(
-          0,
-          0,
-          image.width.toDouble(),
-          image.height.toDouble(),
-        ),
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
         Rect.fromLTWH(0, 0, codeSide, codeSide),
         Paint()..filterQuality = FilterQuality.none,
       );
@@ -589,11 +835,7 @@ class StickerPainter extends CustomPainter {
       maxWidth,
     );
 
-    final rect = Rect.fromCenter(
-      center: center,
-      width: width,
-      height: height,
-    );
+    final rect = Rect.fromCenter(center: center, width: width, height: height);
     final radius = Radius.circular(height * 0.16);
 
     canvas.drawRRect(
@@ -676,6 +918,8 @@ class StickerPainter extends CustomPainter {
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
+      maxLines: 1,
+      ellipsis: '…',
     )..layout(maxWidth: maxWidth);
 
     final top = bottomCenter.dy - painter.height;
@@ -714,9 +958,9 @@ Future<Uint8List?> renderStickerPng(
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
 
-  // Paper is white even where a style does not paint to the edge, so a
-  // transparent PNG never reaches a printer.
-  canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
+  // Paper is the theme's sheet colour even where a style does not paint to the
+  // edge, so a transparent PNG never reaches a printer.
+  canvas.drawRect(Offset.zero & size, Paint()..color = spec.theme.sheet);
   StickerPainter(spec: spec).paint(canvas, size);
 
   final picture = recorder.endRecording();

@@ -10,15 +10,21 @@ import '../models/vehicle_model.dart';
 import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
 import '../utils/sticker_renderer.dart';
+import '../utils/sticker_sheet.dart';
 import '../widgets/metal.dart';
 import '../widgets/ui_kit.dart';
 
 /// The sticker studio.
 ///
-/// The owner picks a design, sees it exactly as it will print, and exports it.
-/// The preview is a `CustomPaint` driven by [StickerPainter] — the same painter
-/// [renderStickerPng] replays into the exported file — so there is no way for
-/// what they approve here to differ from what comes out of the printer.
+/// Two decisions live here and they are deliberately separate:
+///
+/// 1. **What the sticker looks like** — one of [StickerStyle], previewed at
+///    full size by the same [StickerPainter] that writes the print file, so
+///    there is no way for what the owner approves to differ from what comes
+///    out of the printer.
+/// 2. **How it lands on paper** — paper size and how many copies share a
+///    sheet. That is laid out by [SheetPlan], and the page preview on this
+///    screen is drawn from the very same plan the PDF is built from.
 class QRCodeScreen extends StatefulWidget {
   final UserModel user;
   final VehicleModel vehicle;
@@ -32,7 +38,11 @@ class QRCodeScreen extends StatefulWidget {
 class _QRCodeScreenState extends State<QRCodeScreen> {
   StickerStyle _style = StickerStyle.signature;
   StickerSize _size = StickerSize.print;
+  SheetPaper _paper = SheetPaper.a4;
+  int _copies = 1;
+
   bool _isExporting = false;
+  bool _isPrinting = false;
 
   StickerSpec get _spec => StickerSpec(
     qrData: QrPayloadBuilder.buildPayload(
@@ -47,6 +57,12 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     style: _style,
   );
 
+  String get _fileStem {
+    final plate = widget.vehicle.licensePlate.trim();
+    return 'avahanaa-sticker-'
+        '${plate.isEmpty ? 'vehicle' : plate.toUpperCase()}-${_style.name}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final shareableLink = QrPayloadBuilder.buildShareableLink(
@@ -56,12 +72,12 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your sticker'),
+        title: const Text('Sticker studio'),
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share_rounded),
             onPressed: _isExporting ? null : _shareSticker,
-            tooltip: 'Share sticker',
+            tooltip: 'Share sticker image',
           ),
         ],
       ),
@@ -86,45 +102,24 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
 
             EntranceFade(
               delay: const Duration(milliseconds: 120),
-              child: _buildSizePicker(),
+              child: _buildPrintCard(),
             ),
             const SizedBox(height: AppSpacing.xl),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 160),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  MetalButton(
-                    label: _isExporting
-                        ? 'Preparing…'
-                        : 'Share or save sticker',
-                    icon: Icons.ios_share_rounded,
-                    busy: _isExporting,
-                    onPressed: _shareSticker,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _copyToClipboard(shareableLink),
-                      icon: const Icon(Icons.link_rounded),
-                      label: const Text('Copy scan link'),
-                    ),
-                  ),
-                ],
-              ),
+              delay: const Duration(milliseconds: 180),
+              child: _buildImageCard(shareableLink),
             ),
             const SizedBox(height: AppSpacing.xl),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 200),
-              child: _buildPrintingCard(),
+              delay: const Duration(milliseconds: 220),
+              child: _buildPrintingTipsCard(),
             ),
             const SizedBox(height: AppSpacing.lg),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 240),
+              delay: const Duration(milliseconds: 260),
               child: _buildScanTipCard(),
             ),
           ],
@@ -147,7 +142,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
             duration: AppMotion.normal,
             curve: AppMotion.emphasis,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _style.theme.sheet,
               borderRadius: AppRadius.heroAll,
               boxShadow: AppShadows.hero,
             ),
@@ -170,7 +165,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     );
   }
 
-  // -- Pickers ------------------------------------------------------------
+  // -- Design -------------------------------------------------------------
 
   Widget _buildStylePicker() {
     return Column(
@@ -196,38 +191,162 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          _style.description,
-          style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              _style.theme.floodsInk
+                  ? Icons.water_drop_rounded
+                  : Icons.check_circle_rounded,
+              size: 16,
+              color: _style.theme.floodsInk
+                  ? AppColors.warning
+                  : AppColors.success,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                _style.description,
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildSizePicker() {
+  // -- Paper --------------------------------------------------------------
+
+  Widget _buildPrintCard() {
+    final plan = SheetPlan.compute(pageSize: _paper.sizePt, copies: _copies);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(overline: 'Export', title: 'Image size'),
+        const SectionHeader(
+          overline: 'Put it on paper',
+          title: 'Print a sheet',
+        ),
         AppCard(
-          padding: const EdgeInsets.all(AppSpacing.xs),
-          child: Row(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final size in StickerSize.values)
-                Expanded(
-                  child: _SizeOption(
-                    size: size,
-                    isSelected: size == _size,
-                    onTap: () => setState(() => _size = size),
-                  ),
+              _OptionRail<SheetPaper>(
+                label: 'Paper',
+                values: SheetPaper.values,
+                selected: _paper,
+                labelOf: (paper) => paper.label,
+                onSelect: (paper) => setState(() => _paper = paper),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _OptionRail<int>(
+                label: 'Per sheet',
+                values: kSheetCopyOptions,
+                selected: _copies,
+                labelOf: (copies) => '$copies',
+                onSelect: (copies) => setState(() => _copies = copies),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _SheetPreview(paper: _paper, plan: plan, spec: _spec),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _sheetCaption(plan),
+                textAlign: TextAlign.center,
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
                 ),
+              ),
+              if (plan.isBelowScanFloor) ...[
+                const SizedBox(height: AppSpacing.md),
+                const _ScanFloorWarning(),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              MetalButton(
+                label: _isPrinting ? 'Preparing…' : 'Print this sheet',
+                icon: Icons.print_rounded,
+                busy: _isPrinting,
+                onPressed: _printSheet,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: _isPrinting ? null : _sharePdf,
+                  icon: const Icon(Icons.picture_as_pdf_rounded),
+                  label: const Text('Send PDF to a print shop'),
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          _size.description,
-          style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+      ],
+    );
+  }
+
+  String _sheetCaption(SheetPlan plan) {
+    if (plan.slots.isEmpty) return 'This paper is too small for a sticker.';
+    final mm = plan.stickerSizeMm;
+    final each = plan.copies == 1 ? 'sticker' : 'stickers';
+    return '${plan.copies} $each on one ${_paper.label} sheet · '
+        '${mm.width.round()} × ${mm.height.round()} mm each · '
+        '${_paper.description}';
+  }
+
+  // -- Image --------------------------------------------------------------
+
+  Widget _buildImageCard(String shareableLink) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(
+          overline: 'Or send it as a picture',
+          title: 'Share the image',
+        ),
+        AppCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _OptionRail<StickerSize>(
+                label: 'Size',
+                values: StickerSize.values,
+                selected: _size,
+                labelOf: (size) => size.label,
+                onSelect: (size) => setState(() => _size = size),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _size.description,
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: _isExporting ? null : _shareSticker,
+                  icon: const Icon(Icons.ios_share_rounded),
+                  label: Text(
+                    _isExporting ? 'Preparing…' : 'Share or save image',
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 52,
+                child: TextButton.icon(
+                  onPressed: () => _copyToClipboard(shareableLink),
+                  icon: const Icon(Icons.link_rounded),
+                  label: const Text('Copy scan link'),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -235,7 +354,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
 
   // -- Cards --------------------------------------------------------------
 
-  Widget _buildPrintingCard() {
+  Widget _buildPrintingTipsCard() {
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
@@ -244,15 +363,15 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
           SectionHeader(overline: 'Make it last', title: 'Getting it printed'),
           NumberedStep(
             number: '1',
-            title: 'Share the image to yourself',
-            detail: 'Send it to a print shop, or save it and print at home.',
+            title: 'Print at 100%',
+            detail:
+                'Turn off "fit to page" or "shrink to fit". The sheet is '
+                'already sized for the paper you picked.',
           ),
           NumberedStep(
             number: '2',
-            title: 'Print at A5 on plain white paper',
-            detail:
-                'The image is already A-sized, so print it at 100% — do not '
-                'scale it down.',
+            title: 'Cut at the corner marks',
+            detail: 'They sit outside the sticker, so nothing gets clipped.',
           ),
           NumberedStep(
             number: '3',
@@ -316,28 +435,64 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     );
   }
 
-  Future<void> _shareSticker() async {
+  Future<void> _printSheet() async {
     // Captured before the first await — the widget may be gone afterwards.
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isPrinting = true);
+
+    try {
+      await printStickerSheet(
+        spec: _spec,
+        paper: _paper,
+        copies: _copies,
+        jobName: _fileStem,
+      );
+    } catch (_) {
+      showAppSnackBar(
+        messenger,
+        'Could not reach a printer. Try sending the PDF instead.',
+        kind: AppSnackKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
+    }
+  }
+
+  Future<void> _sharePdf() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isPrinting = true);
+
+    try {
+      await shareStickerSheetPdf(
+        spec: _spec,
+        paper: _paper,
+        copies: _copies,
+        filename: '$_fileStem-${_paper.label.toLowerCase()}.pdf',
+      );
+    } catch (_) {
+      showAppSnackBar(
+        messenger,
+        'Could not create the PDF.',
+        kind: AppSnackKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
+    }
+  }
+
+  Future<void> _shareSticker() async {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isExporting = true);
 
     try {
-      final bytes = await renderStickerPng(
-        _spec,
-        width: _size.pixelWidth,
-      );
+      final bytes = await renderStickerPng(_spec, width: _size.pixelWidth);
       if (bytes == null) {
         _showExportError(messenger);
         return;
       }
 
       final tempDir = await getTemporaryDirectory();
-      final plate = widget.vehicle.licensePlate.trim().isEmpty
-          ? 'vehicle'
-          : widget.vehicle.licensePlate.trim().toUpperCase();
-      final file = File(
-        '${tempDir.path}/avahanaa-sticker-$plate-${_style.name}.png',
-      );
+      final file = File('${tempDir.path}/$_fileStem.png');
       await file.writeAsBytes(bytes, flush: true);
 
       await SharePlus.instance.share(
@@ -359,6 +514,110 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
       messenger,
       'Could not create the sticker image.',
       kind: AppSnackKind.error,
+    );
+  }
+}
+
+/// Shown when the chosen sheet would print a code too small to scan through a
+/// windscreen. A warning, not a block — a small spare for the glovebox is a
+/// perfectly good reason to ignore it.
+class _ScanFloorWarning extends StatelessWidget {
+  const _ScanFloorWarning();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.warningTint,
+        borderRadius: AppRadius.controlAll,
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            size: 18,
+            color: AppColors.warning,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'This small a sticker is hard to scan from outside the car. '
+              'Fewer per sheet, or bigger paper, reads better through glass.',
+              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sheet preview
+// ---------------------------------------------------------------------------
+
+/// The page, as it will come out of the printer.
+///
+/// Built from the same [SheetPlan] the PDF is, so the arrangement on screen is
+/// the arrangement on paper — including the margin, which is the part people
+/// are surprised by.
+class _SheetPreview extends StatelessWidget {
+  const _SheetPreview({
+    required this.paper,
+    required this.plan,
+    required this.spec,
+  });
+
+  final SheetPaper paper;
+  final SheetPlan plan;
+  final StickerSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label:
+          '${plan.copies} ${plan.copies == 1 ? 'sticker' : 'stickers'} '
+          'on a ${paper.label} sheet',
+      image: true,
+      child: SizedBox(
+        height: 260,
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: paper.widthPt / paper.heightPt,
+            child: AnimatedContainer(
+              duration: AppMotion.fast,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.borderStrong),
+                boxShadow: AppShadows.card,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final scale = constraints.maxWidth / paper.widthPt;
+                  return Stack(
+                    children: [
+                      for (final slot in plan.slots)
+                        Positioned(
+                          left: slot.left * scale,
+                          top: slot.top * scale,
+                          width: slot.width * scale,
+                          height: slot.height * scale,
+                          child: CustomPaint(
+                            painter: StickerPainter(spec: spec),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -415,7 +674,7 @@ class _StyleChip extends StatelessWidget {
                       aspectRatio: kStickerAspectRatio,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: style.theme.sheet,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: AppColors.border),
                         ),
@@ -467,14 +726,71 @@ class _StyleChip extends StatelessWidget {
   }
 }
 
-class _SizeOption extends StatelessWidget {
-  const _SizeOption({
-    required this.size,
+/// A labelled row of mutually exclusive options.
+///
+/// Generic because the studio now picks three different things this way —
+/// paper, copies per sheet and image size — and three hand-rolled segmented
+/// controls would drift apart.
+class _OptionRail<T> extends StatelessWidget {
+  const _OptionRail({
+    required this.label,
+    required this.values,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelect,
+  });
+
+  final String label;
+  final List<T> values;
+  final T selected;
+  final String Function(T) labelOf;
+  final ValueChanged<T> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 76,
+          child: Text(label.toUpperCase(), style: AppText.overline),
+        ),
+        Expanded(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: AppRadius.controlAll,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: Row(
+                children: [
+                  for (final value in values)
+                    Expanded(
+                      child: _OptionButton(
+                        label: labelOf(value),
+                        isSelected: value == selected,
+                        onTap: () => onSelect(value),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OptionButton extends StatelessWidget {
+  const _OptionButton({
+    required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
-  final StickerSize size;
+  final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -483,7 +799,7 @@ class _SizeOption extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: '${size.label} size. ${size.description}',
+      label: label,
       excludeSemantics: true,
       child: Material(
         color: Colors.transparent,
@@ -492,16 +808,25 @@ class _SizeOption extends StatelessWidget {
           borderRadius: AppRadius.controlAll,
           child: AnimatedContainer(
             duration: AppMotion.fast,
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 42),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
+              color: isSelected ? AppColors.surface : Colors.transparent,
               borderRadius: AppRadius.controlAll,
+              border: Border.all(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                width: 1.5,
+              ),
+              boxShadow: isSelected ? AppShadows.card : null,
             ),
             child: Text(
-              size.label,
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: AppText.labelMedium.copyWith(
-                color: isSelected ? AppColors.onDark : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryDeep
+                    : AppColors.textSecondary,
               ),
             ),
           ),
