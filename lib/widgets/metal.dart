@@ -58,12 +58,7 @@ class MetalPalette {
     AlignmentGeometry begin = Alignment.topLeft,
     AlignmentGeometry end = Alignment.bottomRight,
   }) {
-    return LinearGradient(
-      begin: begin,
-      end: end,
-      colors: colors,
-      stops: stops,
-    );
+    return LinearGradient(begin: begin, end: end, colors: colors, stops: stops);
   }
 
   /// Brand blue as anodised steel, running to a green catch-light — the
@@ -127,7 +122,19 @@ class MetalPalette {
 // ---------------------------------------------------------------------------
 
 abstract final class Metal {
-  /// A milled-edge surface: metal ramp, top highlight, bottom shade.
+  /// A milled-edge surface: metal ramp plus depth.
+  ///
+  /// The bevel is **not** part of this decoration, and that is not a
+  /// simplification — it is a correctness requirement. A `BoxDecoration`
+  /// cannot carry a `borderRadius` together with a `Border` whose sides are
+  /// different colours; Flutter asserts "a borderRadius can only be given on
+  /// borders with uniform colors" during paint, and the whole subtree stops
+  /// painting. Every rounded metal surface in this app is exactly that case,
+  /// so a top-white/bottom-black `Border` here silently blanks the control it
+  /// is meant to decorate.
+  ///
+  /// The bevel is drawn by [BevelHighlight] instead, stacked inside the
+  /// surface's clip, where it can follow the corner radius exactly.
   static BoxDecoration surface(
     MetalPalette palette, {
     BorderRadius? radius,
@@ -139,13 +146,6 @@ abstract final class Metal {
       borderRadius: radius,
       gradient: palette.gradient(begin: begin, end: end),
       boxShadow: shadows,
-      border: Border(
-        top: BorderSide(color: Colors.white.withValues(alpha: 0.30), width: 1),
-        bottom: BorderSide(
-          color: Colors.black.withValues(alpha: 0.22),
-          width: 1,
-        ),
-      ),
     );
   }
 
@@ -165,36 +165,67 @@ abstract final class Metal {
   ];
 }
 
-/// The hairline of light along the top inside edge of a surface.
+/// The milled edge: a hairline of light along the top of a surface and a band
+/// of shade along the bottom.
 ///
-/// Drawn as an overlay rather than a border so it can sit inside a clip and
-/// follow the corner radius exactly.
+/// Drawn as an overlay rather than as a [Border] so it can sit inside a clip
+/// and follow the corner radius exactly — and, critically, so the surface
+/// underneath can keep its `borderRadius`. A `Border` with different colours
+/// top and bottom is illegal on a rounded `BoxDecoration` and aborts the paint
+/// (see [Metal.surface]).
 class BevelHighlight extends StatelessWidget {
   const BevelHighlight({
     super.key,
     this.radius = AppRadius.card,
     this.opacity = 0.34,
+    this.shade = 0.20,
   });
 
   final double radius;
+
+  /// Strength of the light along the top edge.
   final double opacity;
+
+  /// Strength of the shade along the bottom edge. Zero for a surface that
+  /// should read as lit but not raised.
+  final double shade;
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(radius),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white.withValues(alpha: opacity),
-              Colors.white.withValues(alpha: 0.0),
-            ],
-            stops: const [0.0, 0.42],
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(radius),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: opacity),
+                  Colors.white.withValues(alpha: 0.0),
+                ],
+                stops: const [0.0, 0.42],
+              ),
+            ),
           ),
-        ),
+          if (shade > 0)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: shade),
+                    Colors.black.withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, 0.30],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
