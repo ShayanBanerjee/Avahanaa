@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/hero_header.dart';
+import '../../widgets/metal.dart';
 import '../../widgets/ui_kit.dart';
 import '../home_screen.dart';
 import 'forgot_password_screen.dart';
@@ -143,14 +144,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      SizedBox(
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
-                          child: _isLoading
-                              ? const AuthButtonSpinner()
-                              : const Text('Sign in'),
-                        ),
+                      MetalButton(
+                        label: 'Sign in',
+                        icon: Icons.lock_open_rounded,
+                        busy: _isLoading,
+                        onPressed: _handleLogin,
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       Row(

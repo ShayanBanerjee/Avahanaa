@@ -41,6 +41,45 @@ bottom-right.
 Red is reserved. It means "an alert" or "this destroys data" and nothing else —
 do not use it for emphasis.
 
+## The metallic layer
+
+Surfaces are machined, not flat. Three things do the work, in
+`lib/widgets/metal.dart`:
+
+1. **An asymmetric five-stop ramp** (`MetalPalette`). Even two-stop gradients
+   read as plastic; real metal has a bright band and a fast falloff, so the
+   stops are deliberately uneven (`0.0, 0.28, 0.52, 0.82, 1.0`).
+2. **A bevel.** One hairline of white on the top edge, one of black on the
+   bottom.
+3. **A sheen that moves** (`SheenSweep`) — a specular band crossing once on
+   entrance, then every ~9s. Continuous shimmer stops reading as premium and
+   starts reading as a loading state, so the pause is the point.
+
+Palettes: `brand` (hero surfaces, primary buttons), `alert` (panic banner),
+`success` (verify email), `graphite` (the QR bezel), `silver` (the plate).
+
+**Never metallic**, and these are hard limits:
+
+- **QR modules.** Pure black on pure white. A gradient across a finder pattern
+  destroys the contrast a scanner's binarisation depends on.
+- **The printed sticker.** A five-stop ramp bands and muddies on a consumer
+  printer, so the sheet keeps the flat `AppColors.heroGradient`.
+- **Body copy backgrounds.** Text sits on solid ground, never on a moving
+  highlight.
+
+### Ramps are contrast-clamped
+
+Every stop of every ramp is darkened until white body text on it clears WCAG AA
+(4.5:1), and `test/contrast_test.dart` fails the build if that ever drifts.
+
+This is not optional polish. A gradient is only as accessible as its worst stop,
+and the literal design tokens did **not** hold: white on `#5B95F7` is 2.96:1 and
+on the raw success green `#10B981` it is 2.54:1 — while the home hero runs muted
+white copy across both. The palettes therefore carry darkened variants of the
+brand colours rather than the tokens themselves. When adding a stop, run the
+test rather than trusting your eye; several hand-picked values that looked
+obviously fine measured at 3.8–4.1:1.
+
 ## Shape and spacing
 
 - Radius: **12** inputs and buttons, **16** cards, **24** hero surfaces and the

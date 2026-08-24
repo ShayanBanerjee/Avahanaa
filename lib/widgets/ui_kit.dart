@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'metal.dart';
 
 // ---------------------------------------------------------------------------
 // Motion
@@ -191,9 +192,13 @@ class AppCard extends StatelessWidget {
       ),
     );
 
-    return clip
+    final surface = clip
         ? ClipRRect(borderRadius: AppRadius.cardAll, child: decorated)
         : decorated;
+
+    // Only interactive cards get press physics; a static card that shrinks
+    // under a stray finger reads as broken.
+    return onTap == null ? surface : PressableScale(child: surface);
   }
 }
 
@@ -398,6 +403,11 @@ class StatusPill extends StatelessWidget {
 /// Private vehicles in India carry black characters on a white plate with a
 /// blue "IND" band. Showing the plate this way makes the app feel like it is
 /// about *this* car rather than about a database row.
+///
+/// A real plate is stamped metal, so this is the one place in the app where
+/// the metallic treatment is not a stylistic choice — it is what the object
+/// actually is. The face carries a brushed-silver ramp and the characters are
+/// embossed with a light shadow above and a highlight below.
 class PlateBadge extends StatelessWidget {
   const PlateBadge({super.key, required this.plate, this.height = 40});
 
@@ -420,10 +430,13 @@ class PlateBadge extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: _plateInk, width: 1.5),
           boxShadow: AppShadows.card,
+          gradient: MetalPalette.silver.gradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -431,9 +444,14 @@ class PlateBadge extends StatelessWidget {
             // The blue IND band.
             Container(
               width: height * 0.42,
-              decoration: const BoxDecoration(
-                color: _indBand,
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF2B4FA8), _indBand, Color(0xFF16296B)],
+                  stops: [0.0, 0.45, 1.0],
+                ),
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4.5),
                   bottomLeft: Radius.circular(4.5),
                 ),
@@ -462,6 +480,19 @@ class PlateBadge extends StatelessWidget {
                       fontSize: height * 0.42,
                       color: _plateInk,
                       letterSpacing: height * 0.045,
+                      // Emboss: shade above, catch-light below.
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          offset: const Offset(0, -0.6),
+                          blurRadius: 0.5,
+                        ),
+                        Shadow(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          offset: const Offset(0, 0.9),
+                          blurRadius: 0.6,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -500,12 +531,20 @@ class AppStatTile extends StatelessWidget {
         children: [
           AppIconBadge(icon: icon, color: color, size: 36, iconSize: 18),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.metric.copyWith(color: color),
-          ),
+          // Numeric values count up so a figure that just changed announces
+          // itself; non-numeric ones ("On"/"Off") render directly.
+          switch (int.tryParse(value)) {
+            final int n => AnimatedCounter(
+              value: n,
+              style: AppText.metric.copyWith(color: color),
+            ),
+            _ => Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.metric.copyWith(color: color),
+            ),
+          },
           const SizedBox(height: 2),
           Text(
             label,

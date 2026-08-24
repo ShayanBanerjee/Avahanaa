@@ -7,9 +7,10 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/vehicle_registration_validator.dart';
+import '../../widgets/metal.dart';
 import '../../widgets/ui_kit.dart';
 import '../legal_documents_screen.dart';
-import 'login_screen.dart' show AuthBrandHeader, AuthButtonSpinner, AuthValidators;
+import 'login_screen.dart' show AuthBrandHeader, AuthValidators;
 import 'verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -322,14 +323,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: AppSpacing.xxl),
 
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleSignUp,
-                        child: _isLoading
-                            ? const AuthButtonSpinner()
-                            : const Text('Create account'),
-                      ),
+                    MetalButton(
+                      label: 'Create account',
+                      icon: Icons.arrow_forward_rounded,
+                      busy: _isLoading,
+                      onPressed: _handleSignUp,
                     ),
                     const SizedBox(height: AppSpacing.lg),
 

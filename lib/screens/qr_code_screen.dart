@@ -10,6 +10,7 @@ import '../models/vehicle_model.dart';
 import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
 import '../utils/sticker_renderer.dart';
+import '../widgets/metal.dart';
 import '../widgets/ui_kit.dart';
 
 /// The sticker studio.
@@ -94,26 +95,13 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: _isExporting ? null : _shareSticker,
-                      icon: _isExporting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.onDark,
-                                ),
-                              ),
-                            )
-                          : const Icon(Icons.ios_share_rounded),
-                      label: Text(
-                        _isExporting ? 'Preparing…' : 'Share or save sticker',
-                      ),
-                    ),
+                  MetalButton(
+                    label: _isExporting
+                        ? 'Preparing…'
+                        : 'Share or save sticker',
+                    icon: Icons.ios_share_rounded,
+                    busy: _isExporting,
+                    onPressed: _shareSticker,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(

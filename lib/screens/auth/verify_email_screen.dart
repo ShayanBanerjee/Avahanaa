@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/hero_header.dart';
+import '../../widgets/metal.dart';
 import '../../widgets/ui_kit.dart';
 import '../home_screen.dart';
 import 'login_screen.dart' show AuthButtonSpinner, LoginScreen;
@@ -122,11 +123,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     return Scaffold(
       body: HeroSurface(
         padding: EdgeInsets.zero,
-        colors: const [
-          AppColors.success,
-          AppColors.successDark,
-          AppColors.primaryDark,
-        ],
+        palette: MetalPalette.success,
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(

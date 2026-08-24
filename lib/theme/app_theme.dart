@@ -64,16 +64,16 @@ abstract final class AppColors {
   static const Color border = Color(0xFFE5E7EB);
   static const Color borderStrong = Color(0xFFD1D5DB);
 
-  /// The single brand gradient. Used by the splash, the home hero and the
-  /// profile header so the three read as one product.
+  /// The flat brand gradient, kept for the **printed** sticker only.
+  ///
+  /// On screen the same ramp is rendered as metal (`MetalPalette.brand`), but
+  /// print is unforgiving: a five-stop metallic ramp bands and muddies on a
+  /// consumer printer, so the sheet keeps the flat three-stop version.
   static const List<Color> heroGradient = <Color>[
     primary,
     primaryDark,
     success,
   ];
-
-  /// Escalation gradient for panic-mode surfaces.
-  static const List<Color> alertGradient = <Color>[alert, alertDeep];
 }
 
 // ---------------------------------------------------------------------------
