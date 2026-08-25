@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:qr/qr.dart';
 
 import '../theme/app_theme.dart';
 import 'metal.dart';
@@ -8,45 +12,364 @@ import 'ui_kit.dart';
 /// The one place QR appearance is defined.
 ///
 /// The on-screen preview, the printable sticker composite and the shared PNG
-/// all read these constants, so the code a stranger scans is byte-identical in
-/// styling wherever it is rendered.
+/// all render through [AvahanaaQrPainter], so the code a stranger scans is
+/// pixel-identical in styling wherever it appears.
 ///
-/// Scan reliability outranks aesthetics here, always:
+/// ## Why this is hand-painted
 ///
-/// * **Pure black modules and eyes.** The eyes were previously tinted brand
-///   blue. A tinted finder pattern lowers the contrast ratio the scanner's
-///   binarisation step depends on, and through a dusty windscreen that is
-///   exactly the margin you lose first.
-/// * **Error correction M, not L.** The payload is a short URL, so the density
-///   cost is one QR version. In exchange roughly 15% of the code can be
-///   obscured by dirt, a wiper smear or a crease and still decode.
+/// `qr_flutter` only offers square-or-circle modules. Circles are the usual way
+/// to make a code "look designed", and they are the wrong trade here: a circle
+/// inscribed in a square keeps 78.5% of its area, so every module loses a fifth
+/// of its ink. That margin is exactly what a phone camera is working with
+/// through a dusty windscreen at arm's length. Rounded squares at a 0.28 corner
+/// radius keep ~97% of the area and read as just as deliberate, so this file
+/// drives the module matrix from the `qr` package directly and draws it.
 ///
-/// Raising the correction level does not change what the code *contains* —
-/// already-printed stickers keep working, they simply carry less redundancy
-/// than newly exported ones.
+/// ## What is safe to style, and what is not
+///
+/// * **Module colour stays pure black on pure white.** A tinted or gradient
+///   module lowers the contrast ratio the scanner's binarisation step depends
+///   on, and that is the first thing to fail in the field.
+/// * **Corner radius is free.** It changes the silhouette, not the coverage.
+/// * **Finder eyes carry no data**, so their shape is the cheapest visual win
+///   available, as long as the 1:1:3:1:1 ratio along the centre line survives.
+///   A rounded frame preserves it exactly.
+/// * **A centre logo costs redundancy**, and is paid for by the error
+///   correction level below.
+///
+/// ## Error correction, measured rather than assumed
+///
+/// For the real payload (38 characters), module size on an A5 sticker:
+///
+/// * L: version 3, 29x29 modules, 2.81mm
+/// * M: version 3, 29x29 modules, 2.81mm
+/// * Q: version 4, 33x33 modules, 2.47mm
+/// * H: version 5, 37x37 modules, 2.20mm
+///
+/// M is free, buying 15% redundancy over L at the same version. Q costs 12% of
+/// the module size and buys 25%, which is what pays for the centre logo. H was
+/// rejected: 22% smaller modules is a real loss at arm's length, and the logo
+/// does not need that much headroom.
+///
+/// Raising the level does not change what the code *contains* — already-printed
+/// stickers keep working, they simply carry different redundancy than newly
+/// exported ones.
 abstract final class AvahanaaQr {
-  static const int errorCorrectionLevel = QrErrorCorrectLevel.M;
+  /// Q (25%). See the table above for why this and not H.
+  static const int errorCorrectionLevel = QrErrorCorrectLevel.Q;
 
-  static const QrEyeStyle eyeStyle = QrEyeStyle(
-    eyeShape: QrEyeShape.square,
-    color: Colors.black,
+  /// The app-wide style. One definition, so preview and print cannot drift.
+  static const QrStyle style = QrStyle();
+
+  /// The brand mark drawn in the middle of the code, once loaded.
+  ///
+  /// Null until [loadLogo] completes, and every painter treats null as "draw no
+  /// logo" — a code that has not finished loading its decoration is still a
+  /// perfectly good code, so nothing ever waits on this.
+  static ui.Image? logo;
+
+  static Future<void>? _loading;
+
+  /// Decodes the brand mark once, for the centre of the code.
+  ///
+  /// Safe to call repeatedly; the work happens on the first call only. Called
+  /// from `main()` so the first frame already has it, and from the sticker
+  /// export path so a PNG never ships a logo-less code by accident.
+  static Future<void> loadLogo() {
+    return _loading ??= () async {
+      try {
+        final data = await rootBundle.load('assets/images/logo.png');
+        final codec = await ui.instantiateImageCodec(
+          data.buffer.asUint8List(),
+          // The mark is drawn at ~17% of the code; decoding the full 153KB
+          // asset to paint it at 60px wastes memory on every sticker.
+          targetWidth: 256,
+        );
+        final frame = await codec.getNextFrame();
+        logo = frame.image;
+      } catch (_) {
+        // A missing or corrupt asset must never take the QR down with it.
+        logo = null;
+      }
+    }();
+  }
+}
+
+/// How a code is drawn. Geometry only — the colours are not negotiable.
+@immutable
+class QrStyle {
+  const QrStyle({
+    this.moduleRadius = 0.35,
+    this.eyeOuterRadius = 0.10,
+    this.eyeInnerRadius = 0.30,
+    this.logoFraction = 0.17,
+    this.logoPadding = 0.22,
+  });
+
+  /// Corner radius of a data module, as a fraction of the module size. 0 is a
+  /// hard square, 0.5 is a circle.
+  ///
+  /// The cheapest knob on this class: the sweep decoded 10/10 at every value
+  /// from 0 to 0.5, so the default is set for looks and still sits well inside
+  /// what was measured. [kMaxSafeModuleRadius] is the guard.
+  final double moduleRadius;
+
+  /// Corner radius of the finder frame, as a fraction of its 7-module box.
+  ///
+  /// **This is the dangerous one.** The detector finds a code by scanning for
+  /// the 1:1:3:1:1 ratio across a finder pattern, and rounding the frame
+  /// distorts that ratio on the lines near its edges. The cliff is sharp and
+  /// close:
+  ///
+  /// * 0.00 - 0.12: decodes 10/10 under the full degradation set
+  /// * 0.16: 9/10 (loses the distant-scan case)
+  /// * 0.20: 8/10
+  /// * 0.24 and above: **0/10 — it stops decoding at all, even clean**
+  ///
+  /// The default keeps a margin below the last fully-passing value. Do not
+  /// raise it because a mockup looks better; re-run the sweep.
+  final double eyeOuterRadius;
+
+  /// Corner radius of the pupil, as a fraction of its 3-module box.
+  final double eyeInnerRadius;
+
+  /// Width of the centre logo, as a fraction of the code width. The white pad
+  /// behind it is what actually occludes data, so this is budgeted against the
+  /// error correction level rather than chosen by eye.
+  ///
+  /// Measured: decodes 10/10 up to 0.24 and starts failing at 0.28. The logo
+  /// turned out to be far cheaper than expected — it was never what broke the
+  /// first attempt at styling this code.
+  final double logoFraction;
+
+  /// White margin around the logo, as a fraction of the logo width.
+  final double logoPadding;
+
+  /// Ceilings established by the sweep in `tool/verify_sticker_scan.py`. The
+  /// unit test asserts the shipped style stays under them, so a "small tweak"
+  /// cannot silently break every printed sticker.
+  static const double kMaxSafeEyeOuterRadius = 0.12;
+  static const double kMaxSafeModuleRadius = 0.50;
+  static const double kMaxSafeLogoFraction = 0.24;
+
+  /// The plainest possible code: hard squares, no logo. Kept because it is the
+  /// control the scan harness measures every other style against.
+  static const QrStyle plain = QrStyle(
+    moduleRadius: 0,
+    eyeOuterRadius: 0,
+    eyeInnerRadius: 0,
+    logoFraction: 0,
   );
 
-  static const QrDataModuleStyle moduleStyle = QrDataModuleStyle(
-    dataModuleShape: QrDataModuleShape.square,
-    color: Colors.black,
-  );
-
-  /// A painter configured identically to [AvahanaaQrView], for canvas export.
-  static QrPainter painter(String data) {
-    return QrPainter(
-      data: data,
-      version: QrVersions.auto,
-      errorCorrectionLevel: errorCorrectionLevel,
-      gapless: true,
-      eyeStyle: eyeStyle,
-      dataModuleStyle: moduleStyle,
+  QrStyle copyWith({
+    double? moduleRadius,
+    double? eyeOuterRadius,
+    double? eyeInnerRadius,
+    double? logoFraction,
+    double? logoPadding,
+  }) {
+    return QrStyle(
+      moduleRadius: moduleRadius ?? this.moduleRadius,
+      eyeOuterRadius: eyeOuterRadius ?? this.eyeOuterRadius,
+      eyeInnerRadius: eyeInnerRadius ?? this.eyeInnerRadius,
+      logoFraction: logoFraction ?? this.logoFraction,
+      logoPadding: logoPadding ?? this.logoPadding,
     );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is QrStyle &&
+        other.moduleRadius == moduleRadius &&
+        other.eyeOuterRadius == eyeOuterRadius &&
+        other.eyeInnerRadius == eyeInnerRadius &&
+        other.logoFraction == logoFraction &&
+        other.logoPadding == logoPadding;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    moduleRadius,
+    eyeOuterRadius,
+    eyeInnerRadius,
+    logoFraction,
+    logoPadding,
+  );
+}
+
+/// Builds (and caches) the module matrix for a payload.
+///
+/// `QrImage` trials all eight mask patterns to pick the best one, which is far
+/// too much work to redo on every repaint — and the sticker studio paints nine
+/// codes at once across its theme chips.
+QrImage qrMatrixFor(String data, {int? errorCorrectionLevel}) {
+  final level = errorCorrectionLevel ?? AvahanaaQr.errorCorrectionLevel;
+  final key = '$level $data';
+  final cached = _matrixCache[key];
+  if (cached != null) return cached;
+
+  final matrix = QrImage(QrCode.fromData(data: data, errorCorrectLevel: level));
+
+  // Bounded so a long session cannot grow it without limit.
+  if (_matrixCache.length > 24) _matrixCache.clear();
+  _matrixCache[key] = matrix;
+  return matrix;
+}
+
+final Map<String, QrImage> _matrixCache = <String, QrImage>{};
+
+/// Draws the code. Pure black modules on pure white, always.
+class AvahanaaQrPainter extends CustomPainter {
+  AvahanaaQrPainter({
+    required this.data,
+    this.style = AvahanaaQr.style,
+    this.errorCorrectionLevel,
+    ui.Image? logo,
+  }) : logo = logo ?? AvahanaaQr.logo;
+
+  final String data;
+  final QrStyle style;
+  final int? errorCorrectionLevel;
+  final ui.Image? logo;
+
+  static const Color _ink = Color(0xFF000000);
+  static const Color _paper = Color(0xFFFFFFFF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final side = size.shortestSide;
+    if (side <= 0) return;
+
+    final matrix = qrMatrixFor(
+      data,
+      errorCorrectionLevel: errorCorrectionLevel,
+    );
+    final count = matrix.moduleCount;
+    final module = side / count;
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, side, side), Paint()..color = _paper);
+
+    final ink = Paint()
+      ..color = _ink
+      ..isAntiAlias = true;
+
+    // Data modules, skipping the three finder patterns — those are drawn as
+    // whole shapes below so their frames stay unbroken.
+    final radius = Radius.circular(module * style.moduleRadius);
+    for (var row = 0; row < count; row++) {
+      for (var col = 0; col < count; col++) {
+        if (_isFinder(row, col, count)) continue;
+        if (!matrix.isDark(row, col)) continue;
+
+        final rect = Rect.fromLTWH(col * module, row * module, module, module);
+        if (style.moduleRadius <= 0) {
+          canvas.drawRect(rect, ink);
+        } else {
+          canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), ink);
+        }
+      }
+    }
+
+    _drawEye(canvas, ink, Offset.zero, module);
+    _drawEye(canvas, ink, Offset((count - 7) * module, 0), module);
+    _drawEye(canvas, ink, Offset(0, (count - 7) * module), module);
+
+    _drawLogo(canvas, side);
+  }
+
+  /// True inside any of the three 7x7 finder patterns.
+  bool _isFinder(int row, int col, int count) {
+    final top = row < 7;
+    final bottom = row >= count - 7;
+    final left = col < 7;
+    final right = col >= count - 7;
+    return (top && left) || (top && right) || (bottom && left);
+  }
+
+  /// A finder pattern: 7x7 frame one module thick, with a 3x3 pupil.
+  ///
+  /// Drawn as three nested shapes rather than as modules so the frame reads as
+  /// a continuous stroke. The 1:1:3:1:1 ratio along the centre line — which is
+  /// what the detector actually looks for — is preserved exactly.
+  void _drawEye(Canvas canvas, Paint ink, Offset origin, double module) {
+    final outer = Rect.fromLTWH(origin.dx, origin.dy, module * 7, module * 7);
+    final middle = outer.deflate(module);
+    final inner = outer.deflate(module * 2);
+
+    if (style.eyeOuterRadius <= 0) {
+      canvas.drawRect(outer, ink);
+      canvas.drawRect(middle, Paint()..color = _paper);
+      canvas.drawRect(inner, ink);
+      return;
+    }
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        outer,
+        Radius.circular(outer.width * style.eyeOuterRadius),
+      ),
+      ink,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        middle,
+        Radius.circular(middle.width * style.eyeOuterRadius * 0.82),
+      ),
+      Paint()..color = _paper,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        inner,
+        Radius.circular(inner.width * style.eyeInnerRadius),
+      ),
+      ink,
+    );
+  }
+
+  void _drawLogo(Canvas canvas, double side) {
+    final image = logo;
+    if (image == null || style.logoFraction <= 0) return;
+
+    final logoSide = side * style.logoFraction;
+    final pad = logoSide * style.logoPadding;
+    final centre = Offset(side / 2, side / 2);
+
+    // The white pad is the part that actually occludes data, so it is kept as
+    // tight as it can be while still giving the mark a clean edge.
+    final padded = Rect.fromCenter(
+      center: centre,
+      width: logoSide + pad * 2,
+      height: logoSide + pad * 2,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(padded, Radius.circular(padded.width * 0.22)),
+      Paint()..color = _paper,
+    );
+
+    final target = Rect.fromCenter(
+      center: centre,
+      width: logoSide,
+      height: logoSide,
+    );
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(target, Radius.circular(target.width * 0.24)),
+    );
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      target,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant AvahanaaQrPainter old) {
+    return old.data != data ||
+        old.style != style ||
+        old.errorCorrectionLevel != errorCorrectionLevel ||
+        old.logo != logo;
   }
 }
 
@@ -56,30 +379,46 @@ class AvahanaaQrView extends StatelessWidget {
     super.key,
     required this.data,
     this.size,
-    this.padding = EdgeInsets.zero,
+    this.style = AvahanaaQr.style,
   });
 
   final String data;
   final double? size;
-  final EdgeInsets padding;
+  final QrStyle style;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       label: 'QR code for your vehicle',
       image: true,
-      child: QrImageView(
-        data: data,
-        version: QrVersions.auto,
-        size: size,
-        padding: padding,
-        backgroundColor: Colors.white,
-        errorCorrectionLevel: AvahanaaQr.errorCorrectionLevel,
-        gapless: true,
-        eyeStyle: AvahanaaQr.eyeStyle,
-        dataModuleStyle: AvahanaaQr.moduleStyle,
+      child: RepaintBoundary(
+        child: CustomPaint(
+          size: size == null ? Size.infinite : Size.square(size!),
+          painter: AvahanaaQrPainter(data: data, style: style),
+          isComplex: true,
+          willChange: false,
+        ),
       ),
     );
+  }
+}
+
+/// Rasterises a code on its own, for callers that need pixels rather than a
+/// widget.
+Future<Uint8List?> renderQrPng(String data, {int width = 600}) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  AvahanaaQrPainter(
+    data: data,
+  ).paint(canvas, Size(width.toDouble(), width.toDouble()));
+  final picture = recorder.endRecording();
+  try {
+    final image = await picture.toImage(width, width);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return bytes?.buffer.asUint8List();
+  } finally {
+    picture.dispose();
   }
 }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -16,6 +17,7 @@ import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/hero_header.dart';
+import 'widgets/qr_visual.dart';
 
 // Handle background messages (must be a top-level, entry-point function).
 @pragma('vm:entry-point')
@@ -43,6 +45,12 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Decode the mark that sits in the middle of the code. Deliberately not
+  // awaited: a code with no logo yet is still a perfectly good code, and
+  // blocking the first frame on an image decode is exactly the kind of thing
+  // that makes a cold start feel slow.
+  unawaited(AvahanaaQr.loadLogo());
 
   // Development only, and a no-op unless --dart-define=USE_FIREBASE_EMULATOR.
   await connectToFirebaseEmulatorsIfEnabled();
