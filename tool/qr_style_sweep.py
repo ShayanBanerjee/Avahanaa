@@ -74,7 +74,15 @@ def low_contrast(im, f):
 
 
 def noise(im, sigma):
-    n = np.random.normal(0, sigma, im.shape).astype(np.float32)
+    # Seeded, so this is a gate and not a coin flip.
+    #
+    # It ran unseeded at first and failed roughly once in five hundred runs —
+    # a rare tail draw, not a margin problem (480 further trials passed). But
+    # an intermittently red gate is one people learn to re-run rather than
+    # read, and this one guards whether a printed sticker scans. A fixed seed
+    # makes a failure here mean something changed.
+    rng = np.random.default_rng(0xA1A)
+    n = rng.normal(0, sigma, im.shape).astype(np.float32)
     return np.clip(im.astype(np.float32) + n, 0, 255).astype(np.uint8)
 
 
