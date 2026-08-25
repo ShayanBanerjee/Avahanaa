@@ -37,6 +37,15 @@ class QrPayloadBuilder {
       if (vehicleColor.isNotEmpty) 'color': vehicleColor,
       if (vehicleModel.isNotEmpty) 'carModel': vehicleModel,
       if (vehiclePlate.isNotEmpty) 'licensePlate': vehiclePlate,
+      // Firestore has no case-insensitive equality, so the plate is stored a
+      // second time in a normalised form for the backend's plate lookup to
+      // match on. `KA 01 AB 1234`, `ka-01-ab-1234` and `KA01AB1234` all have
+      // to resolve to the same vehicle — the person typing it is standing in
+      // the street reading it off a bumper.
+      //
+      // Display still uses `licensePlate`; this field is only ever a key.
+      if (vehiclePlate.isNotEmpty)
+        'licensePlateCanonical': canonicalisePlate(vehiclePlate),
     };
 
     return {
@@ -87,6 +96,16 @@ class QrPayloadBuilder {
         : _normalisePath(_qrPath);
 
     return Uri.https(_qrHost, redirectPath, queryParameters);
+  }
+
+  /// Uppercases and strips everything that is not a letter or digit.
+  ///
+  /// Must stay byte-identical to `canonicalisePlate` in the backend's
+  /// `functions/index.js` — the two are the read and write halves of the same
+  /// index, and a mismatch shows up as "no vehicle matches that number" rather
+  /// than as an error.
+  static String canonicalisePlate(String value) {
+    return value.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
   }
 
   static String _toTrimmedString(dynamic value) {

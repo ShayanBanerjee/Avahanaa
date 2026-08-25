@@ -89,7 +89,35 @@ void main() {
         'color': 'White',
         'carModel': 'Maruti Swift',
         'licensePlate': 'KA01AB1234',
+        'licensePlateCanonical': 'KA01AB1234',
       });
+    });
+
+    test('stores a normalised plate for the backend to match on', () {
+      // Firestore has no case-insensitive equality, so the plate lookup at
+      // /api/lookup matches on this field rather than on the display one.
+      // Someone typing a registration off a bumper will not reproduce the
+      // owner's spacing.
+      final metadata = QrPayloadBuilder.buildMetadata(
+        user: _user(),
+        vehicle: _vehicle(licensePlate: 'ka-01 ab 1234'),
+      );
+      final vehicle = metadata['vehicle'] as Map<String, dynamic>;
+
+      expect(vehicle['licensePlate'], 'ka-01 ab 1234');
+      expect(vehicle['licensePlateCanonical'], 'KA01AB1234');
+    });
+
+    test('canonicalisation agrees with the backend implementation', () {
+      // The read half of this index is `canonicalisePlate` in the backend's
+      // functions/index.js:
+      //     value.toUpperCase().replace(/[^A-Z0-9]/g, "")
+      // If these two ever diverge, plate lookup fails as "no vehicle matches
+      // that number" rather than as an error, so it is pinned here.
+      expect(QrPayloadBuilder.canonicalisePlate('KA 01 AB 1234'), 'KA01AB1234');
+      expect(QrPayloadBuilder.canonicalisePlate('ka-01-ab-1234'), 'KA01AB1234');
+      expect(QrPayloadBuilder.canonicalisePlate('  ka01ab1234  '), 'KA01AB1234');
+      expect(QrPayloadBuilder.canonicalisePlate(''), '');
     });
 
     test('never includes owner contact details', () {

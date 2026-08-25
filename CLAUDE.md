@@ -88,12 +88,21 @@ tool/verify_sticker_scan.py  Decodes exported stickers under simulated scan cond
 test/                        Only notification_payload_test.dart is meaningful
 ```
 
-**The scan-side web page and the FCM sender are NOT in this repo.** They live at
-`avahanaa.com` (Firebase Hosting + Cloud Functions in a separate project or
-directory). This repo only ever *reads* alerts. The contract between the two is
-`docs/critical_notification_payload_contract.md` and
+**There are two backends, and the one in this repo is not the one running.**
+
+`functions/` + `public/` + `firestore.rules` here (added `79b7720`) are
+contract-correct but **have never been deployed**. What actually serves
+`avahanaa.com` is a separate repo, `github.com/ShayanBanerjee/Avahanaa-Web`,
+whose scan page reads `users/{uid}` — `fcmToken` and `phoneNumber` — directly
+from the anonymous scanner's browser. Both repos target the same Firebase
+project (`congestion-free`) with conflicting hosting configs, so **a
+`firebase deploy` from either silently clobbers the other**.
+
+Read `docs/web_backend_sync.md` before touching anything under `functions/`,
+`public/`, `firestore.rules`, or `firebase.json`. The contract both sides owe
+the app is `docs/critical_notification_payload_contract.md` and
 `docs/backend_contract.md` — treat those as an API you do not control
-unilaterally.
+unilaterally, because QR URLs printed on windshields are permanent.
 
 ## Data model (Firestore)
 
@@ -240,7 +249,8 @@ Kept in `docs/known_issues.md` with detail. The short list:
    loud-buzzer feature is unbuilt. See `docs/alert_escalation_options.md`.
 3. `lib/utils/qr_encryption.dart` is dead code with a hardcoded default AES key
    committed in source. Delete it or wire it up — do not ship the default key.
-4. No `firestore.rules` or `firestore.indexes.json` in this repo, and
-   `firebase.json` has no rules/indexes/hosting config. Security rules are
-   managed out-of-band, which means they are unreviewed here.
+4. `firestore.rules` / `firestore.indexes.json` now exist and are wired in
+   `firebase.json`, but **nothing here is deployed** — production still runs
+   the 2025 `Avahanaa-Web` code, which leaks owner contact data to the scanner.
+   This is the highest-severity open item: `docs/web_backend_sync.md`.
 5. `assets/images/qr_template.svg` is legacy artwork that nothing references.

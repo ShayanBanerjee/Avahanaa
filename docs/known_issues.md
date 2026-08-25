@@ -53,18 +53,22 @@ The QR payload no longer carries encrypted data — it is an opaque ID URL — s
 the file is obsolete. Delete it, or if encryption comes back, make the key
 required via `--dart-define` with no default so a missing key fails the build.
 
-## 4. Firestore rules and indexes are not in this repo
+## 4. Firestore rules and indexes exist here but are NOT deployed — SUPERSEDED (Aug 2026)
 
-`firebase.json` configures only the Flutter platform mapping. There is no
-`firestore.rules`, no `firestore.indexes.json`. The rules protecting `qrCodes`
-(public read) and `notifications` (owner-only) are therefore unreviewable here
-and undeployable from here.
+`firestore.rules` and `firestore.indexes.json` landed in `79b7720`, and
+`firebase.json` now wires both. So the original complaint — nothing in the repo
+— is closed.
 
-This is the highest-severity item on the list, because `qrCodes` is
-publicly readable by design and `notifications` is written by an unauthenticated
-scan flow. Bring the rules into the repo, with tests.
+What replaced it is worse. **Neither file has been deployed**, and the rules
+actually live in the project appear to allow an anonymous scan page to read
+`users/{uid}` — including `fcmToken` and `phoneNumber`. Production is still
+served by the 2025 `Avahanaa-Web` code.
 
-Indexes needed by existing queries:
+Full audit, evidence and remediation order: `docs/web_backend_sync.md`. That is
+now the highest-severity item in the repo.
+
+Indexes needed by existing queries (all three present in
+`firestore.indexes.json`, none confirmed live):
 - `notifications(userId ASC, sentAt DESC)`
 - `notifications(userId ASC, read ASC)`
 - `notifications(userId ASC, vehicleId ASC, sentAt DESC)` — used by

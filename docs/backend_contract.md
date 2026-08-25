@@ -1,5 +1,13 @@
 # Contract with the out-of-repo backend
 
+> **Status (Aug 2026): production does not honour this contract.** The deployed
+> sender is `notifyOwner` from `Avahanaa-Web`, which sends a `notification`
+> block instead of data-only, omits `notificationId` and `sentAt`, and does not
+> set the alert channel — so dedupe and the +3/+15 min escalating reminders
+> never run. See `docs/web_backend_sync.md`. The spec below is still the
+> target; `functions/index.js` in this repo implements it correctly but is not
+> deployed.
+
 The scan page and the FCM sender are **not in this repository**. They live at
 `avahanaa.com` (Firebase Hosting + Cloud Functions). This file is the
 app-side view of that boundary. Changing anything here means coordinating two
