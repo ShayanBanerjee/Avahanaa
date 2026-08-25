@@ -796,7 +796,9 @@ class StickerPainter extends CustomPainter {
         Paint()..filterQuality = FilterQuality.none,
       );
     } else {
-      AvahanaaQr.painter(spec.qrData).paint(canvas, Size(codeSide, codeSide));
+      AvahanaaQrPainter(
+        data: spec.qrData,
+      ).paint(canvas, Size(codeSide, codeSide));
     }
     canvas.restore();
   }
@@ -952,6 +954,11 @@ Future<Uint8List?> renderStickerPng(
   StickerSpec spec, {
   int width = 1000,
 }) async {
+  // A printed sticker must never ship a logo-less code just because the app
+  // happened to export before the asset finished decoding. Unlike the on-screen
+  // preview, this one waits.
+  await AvahanaaQr.loadLogo();
+
   final height = (width / kStickerAspectRatio).round();
   final size = Size(width.toDouble(), height.toDouble());
 

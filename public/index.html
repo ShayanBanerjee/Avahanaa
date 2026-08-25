@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Alert the owner · Avahanaa</title>
+<link rel="icon" href="/favicon.png">
+<style>
+/*
+  The scan page.
+
+  Designed for the worst case, which is also the common case: someone standing
+  in traffic, one-handed, on a bad connection, who has never seen this page
+  before and has no intention of installing anything. Every decision below
+  follows from that.
+
+  - No framework, no fonts, no images. One HTML file, inline everything. It has
+    to render on a 3G connection in Bangalore before the person gives up.
+  - Tap targets are large and the reason list is the whole interface. Nobody
+    reads instructions while standing next to a stranger's car.
+  - System font stack, so there is no webfont round-trip and no layout shift.
+*/
+:root {
+  --primary: #2563EB;
+  --primary-deep: #1E40AF;
+  --success: #0B845C;
+  --alert: #DC2626;
+  --bg: #F9FAFB;
+  --surface: #FFFFFF;
+  --text: #1F2937;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+  --radius: 16px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+  min-height: 100dvh;
+}
+.wrap { max-width: 520px; margin: 0 auto; padding: 0 16px 48px; }
+
+header {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 55%, #0B845C 100%);
+  color: #fff;
+  padding: 28px 16px 32px;
+  border-radius: 0 0 24px 24px;
+  margin-bottom: -16px;
+}
+header .inner { max-width: 520px; margin: 0 auto; }
+.brand {
+  font-size: 12px; font-weight: 700; letter-spacing: 1.6px;
+  opacity: .82; text-transform: uppercase;
+}
+h1 { font-size: 26px; line-height: 1.2; margin: 6px 0 4px; font-weight: 800; }
+header p { margin: 0; opacity: .88; font-size: 14px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 16px;
+  box-shadow: 0 2px 12px rgba(16,24,40,.04);
+}
+
+.vehicle { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.plate {
+  /* Never squeezed: a truncated registration is worse than no registration —
+     the whole point is letting someone confirm they are at the right car. */
+  flex: 0 0 auto; white-space: nowrap;
+  display: inline-flex; align-items: stretch; overflow: hidden;
+  border: 1.5px solid #111827; border-radius: 6px; background: #F4F6F9;
+  font-weight: 700; letter-spacing: 1.2px; font-variant-numeric: tabular-nums;
+}
+.plate .ind {
+  background: #1E3A8A; color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 4px 3px; letter-spacing: .2px;
+}
+.plate .num { padding: 6px 10px; color: #111827; }
+.desc { color: var(--muted); font-size: 14px; min-width: 0; flex: 1 1 140px; }
+
+h2 { font-size: 15px; margin: 24px 0 10px; font-weight: 700; }
+
+.reasons { display: grid; gap: 10px; }
+.reason {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  min-height: 60px; padding: 12px 14px; text-align: left;
+  background: var(--surface); color: var(--text);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font: inherit; font-weight: 600; cursor: pointer;
+  transition: border-color .15s, background .15s, transform .06s;
+}
+.reason:active { transform: scale(.985); }
+.reason[aria-pressed="true"] {
+  border-color: var(--primary); background: #EFF6FF; color: var(--primary-deep);
+}
+.reason .emoji { font-size: 22px; line-height: 1; }
+.reason.urgent[aria-pressed="true"] {
+  border-color: var(--alert); background: #FEF2F2; color: #B91C1C;
+}
+
+textarea {
+  width: 100%; min-height: 84px; resize: vertical; padding: 12px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font: inherit; color: var(--text); background: var(--surface);
+}
+textarea:focus { outline: none; border-color: var(--primary); }
+.counter { text-align: right; font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.send {
+  width: 100%; min-height: 56px; margin-top: 16px;
+  border: 0; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8 60%, #0B845C);
+  color: #fff; font: inherit; font-size: 17px; font-weight: 700;
+  box-shadow: 0 8px 20px -6px rgba(29,78,216,.5);
+}
+.send[disabled] { opacity: .5; box-shadow: none; cursor: not-allowed; }
+
+.privacy {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: #F0F9FF; border: 1px solid #D6ECFB;
+  border-radius: 12px; padding: 12px 14px; margin-top: 16px;
+  font-size: 13px; color: #374151;
+}
+
+.state { text-align: center; padding: 40px 8px; }
+.state .big { font-size: 52px; line-height: 1; }
+.state h2 { font-size: 22px; margin: 14px 0 6px; }
+.state p { color: var(--muted); margin: 0 auto; max-width: 34ch; }
+.hidden { display: none !important; }
+.err { color: var(--alert); font-size: 14px; margin-top: 10px; text-align: center; }
+.skeleton { background: #F3F4F6; border-radius: 8px; height: 14px; animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
+footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="brand">Avahanaa</div>
+    <h1 id="headline">Alert the owner</h1>
+    <p id="subhead">They will get this on their phone straight away.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Loading -------------------------------------------------------- -->
+  <div id="loading" class="card">
+    <div class="skeleton" style="width:60%"></div>
+    <div class="skeleton" style="width:40%;margin-top:10px"></div>
+  </div>
+
+  <!-- Not found ------------------------------------------------------ -->
+  <div id="notfound" class="state hidden">
+    <div class="big">🔎</div>
+    <h2>This code is not active</h2>
+    <p>The owner may have turned it off, or the sticker may be damaged. There is
+       nothing to do here.</p>
+  </div>
+
+  <!-- Form ----------------------------------------------------------- -->
+  <main id="form" class="hidden">
+    <div class="card">
+      <div class="vehicle">
+        <span class="plate" id="plate" hidden>
+          <span class="ind">IND</span><span class="num" id="plateNum"></span>
+        </span>
+        <span class="desc" id="desc"></span>
+      </div>
+    </div>
+
+    <h2>What is happening?</h2>
+    <div class="reasons" id="reasons"></div>
+
+    <h2>Anything else? <span style="font-weight:400;color:var(--muted)">(optional)</span></h2>
+    <textarea id="message" maxlength="280"
+      placeholder="e.g. Silver hatchback is boxed in behind you"></textarea>
+    <div class="counter"><span id="count">0</span>/280</div>
+
+    <button class="send" id="send" disabled>Send alert</button>
+    <div class="err hidden" id="error"></div>
+
+    <div class="privacy">
+      <span>🔒</span>
+      <span><strong>You stay anonymous.</strong> The owner gets your message and
+      nothing else — not your name, not your number, not your location.</span>
+    </div>
+  </main>
+
+  <!-- Sent ----------------------------------------------------------- -->
+  <div id="sent" class="state hidden">
+    <div class="big">✅</div>
+    <h2>The owner has been alerted</h2>
+    <p>Their phone is ringing now, even if it is on silent. Most people get
+       there within a few minutes.</p>
+  </div>
+
+  <footer>avahanaa.com</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // The short route is /n/{id}; the legacy fallback is
+  // /index.html?page=notify&qr={id}&v=3. Both must keep working forever —
+  // stickers already glued to windshields encode whichever was current.
+  function qrCodeIdFromLocation() {
+    var short = location.pathname.match(/^\/n\/([A-Za-z0-9_-]+)\/?$/);
+    if (short) return short[1];
+    return new URLSearchParams(location.search).get("qr") || "";
+  }
+
+  var REASON_LABELS = {
+    blocking_driveway: ["🚪", "Blocking a driveway"],
+    illegal_parking:   ["⚠️", "Parked illegally"],
+    blocking_traffic:  ["🚦", "Blocking traffic"],
+    double_parked:     ["🚗", "Double parked"],
+    emergency:         ["🚨", "Emergency"],
+    private_property:  ["🏠", "On private property"],
+    other:             ["💬", "Something else"]
+  };
+  var URGENT = { emergency: true };
+
+  var qrCodeId = qrCodeIdFromLocation();
+  var chosen = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  function show(id) { $(id).classList.remove("hidden"); }
+  function hide(id) { $(id).classList.add("hidden"); }
+
+  // Text nodes only, never innerHTML — the vehicle description is owner-typed
+  // and the message is stranger-typed. Neither is ever parsed as markup.
+  function setText(el, value) { el.textContent = value || ""; }
+
+  if (!qrCodeId) { hide("loading"); show("notfound"); return; }
+
+  fetch("/api/qr/" + encodeURIComponent(qrCodeId))
+    .then(function (r) { if (!r.ok) throw new Error("inactive"); return r.json(); })
+    .then(function (data) {
+      var v = data.vehicle || {};
+      if (v.licensePlate) {
+        setText($("plateNum"), v.licensePlate);
+        $("plate").hidden = false;
+      }
+      setText($("desc"), [v.color, v.carModel].filter(Boolean).join(" "));
+      buildReasons(data.reasons || Object.keys(REASON_LABELS));
+      hide("loading");
+      show("form");
+    })
+    .catch(function () { hide("loading"); show("notfound"); });
+
+  function buildReasons(codes) {
+    var host = $("reasons");
+    codes.forEach(function (code) {
+      var meta = REASON_LABELS[code];
+      if (!meta) return;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "reason" + (URGENT[code] ? " urgent" : "");
+      b.setAttribute("aria-pressed", "false");
+      b.dataset.code = code;
+
+      var e = document.createElement("span");
+      e.className = "emoji"; e.textContent = meta[0];
+      var t = document.createElement("span"); t.textContent = meta[1];
+      b.appendChild(e); b.appendChild(t);
+
+      b.addEventListener("click", function () {
+        chosen = code;
+        Array.prototype.forEach.call(
+          host.querySelectorAll(".reason"),
+          function (other) {
+            other.setAttribute("aria-pressed", String(other === b));
+          }
+        );
+        $("send").disabled = false;
+      });
+      host.appendChild(b);
+    });
+  }
+
+  $("message").addEventListener("input", function () {
+    setText($("count"), String(this.value.length));
+  });
+
+  $("send").addEventListener("click", function () {
+    if (!chosen) return;
+    var btn = $("send");
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    hide("error");
+
+    fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        qrCodeId: qrCodeId,
+        reason: chosen,
+        message: $("message").value
+      })
+    })
+      .then(function (r) {
+        return r.json().then(function (body) { return { ok: r.ok, body: body }; });
+      })
+      .then(function (res) {
+        if (res.ok) { hide("form"); show("sent"); return; }
+        // A rate-limited scanner is told the owner already knows, which is both
+        // true and the least useful possible response to someone abusing it.
+        var code = res.body && res.body.error && res.body.error.code;
+        fallback(code === "rate_limited"
+          ? "The owner has already been alerted about this vehicle."
+          : "Could not send that. Check your connection and try again.");
+      })
+      .catch(function () {
+        fallback("Could not send that. Check your connection and try again.");
+      });
+
+    function fallback(msg) {
+      setText($("error"), msg);
+      show("error");
+      btn.disabled = false;
+      btn.textContent = "Send alert";
+    }
+  });
+})();
+</script>
+</body>
+</html>

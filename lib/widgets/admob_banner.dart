@@ -35,7 +35,18 @@ class _AdMobBannerState extends State<AdMobBanner> {
     super.dispose();
   }
 
-  void _loadAd() {
+  /// Loads the banner once the SDK is ready.
+  ///
+  /// `main()` kicks off `MobileAds.initialize()` without awaiting it, so the
+  /// launch path is not held open by an ad SDK. That means this widget can be
+  /// built before initialisation finishes, and a `BannerAd.load()` at that
+  /// point fails. `initialize()` is idempotent and returns the same completed
+  /// status once it has run, so awaiting it here is free in the common case
+  /// and correct in the racy one.
+  Future<void> _loadAd() async {
+    await MobileAds.instance.initialize();
+    if (!mounted) return;
+
     final adUnitId = kReleaseMode ? _liveAdUnitId : _testAdUnitId;
 
     final bannerAd = BannerAd(

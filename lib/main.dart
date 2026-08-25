@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -16,6 +17,7 @@ import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/hero_header.dart';
+import 'widgets/qr_visual.dart';
 
 // Handle background messages (must be a top-level, entry-point function).
 @pragma('vm:entry-point')
@@ -44,15 +46,27 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Decode the mark that sits in the middle of the code. Deliberately not
+  // awaited: a code with no logo yet is still a perfectly good code, and
+  // blocking the first frame on an image decode is exactly the kind of thing
+  // that makes a cold start feel slow.
+  unawaited(AvahanaaQr.loadLogo());
+
   // Development only, and a no-op unless --dart-define=USE_FIREBASE_EMULATOR.
   await connectToFirebaseEmulatorsIfEnabled();
   await signInDevFixtureUserIfEnabled();
 
-  // Initialize AdMob
+  // Initialize AdMob.
+  //
+  // Not awaited. This talks to Play Services and can take hundreds of
+  // milliseconds, and every one of them is spent before `runApp` — a blank
+  // screen held open by an ad SDK, on the launch path of an app whose whole
+  // promise is speed. The banner widget handles not-yet-initialised on its own
+  // and simply appears a moment later.
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS)) {
-    await MobileAds.instance.initialize();
+    unawaited(MobileAds.instance.initialize());
   }
 
   // Initialize FCM
