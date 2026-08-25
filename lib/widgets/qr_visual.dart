@@ -491,8 +491,15 @@ class QrHeroPlinth extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         // The ring sits behind the plinth and reads as a "live" indicator.
+        //
+        // Wrapped in a RepaintBoundary because it never stops animating.
+        // Without one, every frame of a slow decorative pulse repaints the
+        // whole plinth above it — the bezel, the reticle, and a QR made of
+        // several hundred rounded rects.
         if (isActive)
-          BreathingRing(color: accent, size: size + 96)
+          RepaintBoundary(
+            child: BreathingRing(color: accent, size: size + 96),
+          )
         else
           const SizedBox.shrink(),
         ReticleFrame(

@@ -606,8 +606,10 @@ class _SheetPreview extends StatelessWidget {
                           top: slot.top * scale,
                           width: slot.width * scale,
                           height: slot.height * scale,
-                          child: CustomPaint(
-                            painter: StickerPainter(spec: spec),
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: StickerPainter(spec: spec),
+                            ),
                           ),
                         ),
                     ],
@@ -680,11 +682,16 @@ class _StyleChip extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
-                          child: CustomPaint(
-                            painter: StickerPainter(
-                              spec: spec.copyWith(style: style),
+                          // Each chip paints a complete sticker, QR included.
+                          // Eight of them scroll in a row, so each gets its own
+                          // layer — otherwise scrolling repaints all eight.
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: StickerPainter(
+                                spec: spec.copyWith(style: style),
+                              ),
+                              size: Size.infinite,
                             ),
-                            size: Size.infinite,
                           ),
                         ),
                       ),

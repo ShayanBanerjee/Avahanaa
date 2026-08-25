@@ -46,18 +46,29 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _viewedVehicleId = vehicle.id);
   }
 
+  /// One listener on `notifications`, shared by everything that needs it.
+  ///
+  /// The nav badge, the home stat tile and the panic banner all want the same
+  /// thing, and each used to open its own Firestore stream — three live
+  /// listeners on one collection, three sets of socket traffic, three rebuild
+  /// cascades per alert. Held here and passed down instead.
+  late final Stream<List<NotificationModel>> _notifications = _firestoreService
+      .streamUserNotifications(_currentUser!.uid)
+      .asBroadcastStream();
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<int>(
-      stream: _firestoreService.streamUnreadNotificationCount(
-        _currentUser!.uid,
-      ),
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _notifications,
       builder: (context, snapshot) {
-        final unreadCount = snapshot.data ?? 0;
+        final all = snapshot.data ?? const <NotificationModel>[];
+        final unread = all.where((n) => !n.read).toList(growable: false);
+        final unreadCount = unread.length;
         final screens = <Widget>[
           _HomeTab(
             state: this,
             unreadCount: unreadCount,
+            unread: unread,
             onOpenInbox: () => _openTab(1),
           ),
           const NotificationsScreen(),
@@ -65,7 +76,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ];
 
         return Scaffold(
-          body: IndexedStack(index: _selectedIndex, children: screens),
+          // IndexedStack keeps all three tabs alive (so scroll position and
+          // Firestore listeners survive a tab switch); the fade just stops the
+          // swap being a hard cut.
+          body: AnimatedSwitcher(
+            duration: AppMotion.fast,
+            child: KeyedSubtree(
+              key: ValueKey<int>(_selectedIndex),
+              child: IndexedStack(index: _selectedIndex, children: screens),
+            ),
+          ),
           bottomNavigationBar: _AppNavBar(
             currentIndex: _selectedIndex,
             unreadCount: unreadCount,
@@ -168,11 +188,13 @@ class _HomeTab extends StatelessWidget {
   const _HomeTab({
     required this.state,
     required this.unreadCount,
+    required this.unread,
     required this.onOpenInbox,
   });
 
   final _HomeScreenState state;
   final int unreadCount;
+  final List<NotificationModel> unread;
   final VoidCallback onOpenInbox;
 
   @override
@@ -269,6 +291,7 @@ class _HomeTab extends StatelessWidget {
                 vehicles: vehicles,
                 vehicle: vehicle,
                 unreadCount: unreadCount,
+                unread: unread,
                 onOpenInbox: onOpenInbox,
               ),
             );
@@ -304,6 +327,7 @@ class _HomeBody extends StatelessWidget {
     required this.vehicles,
     required this.vehicle,
     required this.unreadCount,
+    required this.unread,
     required this.onOpenInbox,
   });
 
@@ -312,6 +336,7 @@ class _HomeBody extends StatelessWidget {
   final List<VehicleModel> vehicles;
   final VehicleModel vehicle;
   final int unreadCount;
+  final List<NotificationModel> unread;
   final VoidCallback onOpenInbox;
 
   @override
@@ -344,11 +369,7 @@ class _HomeBody extends StatelessWidget {
           ),
 
           // Panic mode: an unread alert outranks everything below it.
-          _CriticalAlertBanner(
-            state: state,
-            user: user,
-            onOpenInbox: onOpenInbox,
-          ),
+          _CriticalAlertBanner(unread: unread, onOpenInbox: onOpenInbox),
 
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -362,11 +383,28 @@ class _HomeBody extends StatelessWidget {
               children: [
                 EntranceFade(
                   delay: const Duration(milliseconds: 60),
-                  child: _QrCard(
-                    user: user,
-                    vehicle: vehicle,
-                    payload: qrPayload,
-                    isLive: isLive,
+                  // Swiping the vehicle rail changes the code underneath it.
+                  // Swapping it instantly reads as a glitch — the panel is the
+                  // largest thing on the screen — so it cross-fades, keyed by
+                  // vehicle so the switcher is what drives it.
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.normal,
+                    switchInCurve: AppMotion.entrance,
+                    switchOutCurve: Curves.easeIn,
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[
+                        ...previous,
+                        if (current != null) current,
+                      ],
+                    ),
+                    child: _QrCard(
+                      key: ValueKey<String>(vehicle.id),
+                      user: user,
+                      vehicle: vehicle,
+                      payload: qrPayload,
+                      isLive: isLive,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -509,6 +547,7 @@ class _HomeHero extends StatelessWidget {
 /// and the dialog is where paper size and printer get chosen anyway.
 class _QrCard extends StatefulWidget {
   const _QrCard({
+    super.key,
     required this.user,
     required this.vehicle,
     required this.payload,
@@ -763,132 +802,120 @@ class _PrivacyPromiseCard extends StatelessWidget {
 /// action, and no competing decoration. Someone reading this may be walking
 /// fast toward their car.
 class _CriticalAlertBanner extends StatelessWidget {
-  const _CriticalAlertBanner({
-    required this.state,
-    required this.user,
-    required this.onOpenInbox,
-  });
+  const _CriticalAlertBanner({required this.unread, required this.onOpenInbox});
 
-  final _HomeScreenState state;
-  final UserModel user;
+  final List<NotificationModel> unread;
   final VoidCallback onOpenInbox;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<NotificationModel>>(
-      stream: state._firestoreService.streamUserNotifications(user.id),
-      builder: (context, snapshot) {
-        final notifications = snapshot.data ?? const <NotificationModel>[];
-        final unread = notifications.where((n) => !n.read).toList();
-        if (unread.isEmpty) return const SizedBox.shrink();
+    if (unread.isEmpty) return const SizedBox.shrink();
 
-        final latest = unread.first;
-        final detail = latest.message.trim().isEmpty
-            ? latest.reasonText
-            : latest.message.trim();
+    final latest = unread.first;
+    final detail = latest.message.trim().isEmpty
+        ? latest.reasonText
+        : latest.message.trim();
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.xl,
-            AppSpacing.lg,
-            0,
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.heroAll,
-              // Machined, but a shallow ramp: this is panic mode, and the
-              // white text on it must never lose contrast.
-              gradient: MetalPalette.alert.gradient(),
-              boxShadow: AppShadows.glow(AppColors.alert),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.heroAll,
+          // Machined, but a shallow ramp: this is panic mode, and the
+          // white text on it must never lose contrast.
+          gradient: MetalPalette.alert.gradient(),
+          boxShadow: AppShadows.glow(AppColors.alert),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                // Top-aligned so the icon tracks the first line of the
+                // headline instead of drifting to the middle when it wraps.
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    // Top-aligned so the icon tracks the first line of the
-                    // headline instead of drifting to the middle when it wraps.
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: BreathingPulse(
-                          child: Icon(
-                            Icons.warning_rounded,
-                            color: AppColors.onDark,
-                            size: 28,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Text(
-                          unread.length == 1
-                              ? 'Someone needs you at your vehicle'
-                              : '${unread.length} people need you at your vehicle',
-                          style: AppText.panicTitle,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    detail,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.bodyLarge.copyWith(color: AppColors.onDark),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    latest.timeAgo,
-                    style: AppText.labelMedium.copyWith(
-                      color: AppColors.onDarkMuted,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => NotificationsScreen(
-                              initialNotificationId: latest.id,
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.surface,
-                        foregroundColor: AppColors.alertDeep,
-                        textStyle: AppText.labelLarge.copyWith(fontSize: 17),
-                      ),
-                      child: const Text('See what happened'),
-                    ),
-                  ),
-                  if (unread.length > 1) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: onOpenInbox,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.onDark,
-                        ),
-                        child: Text('View all ${unread.length} alerts'),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: BreathingPulse(
+                      child: Icon(
+                        Icons.warning_rounded,
+                        color: AppColors.onDark,
+                        size: 28,
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      unread.length == 1
+                          ? 'Someone needs you at your vehicle'
+                          : '${unread.length} people need you at your vehicle',
+                      style: AppText.panicTitle,
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                detail,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.bodyLarge.copyWith(color: AppColors.onDark),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                latest.timeAgo,
+                style: AppText.labelMedium.copyWith(
+                  color: AppColors.onDarkMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => NotificationsScreen(
+                          initialNotificationId: latest.id,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.alertDeep,
+                    textStyle: AppText.labelLarge.copyWith(fontSize: 17),
+                  ),
+                  child: const Text('See what happened'),
+                ),
+              ),
+              if (unread.length > 1) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: onOpenInbox,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.onDark,
+                    ),
+                    child: Text('View all ${unread.length} alerts'),
+                  ),
+                ),
+              ],
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

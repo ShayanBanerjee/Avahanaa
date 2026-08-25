@@ -56,11 +56,17 @@ void main() async {
   await connectToFirebaseEmulatorsIfEnabled();
   await signInDevFixtureUserIfEnabled();
 
-  // Initialize AdMob
+  // Initialize AdMob.
+  //
+  // Not awaited. This talks to Play Services and can take hundreds of
+  // milliseconds, and every one of them is spent before `runApp` — a blank
+  // screen held open by an ad SDK, on the launch path of an app whose whole
+  // promise is speed. The banner widget handles not-yet-initialised on its own
+  // and simply appears a moment later.
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS)) {
-    await MobileAds.instance.initialize();
+    unawaited(MobileAds.instance.initialize());
   }
 
   // Initialize FCM
