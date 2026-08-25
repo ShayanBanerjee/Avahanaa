@@ -27,16 +27,29 @@ Screens that serve both moments must be designed for panic first.
 |---|---|---|
 | Primary | `#2563EB` | Buttons, links, active nav, focus rings |
 | Success | `#10B981` | Confirmations, active QR state, "on my way" |
-| Alert | `#DC2626` | Alert notifications, unread badges, destructive actions |
-| Alert deep | `#B91C1C` | Escalated reminder alerts |
-| Background | `#F9FAFB` | Scaffold background |
+| Alert | `#C81B30` | Alert notifications, unread badges, destructive actions |
+| Alert deep | `#A01625` | Escalated reminder alerts |
+| Background | `#F8FAFC` | Scaffold background |
 | Surface | `#FFFFFF` | Cards, app bar, inputs |
 | Info surface | `#F0F9FF` | Informational cards (the QR screen tip card) |
-| Text primary | `#1F2937` | Headings and body |
-| Border | `#E5E7EB` | Input borders, dividers |
+| Text primary | `#0F172A` | Headings and body |
+| Text secondary | `#475569` | Supporting copy — 7.58:1 on white |
+| Text tertiary | `#64748B` | Overlines, captions — still has to clear AA |
+| Border | `#E2E8F0` | Input borders, dividers |
 
 The splash and hero gradient runs `#2563EB` → `#10B981`, top-left to
 bottom-right.
+
+**The neutrals are slate, not grey.** They carry a few degrees of the brand's
+blue. Pure grey beside a saturated blue reads as two palettes that happened to
+meet — the grey looks faintly green by comparison. This is also where the
+contrast came from: secondary text moved from 4.83:1 to 7.58:1 on white, and
+the old tertiary was failing AA outright at 2.54:1.
+
+**The alert red is a crimson, not a fire-engine red.** `#DC2626` is the most
+default-looking colour on a phone, and at panic-card size it filled a third of
+the screen looking like a stock error dialog. Rotated toward blue and dropped
+in value, it stays just as alarming and every ramp stop gained contrast.
 
 Red is reserved. It means "an alert" or "this destroys data" and nothing else —
 do not use it for emphasis.
@@ -92,7 +105,15 @@ obviously fine measured at 3.8–4.1:1.
 
 ## Type
 
-Font family `SF Pro Display`, falling back to the platform default.
+**Plus Jakarta Sans** for display, **Inter** for body and labels. Both ship
+bundled as variable fonts, so `AppText` sets `fontVariations` as well as
+`fontWeight` — setting only `fontWeight` renders at the default axis position
+on some Android builds. (This section used to say `SF Pro Display`, which was
+never shipped and silently fell back to Roboto.)
+
+Display tracking is **optical, not constant**: `_opticalTracking` tightens from
+-0.3 at 18sp to -1.0 at 34sp. Counters and side-bearings scale with the glyph,
+so one value across the whole scale leaves large headings looking gappy.
 
 - App bar title: 18 / w600
 - Section heading: 16 / w600

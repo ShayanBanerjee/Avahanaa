@@ -36,33 +36,51 @@ abstract final class AppColors {
 
   // Alert — reserved. Red means "an alert" or "this destroys data". Nothing
   // else. Never use it for plain emphasis.
-  static const Color alert = Color(0xFFDC2626);
-  static const Color alertDeep = Color(0xFFB91C1C);
-  static const Color alertDarkest = Color(0xFF7F1D1D);
-  static const Color alertTint = Color(0xFFFEE2E2);
-  static const Color alertBorder = Color(0xFFFCA5A5);
+  //
+  // A deep crimson rather than the old fire-engine `#DC2626`. Pure high-hue
+  // red is the most default-looking colour on a phone, and at panic-card size
+  // it filled a third of the screen with something that read as an error
+  // dialog. Rotating a few degrees toward blue and dropping the value keeps it
+  // just as alarming — arguably more so, since it stops looking like a stock
+  // warning — and every stop gained contrast rather than losing it.
+  static const Color alert = Color(0xFFC81B30);
+  static const Color alertDeep = Color(0xFFA01625);
+  static const Color alertDarkest = Color(0xFF6E0F1B);
+  static const Color alertTint = Color(0xFFFDE7EA);
+  static const Color alertBorder = Color(0xFFF5A3AD);
 
   static const Color warning = Color(0xFFF59E0B);
   static const Color warningTint = Color(0xFFFFFBEB);
 
   // Neutrals ------------------------------------------------------------
-  static const Color background = Color(0xFFF9FAFB);
+  //
+  // Blue-tinted rather than pure grey. The brand is `#2563EB`, and neutral
+  // greys sitting next to a saturated blue read as two palettes that happened
+  // to meet — the grey looks faintly green by comparison. Carrying a few
+  // degrees of the brand hue through every neutral is what makes a screen look
+  // designed rather than assembled, and it costs nothing.
+  //
+  // The step also bought real contrast. Secondary text went from 4.83:1 to
+  // 7.58:1 on white, and the old tertiary was failing AA outright at 2.54:1.
+  static const Color background = Color(0xFFF8FAFC);
   /// Surface for the delete-account / destructive zone.
-  static const Color alertSurface = Color(0xFFFEF2F2);
+  static const Color alertSurface = Color(0xFFFEF4F5);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceMuted = Color(0xFFF3F4F6);
+  static const Color surfaceMuted = Color(0xFFF1F5F9);
   static const Color infoSurface = Color(0xFFF0F9FF);
   /// Hairline that pairs with [infoSurface] — plain [border] disappears on it.
   static const Color infoBorder = Color(0xFFD6ECFB);
 
-  static const Color textPrimary = Color(0xFF1F2937);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textTertiary = Color(0xFF9CA3AF);
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
+  /// Quiet, but still text — overlines and captions use this, so it has to
+  /// clear AA. The previous value did not (2.54:1).
+  static const Color textTertiary = Color(0xFF64748B);
   static const Color onDark = Color(0xFFFFFFFF);
   static const Color onDarkMuted = Color(0xCCFFFFFF);
 
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color borderStrong = Color(0xFFD1D5DB);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color borderStrong = Color(0xFFCBD5E1);
 
   /// The flat brand gradient, kept for the **printed** sticker only.
   ///
@@ -111,20 +129,38 @@ abstract final class AppRadius {
 
 abstract final class AppShadows {
   /// Cards sit flat on the background with a whisper of lift.
+  ///
+  /// Two layers, not one. A single soft blur is the classic tell of a flat
+  /// card sitting on a page: real objects cast a tight, dark contact shadow
+  /// where they meet the surface *and* a wide, faint ambient one. Splitting
+  /// them is what separates "container with a drop shadow" from something that
+  /// looks like it has thickness — at the same total opacity.
   static const List<BoxShadow> card = <BoxShadow>[
+    // Contact — tight and close, defines the edge.
     BoxShadow(
-      color: Color(0x0A101828),
-      blurRadius: 12,
-      offset: Offset(0, 2),
+      color: Color(0x0F0F172A),
+      blurRadius: 2,
+      offset: Offset(0, 1),
+    ),
+    // Ambient — wide and faint, gives the lift.
+    BoxShadow(
+      color: Color(0x0A0F172A),
+      blurRadius: 16,
+      offset: Offset(0, 4),
     ),
   ];
 
   /// Hero surfaces only — the QR container, the home hero.
   static const List<BoxShadow> hero = <BoxShadow>[
     BoxShadow(
-      color: Color(0x1A101828),
-      blurRadius: 20,
-      offset: Offset(0, 10),
+      color: Color(0x140F172A),
+      blurRadius: 6,
+      offset: Offset(0, 2),
+    ),
+    BoxShadow(
+      color: Color(0x1A0F172A),
+      blurRadius: 28,
+      offset: Offset(0, 12),
     ),
   ];
 
@@ -174,11 +210,29 @@ List<FontVariation> _wght(FontWeight weight) => <FontVariation>[
   FontVariation('wght', weight.value.toDouble()),
 ];
 
+/// Optical tracking for display type.
+///
+/// Letter-spacing is not a constant — the larger the type, the tighter it
+/// wants to be. Counters and side-bearings scale with the glyph, so a value
+/// that looks right at 18sp leaves 34sp looking gappy and amateur, which is
+/// exactly what a single `-0.4` across the whole display scale produced.
+///
+/// The curve below is roughly -0.03em at the top of the scale easing to
+/// -0.015em at the bottom. This is the cheapest thing on the list that makes
+/// headings look set rather than typed.
+double _opticalTracking(double size) {
+  if (size >= 32) return -1.0;
+  if (size >= 26) return -0.8;
+  if (size >= 22) return -0.6;
+  if (size >= 19) return -0.45;
+  return -0.3;
+}
+
 TextStyle _display(
   double size,
   FontWeight weight, {
   double? height,
-  double letterSpacing = -0.4,
+  double? letterSpacing,
   Color color = AppColors.textPrimary,
 }) {
   return TextStyle(
@@ -187,7 +241,7 @@ TextStyle _display(
     fontWeight: weight,
     fontVariations: _wght(weight),
     height: height,
-    letterSpacing: letterSpacing,
+    letterSpacing: letterSpacing ?? _opticalTracking(size),
     color: color,
   );
 }

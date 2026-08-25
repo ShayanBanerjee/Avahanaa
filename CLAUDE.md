@@ -178,7 +178,9 @@ background isolate can cancel them without reading state.
   `AvahanaaTheme.light()`. Screens must not hardcode hex, spacing or text
   styles; if a shade is missing, add it to the token file so the whole app
   moves together. The palette is `#2563EB` primary blue, `#10B981` green,
-  `#DC2626` alert red, `#F9FAFB` background, `#1F2937` text, `#E5E7EB` borders.
+  `#C81B30` alert crimson, `#F8FAFC` background, `#0F172A` text, `#E2E8F0`
+  borders. The neutrals are blue-tinted slate rather than pure grey, so they
+  sit with the brand blue instead of reading faintly green next to it.
   Radius 12 for inputs/buttons, 16 for cards, 24 for hero surfaces.
 - Shared components live in `lib/widgets/ui_kit.dart` (cards, list rows, empty
   states, stat tiles, plate badge, skeletons, snackbars), `hero_header.dart`

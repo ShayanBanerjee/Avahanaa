@@ -98,11 +98,11 @@ class MetalPalette {
   /// Escalation red, machined. Used only by panic-mode surfaces, where the
   /// gradient stays shallow so contrast never drops.
   static const MetalPalette alert = MetalPalette(
-    lift: Color(0xFFE81414),
-    base: Color(0xFFDC2626),
-    core: Color(0xFFC01F1F),
-    depth: Color(0xFF991B1B),
-    catchLight: Color(0xFFCE2323),
+    lift: Color(0xFFD91F35),
+    base: Color(0xFFC81B30),
+    core: Color(0xFFB01829),
+    depth: Color(0xFF8A1220),
+    catchLight: Color(0xFFBE1A2D),
   );
 
   /// Deep anodised green. Much darker than the raw success token because the
