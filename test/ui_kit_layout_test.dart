@@ -39,7 +39,7 @@ Future<void> pumpAtScale(
       ),
     ),
   );
-  await tester.pump(const Duration(seconds: 1));
+  await tester.pump(Duration(seconds: 1));
 }
 
 void expectNoOverflow(WidgetTester tester) {
@@ -60,7 +60,7 @@ void main() {
       ) async {
         await pumpAtScale(
           tester,
-          const PlateBadge(plate: 'KA01AB1234'),
+          PlateBadge(plate: 'KA01AB1234'),
           textScale: scale,
         );
         expectNoOverflow(tester);
@@ -73,7 +73,7 @@ void main() {
           AppCard(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Expanded(
                   child: AppStatTile(
                     icon: Icons.mark_email_unread_rounded,
@@ -108,7 +108,7 @@ void main() {
       ) async {
         await pumpAtScale(
           tester,
-          const AppCard(
+          AppCard(
             padding: EdgeInsets.zero,
             child: AppListRow(
               icon: Icons.policy_rounded,
@@ -126,7 +126,7 @@ void main() {
       testWidgets('NumberedStep wraps long guidance', (tester) async {
         await pumpAtScale(
           tester,
-          const AppCard(
+          AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -154,7 +154,7 @@ void main() {
       testWidgets('StatusPill row stays inside the card', (tester) async {
         await pumpAtScale(
           tester,
-          const AppCard(
+          AppCard(
             child: Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,

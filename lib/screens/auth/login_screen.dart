@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       navigator.pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+        MaterialPageRoute<void>(builder: (_) => HomeScreen()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthBrandHeader(
+            AuthBrandHeader(
               title: 'Welcome back',
               subtitle: 'Sign in to stay reachable.',
             ),
@@ -136,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute<void>(
-                                builder: (_) => const ForgotPasswordScreen(),
+                                builder: (_) => ForgotPasswordScreen(),
                               ),
                             );
                           },
@@ -165,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute<void>(
-                                  builder: (_) => const SignUpScreen(),
+                                  builder: (_) => SignUpScreen(),
                                 ),
                               );
                             },

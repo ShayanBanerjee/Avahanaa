@@ -22,13 +22,13 @@ import 'ui_kit.dart';
 typedef AlertReplySender = Future<void> Function(AlertReply reply);
 
 class AlertReplyPanel extends StatefulWidget {
-  const AlertReplyPanel({
+  AlertReplyPanel({
     super.key,
     required this.notification,
     required this.onReply,
     this.onReplied,
-    this.accent = AppColors.primary,
-  });
+    Color? accent,
+  }) : accent = accent ?? AppColors.primary;
 
   final NotificationModel notification;
   final AlertReplySender onReply;
@@ -230,7 +230,7 @@ class _ReplySentPanel extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.mark_chat_read_rounded,
             color: AppColors.successDark,
             size: 22,
@@ -269,13 +269,13 @@ class _ReplySentPanel extends StatelessWidget {
 /// person in the street anything, so on that surface the reply — not "see what
 /// happened" — is the primary action.
 class AlertQuickReplyButton extends StatefulWidget {
-  const AlertQuickReplyButton({
+  AlertQuickReplyButton({
     super.key,
     required this.onReply,
     this.reply = AlertReply.onMyWayFive,
-    this.background = AppColors.surface,
-    this.foreground = AppColors.alertDeep,
-  });
+    Color? background,
+    Color? foreground,
+  }) : foreground = foreground ?? AppColors.alertDeep, background = background ?? AppColors.surface;
 
   final AlertReplySender onReply;
   final AlertReply reply;
@@ -334,7 +334,16 @@ class _AlertQuickReplyButtonState extends State<AlertQuickReplyButton> {
           _sent ? Icons.check_circle_rounded : Icons.directions_run_rounded,
           size: 22,
         ),
-        label: Text(label, style: AppText.labelLarge.copyWith(fontSize: 17)),
+        // Explicitly the button's own foreground. AppText carries
+        // `textPrimary`, which is near-white at night — on a white chip that
+        // is an invisible label on a visible button.
+        label: Text(
+          label,
+          style: AppText.labelLarge.copyWith(
+            fontSize: 17,
+            color: widget.foreground,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: widget.background,
           foregroundColor: widget.foreground,

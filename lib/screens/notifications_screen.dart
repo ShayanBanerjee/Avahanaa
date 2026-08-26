@@ -45,7 +45,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   PopupMenuItem(
                     value: 'mark_all_read',
                     enabled: unread > 0,
-                    child: const _MenuRow(
+                    child: _MenuRow(
                       icon: Icons.done_all_rounded,
                       label: 'Mark all as read',
                     ),
@@ -73,11 +73,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const _InboxSkeleton();
+                  return _InboxSkeleton();
                 }
 
                 if (snapshot.hasError) {
-                  return const AppEmptyState(
+                  return AppEmptyState(
                     icon: Icons.cloud_off_rounded,
                     title: 'Could not load your alerts',
                     message:
@@ -91,7 +91,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 _maybeOpenInitialNotification(notifications);
 
                 if (notifications.isEmpty) {
-                  return const AppEmptyState(
+                  return AppEmptyState(
                     icon: Icons.shield_moon_rounded,
                     title: 'Nothing to worry about',
                     message:
@@ -106,7 +106,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               },
             ),
           ),
-          const AdMobBanner(),
+          AdMobBanner(),
         ],
       ),
     );
@@ -438,7 +438,7 @@ class _NotificationCard extends StatelessWidget {
                             const SizedBox(height: AppSpacing.sm),
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.schedule_rounded,
                                   size: 13,
                                   color: AppColors.textTertiary,
@@ -527,7 +527,7 @@ class _NotificationDetailSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SheetGrabber(),
+          SheetGrabber(),
 
           // Header band — carries the severity colour so the sheet reads at a
           // glance before any text is processed.
@@ -539,9 +539,11 @@ class _NotificationDetailSheet extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                // `fill`, not `color`: this band carries white text, and the
+                // night palette's lifted accents are far too pale for that.
                 colors: [
-                  visual.color,
-                  Color.lerp(visual.color, Colors.black, 0.22)!,
+                  visual.fill,
+                  Color.lerp(visual.fill, Colors.black, 0.22)!,
                 ],
               ),
             ),
@@ -586,7 +588,7 @@ class _NotificationDetailSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.schedule_rounded,
                 size: 18,
                 color: AppColors.textSecondary,
@@ -614,7 +616,7 @@ class _NotificationDetailSheet extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.visibility_off_rounded,
                   size: 18,
                   color: AppColors.primary,

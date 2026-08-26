@@ -16,6 +16,7 @@ import 'screens/notifications_screen.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_controller.dart';
 import 'widgets/hero_header.dart';
 import 'widgets/qr_visual.dart';
 
@@ -72,7 +73,12 @@ void main() async {
   // Initialize FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(const AvahanaaApp());
+  // Awaited, unlike the ads init below it. This is one small file read, and
+  // launching in the wrong theme and snapping to the right one a frame later
+  // is exactly the kind of flash people notice at night.
+  await themeController.load();
+
+  runApp(AvahanaaApp());
 }
 
 class AvahanaaApp extends StatefulWidget {
@@ -81,6 +87,13 @@ class AvahanaaApp extends StatefulWidget {
   @override
   State<AvahanaaApp> createState() => _AvahanaaAppState();
 }
+
+/// The app's single theme controller.
+///
+/// A plain global rather than an inherited widget, because it has exactly one
+/// instance, it is read from `main` before the tree exists, and the codebase
+/// deliberately has no state-management package.
+final ThemeController themeController = ThemeController();
 
 class _AvahanaaAppState extends State<AvahanaaApp> {
   @override
@@ -106,18 +119,23 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = AvahanaaTheme.light();
+    // Rebuilt whenever the theme changes. The controller repoints AppColors
+    // *before* it notifies, so this rebuild already reads the new palette —
+    // see the note at the top of theme_controller.dart.
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) => _buildApp(context),
+    );
+  }
 
+  Widget _buildApp(BuildContext context) {
     return MaterialApp(
       title: 'Avahanaa',
       navigatorKey: NotificationNavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: theme,
-      // Light-only by design — see AvahanaaTheme.light(). Supplying the same
-      // theme for dark keeps a device in dark mode from falling back to
-      // Material defaults.
-      darkTheme: theme,
-      themeMode: ThemeMode.light,
+      theme: AvahanaaTheme.light(),
+      darkTheme: AvahanaaTheme.dark(),
+      themeMode: themeController.mode.materialMode,
       builder: (context, child) {
         // Clamp runaway system font scaling. Above 1.6x the alert surfaces
         // start to truncate, and a truncated alert is a failed alert.
@@ -132,7 +150,7 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const AuthGate(),
+      home: AuthGate(),
     );
   }
 }
@@ -146,7 +164,7 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.userChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SplashView();
+          return SplashView();
         }
 
         if (snapshot.hasData) {
@@ -154,10 +172,10 @@ class AuthGate extends StatelessWidget {
           if (!user.emailVerified) {
             return VerifyEmailScreen(email: user.email ?? '');
           }
-          return const HomeScreen();
+          return HomeScreen();
         }
 
-        return const LoginScreen();
+        return LoginScreen();
       },
     );
   }

@@ -171,7 +171,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(overline: 'Choose a look', title: 'Sticker design'),
+        SectionHeader(overline: 'Choose a look', title: 'Sticker design'),
         SizedBox(
           height: 132,
           child: ListView.separated(
@@ -226,7 +226,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(
+        SectionHeader(
           overline: 'Put it on paper',
           title: 'Print a sheet',
         ),
@@ -262,7 +262,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
               ),
               if (plan.isBelowScanFloor) ...[
                 const SizedBox(height: AppSpacing.md),
-                const _ScanFloorWarning(),
+                _ScanFloorWarning(),
               ],
               const SizedBox(height: AppSpacing.lg),
               MetalButton(
@@ -302,7 +302,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(
+        SectionHeader(
           overline: 'Or send it as a picture',
           title: 'Share the image',
         ),
@@ -359,7 +359,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           SectionHeader(overline: 'Make it last', title: 'Getting it printed'),
           NumberedStep(
             number: '1',
@@ -397,7 +397,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppIconBadge(
+          AppIconBadge(
             icon: Icons.center_focus_strong_rounded,
             color: AppColors.primary,
           ),
@@ -536,7 +536,7 @@ class _ScanFloorWarning extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.warning_amber_rounded,
             size: 18,
             color: AppColors.warning,
@@ -716,7 +716,7 @@ class _StyleChip extends StatelessWidget {
                     ),
                     if (isSelected) ...[
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         Icons.check_circle_rounded,
                         size: 14,
                         color: AppColors.primary,

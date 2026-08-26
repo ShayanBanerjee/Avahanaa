@@ -19,7 +19,24 @@ class ReasonVisual {
   });
 
   final IconData icon;
+
+  /// The accent, as **ink** — the icon glyph, the unread rail. Follows the
+  /// theme, so it is lifted at night to stay legible on a dark ground.
   final Color color;
+
+  /// The accent as a **fill**, with white text on top of it — the header band
+  /// on the detail sheet, the panic banner.
+  ///
+  /// Fixed in both themes, and that is the whole point of it existing
+  /// separately. The night palette lifts the accents so they can be read as
+  /// ink on near-black; the same lift makes them far too pale to carry white
+  /// text. The detail sheet's header ran white on `#63A4FF` at 2.2:1 before
+  /// this split.
+  Color get fill => switch (color) {
+    _ when severity >= 2 => const Color(0xFFC81B30),
+    _ when severity == 1 => const Color(0xFFB45309),
+    _ => const Color(0xFF2563EB),
+  };
 
   /// 2 = drop everything, 1 = go now, 0 = informational.
   final int severity;
@@ -29,49 +46,49 @@ class ReasonVisual {
   static ReasonVisual of(String reason) {
     switch (reason) {
       case 'emergency':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.emergency_rounded,
           color: AppColors.alert,
           severity: 2,
         );
       case 'blocking_driveway':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.garage_rounded,
           color: AppColors.alert,
           severity: 2,
         );
       case 'blocking_traffic':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.traffic_rounded,
           color: AppColors.alert,
           severity: 2,
         );
       case 'illegal_parking':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.local_police_rounded,
           color: AppColors.warning,
           severity: 1,
         );
       case 'double_parked':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.directions_car_rounded,
           color: AppColors.warning,
           severity: 1,
         );
       case 'private_property':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.home_rounded,
           color: AppColors.warning,
           severity: 1,
         );
       case 'other':
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.chat_bubble_rounded,
           color: AppColors.primary,
           severity: 0,
         );
       default:
-        return const ReasonVisual(
+        return ReasonVisual(
           icon: Icons.notifications_rounded,
           color: AppColors.primary,
           severity: 0,

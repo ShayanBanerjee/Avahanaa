@@ -57,7 +57,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
       if (verified) {
         navigator.pushAndRemoveUntil(
-          MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+          MaterialPageRoute<void>(builder: (_) => HomeScreen()),
           (route) => false,
         );
         return;
@@ -111,7 +111,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     await _authService.signOut();
     if (!mounted) return;
     navigator.pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      MaterialPageRoute<void>(builder: (_) => LoginScreen()),
       (route) => false,
     );
   }
@@ -140,7 +140,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                         shape: BoxShape.circle,
                         boxShadow: AppShadows.hero,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.mark_email_read_rounded,
                         size: 52,
                         color: AppColors.successDark,
@@ -216,7 +216,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                             ? null
                             : () => _checkVerification(),
                         child: _isChecking
-                            ? const AuthButtonSpinner(
+                            ? AuthButtonSpinner(
                                 color: AppColors.successDark,
                               )
                             : const Text("I've verified — continue"),
@@ -229,7 +229,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                         foregroundColor: AppColors.onDark,
                       ),
                       child: _isResending
-                          ? const AuthButtonSpinner()
+                          ? AuthButtonSpinner()
                           : const Text('Resend the email'),
                     ),
                     const SizedBox(height: AppSpacing.xs),

@@ -76,26 +76,107 @@ void main() {
     });
   });
 
+  // Both palettes, not just the one that happens to be active.
+  //
+  // Dark mode is not an inversion — the accents had to be lifted, because
+  // `#2563EB` gives 2.4:1 on a near-black ground and is simply unreadable. A
+  // gate that only checked light would let the night palette rot silently,
+  // and the person reading it is doing so at night by definition.
   group('core text tokens on their backgrounds', () {
-    test('body text on the scaffold background clears AA', () {
-      expect(
-        contrastRatio(AppColors.textPrimary, AppColors.background),
-        greaterThanOrEqualTo(kAaBody),
-      );
+    const palettes = <String, AvahanaaPalette>{
+      'light': AvahanaaPalette.light,
+      'dark': AvahanaaPalette.dark,
+    };
+
+    palettes.forEach((name, p) {
+      group(name, () {
+        test('body text on the scaffold background clears AA', () {
+          expect(
+            contrastRatio(p.textPrimary, p.background),
+            greaterThanOrEqualTo(kAaBody),
+          );
+        });
+
+        test('secondary text on surface clears AA', () {
+          expect(
+            contrastRatio(p.textSecondary, p.surface),
+            greaterThanOrEqualTo(kAaBody),
+          );
+        });
+
+        test('tertiary text clears AA — it is used for overlines and captions', () {
+          // This one was failing outright at 2.54:1 before the slate move.
+          // Small and quiet is not the same as unreadable.
+          expect(
+            contrastRatio(p.textTertiary, p.surface),
+            greaterThanOrEqualTo(kAaBody),
+          );
+        });
+
+        test('primary clears AA on surface for links and labels', () {
+          expect(
+            contrastRatio(p.primary, p.surface),
+            greaterThanOrEqualTo(kAaBody),
+          );
+        });
+
+        test('the alert colour clears AA on both grounds', () {
+          // Red means "somebody is at your car". If it is the one thing on the
+          // screen that cannot be read, the screen has failed.
+          expect(
+            contrastRatio(p.alert, p.surface),
+            greaterThanOrEqualTo(kAaBody),
+            reason: '\$name alert on surface',
+          );
+          expect(
+            contrastRatio(p.alert, p.background),
+            greaterThanOrEqualTo(kAaBody),
+            reason: '\$name alert on background',
+          );
+        });
+
+        test('the ink versions of success and warning clear AA', () {
+          // `success` is a fill — white sits on it, not beside it — so the
+          // token that has to clear AA against a pale ground is `successDark`,
+          // which is what the reply confirmations are written in. It was at
+          // 3.77:1 in light until this test was written.
+          expect(
+            contrastRatio(p.successDark, p.surface),
+            greaterThanOrEqualTo(kAaBody),
+            reason: '\$name successDark on surface',
+          );
+          expect(
+            contrastRatio(p.successDark, p.successTint),
+            greaterThanOrEqualTo(kAaBody),
+            reason: '\$name successDark on its own tint',
+          );
+
+          // `warning` is drawn as an icon glyph on `warningTint` — the amber
+          // badge on a parking alert. At 2.07:1 that was a decorative smudge.
+          expect(
+            contrastRatio(p.warning, p.warningTint),
+            greaterThanOrEqualTo(kAaBody),
+            reason: '\$name warning on its own tint',
+          );
+        });
+
+        test('borders are visible against the surfaces they divide', () {
+          // Not a text ratio — a hairline only has to be perceivable. But a
+          // border that matches its background is a card with no edge.
+          expect(
+            contrastRatio(p.border, p.surface),
+            greaterThan(1.12),
+            reason: '\$name border vanishes on surface',
+          );
+        });
+      });
     });
 
-    test('secondary text on surface clears AA', () {
-      expect(
-        contrastRatio(AppColors.textSecondary, AppColors.surface),
-        greaterThanOrEqualTo(kAaBody),
-      );
-    });
-
-    test('primary on white clears AA for links and labels', () {
-      expect(
-        contrastRatio(AppColors.primary, AppColors.surface),
-        greaterThanOrEqualTo(kAaBody),
-      );
+    test('the print palette never follows the theme', () {
+      // The sticker ends up as ink on paper. Dark mode is a property of a
+      // screen at night; a sheet of A4 does not have one.
+      expect(AppPrint.heroGradient.first, const Color(0xFF2563EB));
+      expect(AppPrint.brandDeep, const Color(0xFF1E40AF));
     });
   });
 }

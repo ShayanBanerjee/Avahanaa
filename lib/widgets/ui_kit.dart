@@ -146,16 +146,16 @@ class _BreathingPulseState extends State<BreathingPulse>
 
 /// The standard Avahanaa card: white, radius 16, flat, hairline border.
 class AppCard extends StatelessWidget {
-  const AppCard({
+  AppCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.lg),
-    this.color = AppColors.surface,
-    this.borderColor = AppColors.border,
+    Color? color,
+    Color? borderColor,
     this.onTap,
     this.shadows = AppShadows.card,
     this.clip = false,
-  });
+  }) : borderColor = borderColor ?? AppColors.border, color = color ?? AppColors.surface;
 
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -243,13 +243,13 @@ class SectionHeader extends StatelessWidget {
 
 /// Icon in a tinted rounded square — the leading element of most rows.
 class AppIconBadge extends StatelessWidget {
-  const AppIconBadge({
+  AppIconBadge({
     super.key,
     required this.icon,
-    this.color = AppColors.primary,
+    Color? color,
     this.size = 44,
     this.iconSize = 22,
-  });
+  }) : color = color ?? AppColors.primary;
 
   final IconData icon;
   final Color color;
@@ -272,16 +272,16 @@ class AppIconBadge extends StatelessWidget {
 
 /// A tappable settings/navigation row.
 class AppListRow extends StatelessWidget {
-  const AppListRow({
+  AppListRow({
     super.key,
     required this.icon,
     required this.title,
     this.subtitle,
-    this.iconColor = AppColors.primary,
-    this.titleColor = AppColors.textPrimary,
+    Color? iconColor,
+    Color? titleColor,
     this.trailing,
     this.onTap,
-  });
+  }) : titleColor = titleColor ?? AppColors.textPrimary, iconColor = iconColor ?? AppColors.primary;
 
   final IconData icon;
   final String title;
@@ -332,7 +332,7 @@ class AppListRow extends StatelessWidget {
                 trailing!,
               ] else if (onTap != null) ...[
                 const SizedBox(width: AppSpacing.sm),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   color: AppColors.textTertiary,
                   size: 22,
@@ -507,13 +507,13 @@ class PlateBadge extends StatelessWidget {
 
 /// A single number-plus-label metric.
 class AppStatTile extends StatelessWidget {
-  const AppStatTile({
+  AppStatTile({
     super.key,
     required this.icon,
     required this.value,
     required this.label,
-    this.color = AppColors.primary,
-  });
+    Color? color,
+  }) : color = color ?? AppColors.primary;
 
   final IconData icon;
   final String value;
@@ -560,14 +560,14 @@ class AppStatTile extends StatelessWidget {
 
 /// Empty states always say what is missing, why it matters, and what fixes it.
 class AppEmptyState extends StatelessWidget {
-  const AppEmptyState({
+  AppEmptyState({
     super.key,
     required this.icon,
     required this.title,
     required this.message,
     this.action,
-    this.accent = AppColors.primary,
-  });
+    Color? accent,
+  }) : accent = accent ?? AppColors.primary;
 
   final IconData icon;
   final String title;
@@ -680,7 +680,7 @@ class _AppSkeletonState extends State<AppSkeleton>
             gradient: LinearGradient(
               begin: Alignment(-1 - 2 * (1 - t), 0),
               end: Alignment(1 - 2 * (1 - t), 0),
-              colors: const [
+              colors: [
                 AppColors.surfaceMuted,
                 Color(0xFFE9EDF2),
                 AppColors.surfaceMuted,
@@ -754,14 +754,14 @@ class SheetGrabber extends StatelessWidget {
 
 /// Numbered step used by the "how it works" and printing instruction lists.
 class NumberedStep extends StatelessWidget {
-  const NumberedStep({
+  NumberedStep({
     super.key,
     required this.number,
     required this.title,
     this.detail,
-    this.accent = AppColors.primary,
+    Color? accent,
     this.isLast = false,
-  });
+  }) : accent = accent ?? AppColors.primary;
 
   final String number;
   final String title;

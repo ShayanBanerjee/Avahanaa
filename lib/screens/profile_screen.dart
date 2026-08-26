@@ -8,7 +8,9 @@ import '../models/vehicle_model.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
+import '../main.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_controller.dart';
 import '../utils/vehicle_registration_validator.dart';
 import '../widgets/admob_banner.dart';
 import '../widgets/hero_header.dart';
@@ -40,7 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               stream: _firestoreService.streamUserData(_currentUser!.uid),
               builder: (context, userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return const _ProfileSkeleton();
+                  return _ProfileSkeleton();
                 }
 
                 final user = userSnapshot.data;
@@ -119,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
           ),
-          const AdMobBanner(),
+          AdMobBanner(),
         ],
       ),
     );
@@ -191,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.warning_amber_rounded,
                     size: 18,
                     color: AppColors.warning,
@@ -233,7 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               children: [
-                const AppIconBadge(
+                AppIconBadge(
                   icon: Icons.directions_car_outlined,
                   color: AppColors.primary,
                   size: 52,
@@ -317,7 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(overline: 'Settings', title: 'Account'),
+        SectionHeader(overline: 'Settings', title: 'Account'),
         AppCard(
           padding: EdgeInsets.zero,
           child: Column(
@@ -337,6 +339,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: _showChangePasswordSheet,
               ),
               const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              ListenableBuilder(
+                listenable: themeController,
+                builder: (context, _) => AppListRow(
+                  icon: themeController.mode.icon,
+                  title: 'Appearance',
+                  subtitle: themeController.mode.label,
+                  onTap: _showAppearanceSheet,
+                ),
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
               AppListRow(
                 icon: Icons.policy_rounded,
                 title: 'Legal & privacy',
@@ -344,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const LegalDocumentsScreen(),
+                      builder: (_) => LegalDocumentsScreen(),
                     ),
                   );
                 },
@@ -623,6 +635,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Light, dark, or follow the phone.
+  ///
+  /// Three explicit choices rather than a switch. A two-state toggle has to
+  /// pick a meaning for "off", and neither answer is right — a person who has
+  /// their phone on a sunset schedule wants the app to follow it, and a person
+  /// who wants dark at noon wants it pinned. A switch cannot say both.
+  Future<void> _showAppearanceSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.hero)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: ListenableBuilder(
+          listenable: themeController,
+          builder: (context, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              SheetGrabber(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('APPEARANCE', style: AppText.overline),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('How Avahanaa looks', style: AppText.headlineMedium),
+                  ],
+                ),
+              ),
+              for (final mode in AppThemeMode.values)
+                _AppearanceOption(
+                  mode: mode,
+                  selected: themeController.mode == mode,
+                  onTap: () => themeController.setMode(mode),
+                ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _showChangePasswordSheet() async {
     final currentUser = _currentUser;
     if (currentUser == null) return;
@@ -652,7 +716,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _showDeleteAccountDialog() async {
     final password = await showDialog<String>(
       context: context,
-      builder: (_) => const _DeleteAccountDialog(),
+      builder: (_) => _DeleteAccountDialog(),
     );
 
     if (!mounted || password == null) return;
@@ -669,7 +733,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (!mounted) return;
       navigator.pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        MaterialPageRoute<void>(builder: (_) => LoginScreen()),
         (route) => false,
       );
     } catch (e) {
@@ -707,7 +771,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (!mounted) return;
     navigator.pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      MaterialPageRoute<void>(builder: (_) => LoginScreen()),
       (route) => false,
     );
   }
@@ -871,7 +935,7 @@ class _VehicleCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               PopupMenuButton<String>(
-                icon: const Icon(
+                icon: Icon(
                   Icons.more_horiz_rounded,
                   color: AppColors.textTertiary,
                 ),
@@ -893,7 +957,7 @@ class _VehicleCard extends StatelessWidget {
                       value: 'primary',
                       child: Text('Make primary'),
                     ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: Text(
                       'Delete',
@@ -923,7 +987,7 @@ class _VehicleCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               if (isPrimary)
-                const StatusPill(
+                StatusPill(
                   label: 'PRIMARY',
                   color: AppColors.primary,
                   icon: Icons.star_rounded,
@@ -984,7 +1048,7 @@ class _FormSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SheetGrabber(),
+              SheetGrabber(),
               Text(title, style: AppText.headlineMedium),
               if (subtitle != null) ...[
                 const SizedBox(height: AppSpacing.xs),
@@ -1159,7 +1223,7 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
           child: ElevatedButton(
             onPressed: (!_hasChanges || _isSaving) ? null : _submit,
             child: _isSaving
-                ? const _ButtonSpinner()
+                ? _ButtonSpinner()
                 : const Text('Save vehicle'),
           ),
         ),
@@ -1243,7 +1307,7 @@ class _PhoneFormSheetState extends State<_PhoneFormSheet> {
           height: 54,
           child: ElevatedButton(
             onPressed: (!hasChanges || _isSaving) ? null : _submit,
-            child: _isSaving ? const _ButtonSpinner() : const Text('Save'),
+            child: _isSaving ? _ButtonSpinner() : const Text('Save'),
           ),
         ),
       ],
@@ -1362,7 +1426,7 @@ class _PasswordFormSheetState extends State<_PasswordFormSheet> {
           child: ElevatedButton(
             onPressed: (!canSubmit || _isSaving) ? null : _submit,
             child: _isSaving
-                ? const _ButtonSpinner()
+                ? _ButtonSpinner()
                 : const Text('Update password'),
           ),
         ),
@@ -1495,6 +1559,58 @@ class _ProfileSkeleton extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One row in the appearance sheet.
+///
+/// The whole row is the tap target rather than a trailing radio, because the
+/// radio alone is a 20dp target and this list is read by someone squinting at
+/// a phone in the dark.
+class _AppearanceOption extends StatelessWidget {
+  const _AppearanceOption({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppThemeMode mode;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
+        color: selected ? AppColors.primaryTint : Colors.transparent,
+        child: Row(
+          children: [
+            Icon(
+              mode.icon,
+              size: 22,
+              color: selected ? AppColors.primary : AppColors.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(
+              child: Text(
+                mode.label,
+                style: selected
+                    ? AppText.titleMedium.copyWith(color: AppColors.primary)
+                    : AppText.titleMedium,
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_rounded, size: 22, color: AppColors.primary),
+          ],
+        ),
       ),
     );
   }

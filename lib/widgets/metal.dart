@@ -419,14 +419,14 @@ class AnimatedCounter extends StatelessWidget {
 /// Wrapped around the QR on screen. It reinforces "point a camera at this"
 /// without touching the code itself — the brackets sit outside the quiet zone.
 class ReticleFrame extends StatelessWidget {
-  const ReticleFrame({
+  ReticleFrame({
     super.key,
     required this.child,
-    this.color = AppColors.primary,
+    Color? color,
     this.length = 22,
     this.thickness = 2.5,
     this.gap = 14,
-  });
+  }) : color = color ?? AppColors.primary;
 
   final Widget child;
   final Color color;

@@ -72,8 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
             unread: unread,
             onOpenInbox: () => _openTab(1),
           ),
-          const NotificationsScreen(),
-          const ProfileScreen(),
+          NotificationsScreen(),
+          ProfileScreen(),
         ];
 
         return Scaffold(
@@ -204,7 +204,7 @@ class _HomeTab extends StatelessWidget {
       stream: state._firestoreService.streamUserData(state._currentUser!.uid),
       builder: (context, userSnapshot) {
         if (userSnapshot.connectionState == ConnectionState.waiting) {
-          return const _HomeScaffold(child: _HomeSkeleton());
+          return _HomeScaffold(child: _HomeSkeleton());
         }
 
         if (userSnapshot.hasError) {
@@ -222,7 +222,7 @@ class _HomeTab extends StatelessWidget {
 
         final user = userSnapshot.data;
         if (user == null) {
-          return const _HomeScaffold(
+          return _HomeScaffold(
             child: AppEmptyState(
               icon: Icons.person_off_outlined,
               title: 'Account details missing',
@@ -237,7 +237,7 @@ class _HomeTab extends StatelessWidget {
           stream: state._firestoreService.streamUserVehicles(user.id),
           builder: (context, vehicleSnapshot) {
             if (vehicleSnapshot.connectionState == ConnectionState.waiting) {
-              return const _HomeScaffold(child: _HomeSkeleton());
+              return _HomeScaffold(child: _HomeSkeleton());
             }
 
             final vehicles = vehicleSnapshot.data ?? const <VehicleModel>[];
@@ -252,7 +252,7 @@ class _HomeTab extends StatelessWidget {
 
               return _HomeScaffold(
                 child: waitingOnMigration
-                    ? const _PreparingView(
+                    ? _PreparingView(
                         title: 'Setting up your vehicle',
                         subtitle: 'Moving your details over. One moment.',
                       )
@@ -277,7 +277,7 @@ class _HomeTab extends StatelessWidget {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 state._generateQrCode(user, vehicle);
               });
-              return const _HomeScaffold(
+              return _HomeScaffold(
                 child: _PreparingView(
                   title: 'Creating your QR code',
                   subtitle: 'This usually takes a few seconds.',
@@ -315,7 +315,7 @@ class _HomeScaffold extends StatelessWidget {
     return Column(
       children: [
         Expanded(child: child),
-        const AdMobBanner(),
+        AdMobBanner(),
       ],
     );
   }
@@ -420,12 +420,12 @@ class _HomeBody extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 EntranceFade(
                   delay: const Duration(milliseconds: 180),
-                  child: const _HowItWorksCard(),
+                  child: _HowItWorksCard(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 EntranceFade(
                   delay: const Duration(milliseconds: 240),
-                  child: const _PrivacyPromiseCard(),
+                  child: _PrivacyPromiseCard(),
                 ),
               ],
             ),
@@ -674,7 +674,7 @@ class _StatsRow extends StatelessWidget {
               color: unreadCount > 0 ? AppColors.alert : AppColors.primary,
             ),
           ),
-          const _StatDivider(),
+          _StatDivider(),
           Expanded(
             child: AppStatTile(
               icon: Icons.directions_car_rounded,
@@ -682,7 +682,7 @@ class _StatsRow extends StatelessWidget {
               label: vehicleCount == 1 ? 'Vehicle' : 'Vehicles',
             ),
           ),
-          const _StatDivider(),
+          _StatDivider(),
           Expanded(
             child: AppStatTile(
               icon: isLive
@@ -723,21 +723,21 @@ class _HowItWorksCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
+          SectionHeader(
             overline: 'Getting set up',
             title: 'How it works',
           ),
-          const NumberedStep(
+          NumberedStep(
             number: '1',
             title: 'Print the sticker',
             detail: 'Share or save it, then print on plain white paper.',
           ),
-          const NumberedStep(
+          NumberedStep(
             number: '2',
             title: 'Put it on your windshield',
             detail: 'Inside the glass, driver-side corner, facing out.',
           ),
-          const NumberedStep(
+          NumberedStep(
             number: '3',
             title: 'Get alerted in seconds',
             detail: 'A scan rings your phone, even on silent.',
@@ -765,7 +765,7 @@ class _PrivacyPromiseCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppIconBadge(
+          AppIconBadge(
             icon: Icons.lock_person_rounded,
             color: AppColors.primary,
           ),
@@ -885,6 +885,11 @@ class _CriticalAlertBanner extends StatelessWidget {
               // anyone telling the person in the street that help is coming,
               // and that is the thing this product exists to do.
               AlertQuickReplyButton(
+                // This sits on the alert banner, which is red in both themes,
+                // so its colours are pinned rather than themed. Left to the
+                // palette it became a dark navy button on red at night.
+                background: AppColors.onDark,
+                foreground: AppColors.inkOnAlertFill,
                 onReply: (reply) => FirestoreService().replyToNotification(
                   notificationId: latest.id,
                   reply: reply,
@@ -986,7 +991,7 @@ class _HomeSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AppSkeleton(height: 208, radius: 0),
+          AppSkeleton(height: 208, radius: 0),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
@@ -1024,7 +1029,7 @@ class _AppNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),

@@ -150,7 +150,9 @@ class _VehicleMark extends StatelessWidget {
       child: Icon(
         Icons.directions_car_rounded,
         size: 22,
-        color: isPale ? AppColors.textPrimary : AppColors.onDark,
+        // The swatch is the car's actual paint colour, which has no opinion
+        // about the app's theme, so the ink on it cannot have one either.
+        color: isPale ? AppColors.inkOnLightFill : AppColors.onDark,
       ),
     );
   }

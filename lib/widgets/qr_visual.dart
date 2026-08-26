@@ -690,7 +690,7 @@ class _Rail extends StatelessWidget {
         AppSpacing.md,
         AppSpacing.md,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -746,7 +746,7 @@ class _Well extends StatelessWidget {
         border: Border.all(color: AppColors.border),
         // A pale vertical wash, lit from the top, so the plinth reads as
         // standing in the well rather than pasted onto it.
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [AppColors.surfaceMuted, AppColors.background],
@@ -811,7 +811,7 @@ class _Shelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.background,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
@@ -819,7 +819,7 @@ class _Shelf extends StatelessWidget {
         children: [
           for (var i = 0; i < actions.length; i++) ...[
             if (i > 0)
-              const SizedBox(
+              SizedBox(
                 height: 28,
                 child: VerticalDivider(width: 1, color: AppColors.border),
               ),

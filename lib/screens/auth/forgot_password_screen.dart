@@ -73,7 +73,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _AuthIcon(
+          _AuthIcon(
             icon: Icons.lock_reset_rounded,
             color: AppColors.primary,
           ),
@@ -104,7 +104,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleResetPassword,
               child: _isLoading
-                  ? const AuthButtonSpinner()
+                  ? AuthButtonSpinner()
                   : const Text('Send reset link'),
             ),
           ),
@@ -117,7 +117,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _AuthIcon(
+        _AuthIcon(
           icon: Icons.mark_email_read_rounded,
           color: AppColors.success,
         ),

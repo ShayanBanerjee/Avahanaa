@@ -128,7 +128,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   void _openLegalDocuments() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const LegalDocumentsScreen()),
+      MaterialPageRoute<void>(builder: (_) => LegalDocumentsScreen()),
     );
   }
 
@@ -159,7 +159,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SectionHeader(
+                          SectionHeader(
                             overline: 'Step 1 of 2',
                             title: 'Your account',
                           ),
@@ -260,7 +260,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SectionHeader(
+                          SectionHeader(
                             overline: 'Step 2 of 2',
                             title: 'Your vehicle',
                           ),
@@ -378,7 +378,7 @@ class _PrivacyNote extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.visibility_off_rounded,
             size: 18,
             color: AppColors.primary,

@@ -23,75 +23,264 @@ enum AppMood { calm, panic }
 // Colour
 // ---------------------------------------------------------------------------
 
-abstract final class AppColors {
-  // Brand ---------------------------------------------------------------
-  static const Color primary = Color(0xFF2563EB);
-  static const Color primaryDark = Color(0xFF1D4ED8);
-  static const Color primaryDeep = Color(0xFF1E40AF);
-  static const Color primaryTint = Color(0xFFEFF6FF);
+/// One complete set of UI colours.
+///
+/// Two of these exist — [AvahanaaPalette.light] and [AvahanaaPalette.dark] —
+/// and [AppColors] reads whichever is active. Screens keep referring to
+/// `AppColors.textPrimary` exactly as before; the indirection lives here so
+/// the whole app moves together, which is the rule this file exists to
+/// enforce.
+///
+/// Note what is *not* in here: the brand gradient and the sticker's ink. Those
+/// are in [AppPrint], fixed, because they end up on paper. A dark theme that
+/// reached the printable sticker would produce a black sheet and an unscannable
+/// code.
+final class AvahanaaPalette {
+  const AvahanaaPalette({
+    required this.brightness,
+    required this.primary,
+    required this.primaryDark,
+    required this.primaryDeep,
+    required this.primaryTint,
+    required this.success,
+    required this.successDark,
+    required this.successTint,
+    required this.alert,
+    required this.alertDeep,
+    required this.alertDarkest,
+    required this.alertTint,
+    required this.alertBorder,
+    required this.alertSurface,
+    required this.warning,
+    required this.warningTint,
+    required this.background,
+    required this.surface,
+    required this.surfaceMuted,
+    required this.infoSurface,
+    required this.infoBorder,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textTertiary,
+    required this.border,
+    required this.borderStrong,
+  });
 
-  static const Color success = Color(0xFF10B981);
-  static const Color successDark = Color(0xFF059669);
-  static const Color successTint = Color(0xFFECFDF5);
+  final Brightness brightness;
 
-  // Alert — reserved. Red means "an alert" or "this destroys data". Nothing
-  // else. Never use it for plain emphasis.
-  //
-  // A deep crimson rather than the old fire-engine `#DC2626`. Pure high-hue
-  // red is the most default-looking colour on a phone, and at panic-card size
-  // it filled a third of the screen with something that read as an error
-  // dialog. Rotating a few degrees toward blue and dropping the value keeps it
-  // just as alarming — arguably more so, since it stops looking like a stock
-  // warning — and every stop gained contrast rather than losing it.
-  static const Color alert = Color(0xFFC81B30);
-  static const Color alertDeep = Color(0xFFA01625);
-  static const Color alertDarkest = Color(0xFF6E0F1B);
-  static const Color alertTint = Color(0xFFFDE7EA);
-  static const Color alertBorder = Color(0xFFF5A3AD);
+  final Color primary;
+  final Color primaryDark;
+  final Color primaryDeep;
+  final Color primaryTint;
 
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color warningTint = Color(0xFFFFFBEB);
+  final Color success;
+  final Color successDark;
+  final Color successTint;
 
-  // Neutrals ------------------------------------------------------------
-  //
-  // Blue-tinted rather than pure grey. The brand is `#2563EB`, and neutral
-  // greys sitting next to a saturated blue read as two palettes that happened
-  // to meet — the grey looks faintly green by comparison. Carrying a few
-  // degrees of the brand hue through every neutral is what makes a screen look
-  // designed rather than assembled, and it costs nothing.
-  //
-  // The step also bought real contrast. Secondary text went from 4.83:1 to
-  // 7.58:1 on white, and the old tertiary was failing AA outright at 2.54:1.
-  static const Color background = Color(0xFFF8FAFC);
-  /// Surface for the delete-account / destructive zone.
-  static const Color alertSurface = Color(0xFFFEF4F5);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceMuted = Color(0xFFF1F5F9);
-  static const Color infoSurface = Color(0xFFF0F9FF);
-  /// Hairline that pairs with [infoSurface] — plain [border] disappears on it.
-  static const Color infoBorder = Color(0xFFD6ECFB);
+  final Color alert;
+  final Color alertDeep;
+  final Color alertDarkest;
+  final Color alertTint;
+  final Color alertBorder;
+  final Color alertSurface;
 
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF475569);
-  /// Quiet, but still text — overlines and captions use this, so it has to
-  /// clear AA. The previous value did not (2.54:1).
-  static const Color textTertiary = Color(0xFF64748B);
-  static const Color onDark = Color(0xFFFFFFFF);
-  static const Color onDarkMuted = Color(0xCCFFFFFF);
+  final Color warning;
+  final Color warningTint;
 
-  static const Color border = Color(0xFFE2E8F0);
-  static const Color borderStrong = Color(0xFFCBD5E1);
+  final Color background;
+  final Color surface;
+  final Color surfaceMuted;
+  final Color infoSurface;
+  final Color infoBorder;
 
-  /// The flat brand gradient, kept for the **printed** sticker only.
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textTertiary;
+
+  final Color border;
+  final Color borderStrong;
+
+  bool get isDark => brightness == Brightness.dark;
+
+  /// The daylight palette. Neutrals are blue-tinted slate rather than pure
+  /// grey, so they sit with the brand blue instead of reading faintly green
+  /// beside it.
+  static const AvahanaaPalette light = AvahanaaPalette(
+    brightness: Brightness.light,
+    primary: Color(0xFF2563EB),
+    primaryDark: Color(0xFF1D4ED8),
+    primaryDeep: Color(0xFF1E40AF),
+    primaryTint: Color(0xFFEFF6FF),
+    success: Color(0xFF10B981),
+    successDark: Color(0xFF047857),
+    successTint: Color(0xFFECFDF5),
+    alert: Color(0xFFC81B30),
+    alertDeep: Color(0xFFA01625),
+    alertDarkest: Color(0xFF6E0F1B),
+    alertTint: Color(0xFFFDE7EA),
+    alertBorder: Color(0xFFF5A3AD),
+    alertSurface: Color(0xFFFEF2F2),
+    warning: Color(0xFFB45309),
+    warningTint: Color(0xFFFFFBEB),
+    background: Color(0xFFF8FAFC),
+    surface: Color(0xFFFFFFFF),
+    surfaceMuted: Color(0xFFF1F5F9),
+    infoSurface: Color(0xFFF0F9FF),
+    infoBorder: Color(0xFFD6ECFB),
+    textPrimary: Color(0xFF0F172A),
+    textSecondary: Color(0xFF475569),
+    textTertiary: Color(0xFF64748B),
+    border: Color(0xFFE2E8F0),
+    borderStrong: Color(0xFFCBD5E1),
+  );
+
+  /// The night palette.
+  ///
+  /// Not an inversion. Two things had to change in kind rather than in value:
+  ///
+  /// The accents are lifted. `#2563EB` gives 2.4:1 on a dark ground and is
+  /// unreadable; the blue, green and crimson are all raised in luminance until
+  /// they clear AA against both the background and the raised surface. The
+  /// crimson in particular becomes a coral — a deep red on near-black is
+  /// almost invisible, which is a poor property for the colour that means
+  /// "somebody is at your car".
+  ///
+  /// The grounds are blue-tinted, for the same reason the light neutrals are:
+  /// a neutral charcoal beside this blue reads brown.
+  ///
+  /// Surfaces get *lighter* as they come forward — `background` is the
+  /// furthest back — because on a dark theme elevation reads as light, not as
+  /// shadow. Shadows are nearly invisible here, so the card tokens lean on
+  /// this separation instead.
+  static const AvahanaaPalette dark = AvahanaaPalette(
+    brightness: Brightness.dark,
+    primary: Color(0xFF63A4FF),
+    primaryDark: Color(0xFF8FC0FF),
+    primaryDeep: Color(0xFFB9D7FF),
+    primaryTint: Color(0xFF15263F),
+    success: Color(0xFF34D399),
+    successDark: Color(0xFF6EE7B7),
+    successTint: Color(0xFF10281F),
+    alert: Color(0xFFFF6B7A),
+    alertDeep: Color(0xFFFF8D98),
+    alertDarkest: Color(0xFFFFB3BA),
+    alertTint: Color(0xFF3A1119),
+    alertBorder: Color(0xFF7A2733),
+    alertSurface: Color(0xFF2A0F14),
+    warning: Color(0xFFFBBF24),
+    warningTint: Color(0xFF2E2310),
+    background: Color(0xFF0B1220),
+    surface: Color(0xFF151E2E),
+    surfaceMuted: Color(0xFF1E2A3D),
+    infoSurface: Color(0xFF122436),
+    infoBorder: Color(0xFF24405C),
+    textPrimary: Color(0xFFF1F5F9),
+    textSecondary: Color(0xFFA9B8CD),
+    textTertiary: Color(0xFF8CA0B8),
+    border: Color(0xFF263449),
+    borderStrong: Color(0xFF3A4C66),
+  );
+}
+
+/// Colours that must never follow the theme, because they end up as ink.
+///
+/// The printable sticker and the QR code are physical objects. Dark mode is a
+/// property of a screen at night; a sheet of A4 does not have one.
+abstract final class AppPrint {
+  static const Color brandDeep = Color(0xFF1E40AF);
+
+  /// The flat brand gradient for the **printed** sticker.
   ///
   /// On screen the same ramp is rendered as metal (`MetalPalette.brand`), but
   /// print is unforgiving: a five-stop metallic ramp bands and muddies on a
   /// consumer printer, so the sheet keeps the flat three-stop version.
   static const List<Color> heroGradient = <Color>[
-    primary,
-    primaryDark,
-    success,
+    Color(0xFF2563EB),
+    Color(0xFF1D4ED8),
+    Color(0xFF10B981),
   ];
+}
+
+/// The active design tokens.
+///
+/// Every member is a getter over [activePalette], so a theme switch moves the
+/// entire app at once without 300-odd call sites having to know about it. The
+/// palette is swapped immediately before the tree rebuilds — see
+/// `ThemeController` — so a frame never renders half in one palette.
+abstract final class AppColors {
+  static AvahanaaPalette _active = AvahanaaPalette.light;
+
+  /// The palette currently in force.
+  static AvahanaaPalette get activePalette => _active;
+
+  /// Swaps the palette. Only `ThemeController` should call this, and only
+  /// immediately before rebuilding the app.
+  static void usePalette(AvahanaaPalette palette) => _active = palette;
+
+  static bool get isDark => _active.isDark;
+
+  // Brand ---------------------------------------------------------------
+  static Color get primary => _active.primary;
+  static Color get primaryDark => _active.primaryDark;
+  static Color get primaryDeep => _active.primaryDeep;
+  static Color get primaryTint => _active.primaryTint;
+
+  static Color get success => _active.success;
+  static Color get successDark => _active.successDark;
+  static Color get successTint => _active.successTint;
+
+  // Alert — reserved. Red means "an alert" or "this destroys data". Nothing
+  // else. Never use it for plain emphasis.
+  static Color get alert => _active.alert;
+  static Color get alertDeep => _active.alertDeep;
+  static Color get alertDarkest => _active.alertDarkest;
+  static Color get alertTint => _active.alertTint;
+  static Color get alertBorder => _active.alertBorder;
+
+  static Color get warning => _active.warning;
+  static Color get warningTint => _active.warningTint;
+
+  // Neutrals ------------------------------------------------------------
+  static Color get background => _active.background;
+
+  /// Surface for the delete-account / destructive zone.
+  static Color get alertSurface => _active.alertSurface;
+  static Color get surface => _active.surface;
+  static Color get surfaceMuted => _active.surfaceMuted;
+  static Color get infoSurface => _active.infoSurface;
+
+  /// Hairline that pairs with [infoSurface] — plain [border] disappears on it.
+  static Color get infoBorder => _active.infoBorder;
+
+  static Color get textPrimary => _active.textPrimary;
+  static Color get textSecondary => _active.textSecondary;
+  static Color get textTertiary => _active.textTertiary;
+
+  /// Text on a saturated brand fill. White in both themes: the fills are
+  /// contrast-clamped for it, and flipping it per theme would make the alert
+  /// banner unreadable in exactly the moment it matters.
+  static const Color onDark = Color(0xFFFFFFFF);
+  static const Color onDarkMuted = Color(0xCCFFFFFF);
+
+  /// Ink for content sitting on a fill that does **not** follow the theme.
+  ///
+  /// Some surfaces are fixed by what they represent rather than by the theme:
+  /// a vehicle's paint swatch is whatever colour the car is, the alert banner
+  /// is red because it is an alert, the hero is the brand gradient. Content on
+  /// those must be fixed too.
+  ///
+  /// Getting this wrong is invisible in light mode and glaring in dark: the
+  /// car icon sat on a white swatch in `AppColors.textPrimary`, which in the
+  /// night palette is near-white, so it disappeared entirely.
+  static const Color inkOnLightFill = Color(0xFF0F172A);
+
+  /// The deep red for a light chip sitting on the alert banner.
+  static const Color inkOnAlertFill = Color(0xFFA01625);
+
+  static Color get border => _active.border;
+  static Color get borderStrong => _active.borderStrong;
+
+  /// Kept for the printed sticker. See [AppPrint.heroGradient].
+  static const List<Color> heroGradient = AppPrint.heroGradient;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +422,7 @@ TextStyle _display(
   FontWeight weight, {
   double? height,
   double? letterSpacing,
-  Color color = AppColors.textPrimary,
+  Color? color,
 }) {
   return TextStyle(
     fontFamily: AppFonts.display,
@@ -242,7 +431,7 @@ TextStyle _display(
     fontVariations: _wght(weight),
     height: height,
     letterSpacing: letterSpacing ?? _opticalTracking(size),
-    color: color,
+    color: color ?? AppColors.textPrimary,
   );
 }
 
@@ -251,7 +440,7 @@ TextStyle _text(
   FontWeight weight, {
   double? height,
   double letterSpacing = 0,
-  Color color = AppColors.textPrimary,
+  Color? color,
 }) {
   return TextStyle(
     fontFamily: AppFonts.text,
@@ -260,7 +449,7 @@ TextStyle _text(
     fontVariations: _wght(weight),
     height: height,
     letterSpacing: letterSpacing,
-    color: color,
+    color: color ?? AppColors.textPrimary,
   );
 }
 
@@ -329,28 +518,42 @@ abstract final class AppText {
 // ---------------------------------------------------------------------------
 
 abstract final class AvahanaaTheme {
-  /// The app ships light-only on purpose: the QR surfaces, the printable
-  /// sticker preview and the panic-mode alert contrast are all calibrated for
-  /// a light ground. A half-finished dark theme would regress them.
-  static ThemeData light() {
-    const scheme = ColorScheme.light(
-      primary: AppColors.primary,
-      onPrimary: AppColors.onDark,
-      primaryContainer: AppColors.primaryTint,
-      onPrimaryContainer: AppColors.primaryDeep,
-      secondary: AppColors.success,
-      onSecondary: AppColors.onDark,
-      secondaryContainer: AppColors.successTint,
-      onSecondaryContainer: AppColors.successDark,
-      error: AppColors.alert,
-      onError: AppColors.onDark,
-      errorContainer: AppColors.alertTint,
-      onErrorContainer: AppColors.alertDarkest,
-      surface: AppColors.surface,
-      onSurface: AppColors.textPrimary,
-      onSurfaceVariant: AppColors.textSecondary,
-      outline: AppColors.border,
-      outlineVariant: AppColors.border,
+  /// The daylight theme.
+  static ThemeData light() => _build(AvahanaaPalette.light);
+
+  /// The night theme.
+  ///
+  /// Not an inverted copy — see [AvahanaaPalette.dark] for what had to change
+  /// in kind rather than in value. The printable sticker is unaffected in
+  /// either theme; it reads [AppPrint].
+  static ThemeData dark() => _build(AvahanaaPalette.dark);
+
+  /// Builds a theme from a palette.
+  ///
+  /// Reads the palette it is handed rather than the ambient [AppColors], so a
+  /// theme can be constructed for a palette that is not currently active —
+  /// `MaterialApp` wants both themes up front and picks between them itself.
+  static ThemeData _build(AvahanaaPalette p) {
+    final isDark = p.isDark;
+    final scheme = ColorScheme(
+      brightness: p.brightness,
+      primary: p.primary,
+      onPrimary: isDark ? const Color(0xFF06101F) : AppColors.onDark,
+      primaryContainer: p.primaryTint,
+      onPrimaryContainer: p.primaryDeep,
+      secondary: p.success,
+      onSecondary: isDark ? const Color(0xFF06101F) : AppColors.onDark,
+      secondaryContainer: p.successTint,
+      onSecondaryContainer: p.successDark,
+      error: p.alert,
+      onError: isDark ? const Color(0xFF2A0F14) : AppColors.onDark,
+      errorContainer: p.alertTint,
+      onErrorContainer: p.alertDarkest,
+      surface: p.surface,
+      onSurface: p.textPrimary,
+      onSurfaceVariant: p.textSecondary,
+      outline: p.border,
+      outlineVariant: p.border,
     );
 
     final textTheme = TextTheme(
@@ -373,20 +576,20 @@ abstract final class AvahanaaTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: p.background,
       fontFamily: AppFonts.text,
       textTheme: textTheme,
       splashFactory: InkSparkle.splashFactory,
 
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.surface,
+        backgroundColor: p.surface,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: AppColors.textPrimary,
+        foregroundColor: p.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: const Color(0x14101828),
         centerTitle: false,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary, size: 22),
+        iconTheme: IconThemeData(color: p.textPrimary, size: 22),
         titleTextStyle: AppText.titleLarge,
         systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,
@@ -395,10 +598,10 @@ abstract final class AvahanaaTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: p.primary,
           foregroundColor: AppColors.onDark,
-          disabledBackgroundColor: AppColors.borderStrong,
-          disabledForegroundColor: AppColors.surface,
+          disabledBackgroundColor: p.borderStrong,
+          disabledForegroundColor: p.surface,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.controlAll,
@@ -411,9 +614,9 @@ abstract final class AvahanaaTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: p.primary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          side: const BorderSide(color: AppColors.primary, width: 1.6),
+          side: BorderSide(color: p.primary, width: 1.6),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.controlAll,
           ),
@@ -424,7 +627,7 @@ abstract final class AvahanaaTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: p.primary,
           textStyle: AppText.labelLarge,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           shape: const RoundedRectangleBorder(
@@ -435,45 +638,45 @@ abstract final class AvahanaaTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
-        border: _inputBorder(AppColors.border),
-        enabledBorder: _inputBorder(AppColors.border),
-        focusedBorder: _inputBorder(AppColors.primary),
-        errorBorder: _inputBorder(AppColors.alert),
-        focusedErrorBorder: _inputBorder(AppColors.alert),
-        disabledBorder: _inputBorder(AppColors.surfaceMuted),
+        fillColor: p.surface,
+        border: _inputBorder(p.border),
+        enabledBorder: _inputBorder(p.border),
+        focusedBorder: _inputBorder(p.primary),
+        errorBorder: _inputBorder(p.alert),
+        focusedErrorBorder: _inputBorder(p.alert),
+        disabledBorder: _inputBorder(p.surfaceMuted),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        labelStyle: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        labelStyle: AppText.bodyMedium.copyWith(color: p.textSecondary),
         floatingLabelStyle: AppText.labelMedium.copyWith(
-          color: AppColors.primary,
+          color: p.primary,
         ),
-        hintStyle: AppText.bodyMedium.copyWith(color: AppColors.textTertiary),
-        errorStyle: AppText.bodySmall.copyWith(color: AppColors.alert),
-        prefixIconColor: AppColors.textTertiary,
-        suffixIconColor: AppColors.textTertiary,
+        hintStyle: AppText.bodyMedium.copyWith(color: p.textTertiary),
+        errorStyle: AppText.bodySmall.copyWith(color: p.alert),
+        prefixIconColor: p.textTertiary,
+        suffixIconColor: p.textTertiary,
       ),
 
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         elevation: 0,
-        color: AppColors.surface,
+        color: p.surface,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.cardAll),
       ),
 
       dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: p.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.heroAll),
         titleTextStyle: AppText.headlineMedium,
         contentTextStyle: AppText.bodyMedium.copyWith(
-          color: AppColors.textSecondary,
+          color: p.textSecondary,
         ),
       ),
 
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.surface,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: p.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         showDragHandle: false,
@@ -484,16 +687,16 @@ abstract final class AvahanaaTheme {
 
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.textPrimary,
+        backgroundColor: p.textPrimary,
         contentTextStyle: AppText.bodyMedium.copyWith(color: AppColors.onDark),
-        actionTextColor: AppColors.surface,
+        actionTextColor: p.surface,
         insetPadding: const EdgeInsets.all(AppSpacing.lg),
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
         elevation: 0,
       ),
 
-      dividerTheme: const DividerThemeData(
-        color: AppColors.border,
+      dividerTheme: DividerThemeData(
+        color: p.border,
         thickness: 1,
         space: 1,
       ),
@@ -505,24 +708,24 @@ abstract final class AvahanaaTheme {
         ),
         titleTextStyle: AppText.titleSmall,
         subtitleTextStyle: AppText.bodySmall.copyWith(
-          color: AppColors.textSecondary,
+          color: p.textSecondary,
         ),
-        iconColor: AppColors.textSecondary,
+        iconColor: p.textSecondary,
         minVerticalPadding: AppSpacing.md,
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
       ),
 
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          return AppColors.surface;
+          return p.surface;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
-            return AppColors.border;
+            return p.border;
           }
           return states.contains(WidgetState.selected)
-              ? AppColors.success
-              : AppColors.borderStrong;
+              ? p.success
+              : p.borderStrong;
         }),
         trackOutlineColor: const WidgetStatePropertyAll<Color>(
           Colors.transparent,
@@ -530,7 +733,7 @@ abstract final class AvahanaaTheme {
       ),
 
       popupMenuTheme: PopupMenuThemeData(
-        color: AppColors.surface,
+        color: p.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 3,
         shadowColor: const Color(0x1A101828),
@@ -538,16 +741,16 @@ abstract final class AvahanaaTheme {
         textStyle: AppText.bodyMedium,
       ),
 
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.primary,
-        linearTrackColor: AppColors.border,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: p.primary,
+        linearTrackColor: p.border,
         circularTrackColor: Colors.transparent,
       ),
 
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textTertiary,
+        backgroundColor: p.surface,
+        selectedItemColor: p.primary,
+        unselectedItemColor: p.textTertiary,
         selectedLabelStyle: AppText.labelSmall.copyWith(letterSpacing: 0.2),
         unselectedLabelStyle: AppText.labelSmall.copyWith(
           letterSpacing: 0.2,
@@ -559,7 +762,7 @@ abstract final class AvahanaaTheme {
 
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: AppColors.textPrimary,
+          color: p.textPrimary,
           borderRadius: BorderRadius.circular(AppSpacing.sm),
         ),
         textStyle: AppText.bodySmall.copyWith(color: AppColors.onDark),

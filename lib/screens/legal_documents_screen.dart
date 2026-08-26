@@ -40,7 +40,7 @@ class LegalDocumentsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const AppIconBadge(
+                  AppIconBadge(
                     icon: Icons.shield_rounded,
                     color: AppColors.primary,
                   ),
@@ -71,7 +71,7 @@ class LegalDocumentsScreen extends StatelessWidget {
                     icon: Icons.shield_outlined,
                     title: 'Privacy Policy',
                     subtitle: 'What we collect, why, and how long we keep it',
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.open_in_new_rounded,
                       size: 18,
                       color: AppColors.textTertiary,
@@ -86,7 +86,7 @@ class LegalDocumentsScreen extends StatelessWidget {
                     icon: Icons.description_outlined,
                     title: 'Terms of Service',
                     subtitle: 'The rules for using Avahanaa',
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.open_in_new_rounded,
                       size: 18,
                       color: AppColors.textTertiary,

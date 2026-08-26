@@ -61,11 +61,11 @@ class StickerTheme {
     this.sheet = const Color(0xFFFFFFFF),
     this.ink = const Color(0xFF111827),
     this.mutedInk = const Color(0xFF4B5563),
-    this.accent = AppColors.primaryDeep,
+    Color? accent,
     this.onBand = const Color(0xFFFFFFFF),
     this.card = const Color(0xFFFFFFFF),
     this.rule = const Color(0xFF111827),
-  });
+  }) : accent = accent ?? AppPrint.brandDeep;
 
   /// A design with no filled areas — cheapest to print, most forgiving to scan.
   const StickerTheme.plain({
@@ -126,14 +126,14 @@ enum StickerStyle {
   signature(
     'Signature',
     'Branded header on white paper',
-    StickerTheme(layout: StickerLayout.banner, band: AppColors.heroGradient),
+    StickerTheme(layout: StickerLayout.banner, band: AppPrint.heroGradient),
   ),
 
   /// Full-bleed brand gradient with a floating white code card.
   bold(
     'Bold',
     'High-visibility colour panel — uses a lot of ink',
-    StickerTheme(layout: StickerLayout.panel, band: AppColors.heroGradient),
+    StickerTheme(layout: StickerLayout.panel, band: AppPrint.heroGradient),
   ),
 
   /// Black on white, nothing else. Cheapest to print and the most forgiving
