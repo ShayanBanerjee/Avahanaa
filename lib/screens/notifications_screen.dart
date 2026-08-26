@@ -350,6 +350,7 @@ class _NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final visual = ReasonVisual.of(notification.reason);
     final isUnread = !notification.read;
+    final reply = notification.reply;
 
     return Dismissible(
       key: ValueKey<String>('alert-${notification.id}'),
@@ -449,6 +450,40 @@ class _NotificationCard extends StatelessWidget {
                                     color: AppColors.textTertiary,
                                   ),
                                 ),
+
+                                // Whether this conversation got an answer.
+                                // Without it the list shows read/unread and
+                                // nothing else, so an owner scanning it cannot
+                                // tell which people are still standing in the
+                                // street waiting on them.
+                                if (reply != null) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Flexible(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          reply.isOnTheWay
+                                              ? Icons.directions_run_rounded
+                                              : Icons.mark_chat_read_rounded,
+                                          size: 13,
+                                          color: AppColors.successDark,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            'You replied',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppText.caption.copyWith(
+                                              color: AppColors.successDark,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ],
