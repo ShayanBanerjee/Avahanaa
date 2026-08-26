@@ -11,6 +11,7 @@ import '../utils/qr_payload_builder.dart';
 import '../utils/sticker_renderer.dart';
 import '../utils/sticker_sheet.dart';
 import '../widgets/admob_banner.dart';
+import '../widgets/alert_reply_panel.dart';
 import '../widgets/hero_header.dart';
 import '../widgets/metal.dart';
 import '../widgets/qr_visual.dart';
@@ -877,10 +878,22 @@ class _CriticalAlertBanner extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
+
+              // The reply is the primary action here, not "see what happened".
+              // The reason, the note and the time are already on this card —
+              // the owner knows what is wrong. What has not happened yet is
+              // anyone telling the person in the street that help is coming,
+              // and that is the thing this product exists to do.
+              AlertQuickReplyButton(
+                onReply: (reply) => FirestoreService().replyToNotification(
+                  notificationId: latest.id,
+                  reply: reply,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
               SizedBox(
                 width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
+                child: TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -891,10 +904,8 @@ class _CriticalAlertBanner extends StatelessWidget {
                       ),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surface,
-                    foregroundColor: AppColors.alertDeep,
-                    textStyle: AppText.labelLarge.copyWith(fontSize: 17),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.onDark,
                   ),
                   child: const Text('See what happened'),
                 ),

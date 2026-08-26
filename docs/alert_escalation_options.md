@@ -155,7 +155,25 @@ Compliance reality check before anyone builds this:
   and 10 minutes — which is the actual product goal. Per-minute pricing makes
   you stingy with exactly the thing that makes the product work.
 
-## Acknowledgement loop (the other half, and it is free)
+## Acknowledgement loop (the other half, and it is free) — BUILT (Aug 2026)
+
+Shipped, with one deviation from the sketch below: the scan page **polls
+`/api/status`** rather than attaching a Firestore listener. It has to. The
+rules now refuse anonymous reads, which is what stopped the page reading the
+owner's `fcmToken` and `phoneNumber` — see `docs/web_backend_sync.md`. The
+capability token minted at notify time is what lets the page ask about its own
+alert and no other.
+
+The replies are a fixed set (`lib/models/alert_reply.dart`), not free text. A
+free-form channel between two anonymous strangers is a harassment vector in
+both directions and would undo the privacy promise; a closed set carries the
+only thing that actually de-escalates — is someone coming, and roughly when.
+It is also the right shape for a lock screen at night: one tap is the whole
+interaction budget.
+
+Contract: `docs/backend_contract.md`, "The reply channel".
+
+The original design, for reference:
 
 The scanner is standing next to the car with the page open. Close the loop:
 

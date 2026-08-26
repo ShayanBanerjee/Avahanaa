@@ -188,6 +188,25 @@ the deploy lands — leaving it is how the two configs clobber each other.
 | 11 | Delete `notifyOwner`, ~1 week after deploy | pending |
 | 12 | Backfill `status: "sent"` documents | pending, cosmetic |
 
+### The reply channel (added Aug 2026)
+
+Built on top of the port, and verified end to end against the full emulator
+suite — auth, firestore, functions and hosting in one instance:
+
+1. Scanner opens `/n/qr-nexon-003` → page resolves through `/api/qr`.
+2. Picks a reason → `POST /api/notify` → alert written, `statusToken` returned.
+3. Alert appears in the owner's app on the Android emulator.
+4. Owner taps a reply → Firestore.
+5. The still-open page polls `/api/status` and flips to
+   "The owner is on their way now" — **without a reload**.
+
+Polling stops on the first reply (measured: zero further requests in the 14s
+after it landed) and gives up after ten minutes.
+
+Also confirmed here: a wrong or missing `statusToken` answers 404 identically
+to a missing alert, so the endpoint cannot be walked; and `/api/lookup`
+resolved a plate, which exercises the `licensePlateCanonical` field end to end.
+
 ### Verified
 
 - The rewritten page compiles under Babel and renders; submitting calls

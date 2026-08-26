@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'alert_reply.dart';
+
 class NotificationModel {
   final String id;
   final String qrCodeId;
@@ -12,6 +14,14 @@ class NotificationModel {
   final bool read;
   final DateTime? readAt;
 
+  /// When the owner replied. Null until they do.
+  final DateTime? acknowledgedAt;
+
+  /// Which reply they sent. See [AlertReply] — this is the wire value, kept as
+  /// a raw string so an id written by a newer build round-trips unchanged
+  /// instead of being flattened on read.
+  final String acknowledgementEta;
+
   NotificationModel({
     required this.id,
     required this.qrCodeId,
@@ -23,7 +33,16 @@ class NotificationModel {
     this.status = 'sent',
     this.read = false,
     this.readAt,
+    this.acknowledgedAt,
+    this.acknowledgementEta = '',
   });
+
+  /// The owner's reply, or null if they have not answered yet.
+  AlertReply? get reply =>
+      acknowledgedAt == null ? null : AlertReply.fromId(acknowledgementEta);
+
+  /// Whether the scanner has been told someone is coming.
+  bool get isAcknowledged => acknowledgedAt != null;
 
   // Create NotificationModel from Firestore document
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
@@ -40,6 +59,8 @@ class NotificationModel {
       status: data['status'] ?? 'sent',
       read: data['read'] ?? false,
       readAt: (data['readAt'] as Timestamp?)?.toDate(),
+      acknowledgedAt: (data['acknowledgedAt'] as Timestamp?)?.toDate(),
+      acknowledgementEta: data['acknowledgementEta'] ?? '',
     );
   }
 
@@ -55,6 +76,9 @@ class NotificationModel {
       'status': status,
       'read': read,
       'readAt': readAt != null ? Timestamp.fromDate(readAt!) : null,
+      'acknowledgedAt':
+          acknowledgedAt != null ? Timestamp.fromDate(acknowledgedAt!) : null,
+      'acknowledgementEta': acknowledgementEta,
     };
   }
 
@@ -69,6 +93,8 @@ class NotificationModel {
     String? status,
     bool? read,
     DateTime? readAt,
+    DateTime? acknowledgedAt,
+    String? acknowledgementEta,
   }) {
     return NotificationModel(
       id: id,
@@ -81,6 +107,8 @@ class NotificationModel {
       status: status ?? this.status,
       read: read ?? this.read,
       readAt: readAt ?? this.readAt,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
+      acknowledgementEta: acknowledgementEta ?? this.acknowledgementEta,
     );
   }
 

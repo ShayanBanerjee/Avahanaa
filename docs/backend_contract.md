@@ -81,12 +81,44 @@ degrades gracefully. Removing or renaming one is not.
   system displays it directly in background/terminated state and the app's
   dedupe + escalating reminders never run (`main.dart` background handler).
 
+## The reply channel (built Aug 2026)
+
+The owner answers, and the person still standing at the vehicle sees it. This
+is the half that de-escalates the moment, and it is the reason the alert was
+worth delivering fast.
+
+**Model** — `notifications/{id}` carries:
+
+- `acknowledgedAt` — when the owner replied, null until they do.
+- `acknowledgementEta` — which reply, as an id from `lib/models/alert_reply.dart`:
+  `omw_now`, `omw_5`, `omw_15`, `cannot_come`, `seen`. Never rename one; old
+  app versions stay installed.
+- `statusToken` — minted by `notify`, handed once to the scan page. Server-only:
+  the rules exclude it from the owner's update allowlist, because an owner who
+  could rewrite it could silently cut off the person waiting at their vehicle.
+
+**Endpoints**
+
+- `POST /api/notify` returns `{ok, notificationId, statusToken}`.
+- `GET /api/status?id=&t=` returns `{delivered, acknowledged, reply}`, where
+  `reply` is `{id, label, onTheWay, at}` or null. Requires the token, compared
+  in constant time, and answers 404 identically for a bad token and a missing
+  alert so it cannot be walked. Returns nothing about the owner.
+
+**Why polling, not a listener.** The original sketch in
+`docs/alert_escalation_options.md` said the scan page would watch Firestore
+directly. It cannot any more, and should not: the rules now refuse anonymous
+reads, which is exactly what stopped the page harvesting `fcmToken` and
+`phoneNumber`. The page polls `/api/status` every 4s, stops on the first reply,
+and gives up after ten minutes.
+
+**Keeping the two sides honest.** `REPLY_LABELS` and `REPLY_ON_THE_WAY` in the
+backend must match `AlertReply`. `test/alert_reply_test.dart` reads the backend
+source and fails if they drift, when both repos are checked out side by side.
+
 ## Fields the app would like next
 
 Not yet implemented on either side; listed so both sides build the same thing:
-
-- `acknowledgedAt`, `acknowledgementEta` on `notifications` — the owner's
-  "on my way" reply, read live by the still-open scan page.
 - `photoUrl` — scanner-supplied photo of the situation. Needs Storage rules and
   an abuse story before it ships.
 - `location` — coarse geohash of the scan, to confirm which parked vehicle.

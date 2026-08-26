@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../models/alert_reply.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
@@ -580,6 +581,39 @@ class FirestoreService {
   }
 
   // Delete notification
+  /// Records the owner's reply to an alert.
+  ///
+  /// This is the only write in the app that a stranger will read. It goes to
+  /// `notifications/{id}`, and the scan page — which is still open in
+  /// somebody's hand a few metres from the vehicle — polls for it through
+  /// `/api/status`. Nothing about the owner travels with it; the reply is an
+  /// id from [AlertReply] and a timestamp, and the endpoint that serves it
+  /// returns only those two things.
+  ///
+  /// Replying also marks the alert read, because it plainly is, and that is
+  /// what stops the escalating reminders. Callers still cancel the local
+  /// notification lifecycle themselves — this method only owns the document.
+  ///
+  /// Throws a human-readable string on failure, like every other user-initiated
+  /// write here, because the owner is watching for confirmation that the person
+  /// at their car has been told.
+  Future<void> replyToNotification({
+    required String notificationId,
+    required AlertReply reply,
+  }) async {
+    try {
+      await _firestore.collection('notifications').doc(notificationId).update({
+        'acknowledgedAt': FieldValue.serverTimestamp(),
+        'acknowledgementEta': reply.id,
+        'read': true,
+        'readAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error replying to notification: $e');
+      throw 'Could not send your reply. Check your connection and try again.';
+    }
+  }
+
   Future<void> deleteNotification(String notificationId) async {
     try {
       await _firestore.collection('notifications').doc(notificationId).delete();

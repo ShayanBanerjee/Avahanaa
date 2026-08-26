@@ -8,6 +8,7 @@ import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/notification_visuals.dart';
 import '../widgets/admob_banner.dart';
+import '../widgets/alert_reply_panel.dart';
 import '../widgets/ui_kit.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -251,6 +252,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return _NotificationDetailSheet(
             notification: notification,
             scrollController: scrollController,
+            onReply: (reply) => _firestoreService.replyToNotification(
+              notificationId: notification.id,
+              reply: reply,
+            ),
           );
         },
       ),
@@ -465,10 +470,12 @@ class _NotificationDetailSheet extends StatelessWidget {
   const _NotificationDetailSheet({
     required this.notification,
     required this.scrollController,
+    required this.onReply,
   });
 
   final NotificationModel notification;
   final ScrollController scrollController;
+  final AlertReplySender onReply;
 
   @override
   Widget build(BuildContext context) {
@@ -592,19 +599,15 @@ class _NotificationDetailSheet extends StatelessWidget {
           ),
 
           const SizedBox(height: AppSpacing.xl),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.directions_run_rounded),
-              label: const Text("Got it, I'm heading over"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: visual.isUrgent
-                    ? AppColors.alert
-                    : AppColors.primary,
-              ),
-            ),
+
+          // Replaces what used to be a "Got it, I'm heading over" button that
+          // only closed the sheet. It promised the scanner had been answered
+          // and told nobody anything.
+          AlertReplyPanel(
+            notification: notification,
+            accent: visual.isUrgent ? AppColors.alert : AppColors.primary,
+            onReply: onReply,
+            onReplied: () => Navigator.of(context).maybePop(),
           ),
         ],
       ),
