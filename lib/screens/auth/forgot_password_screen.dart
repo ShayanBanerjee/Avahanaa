@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+
+import '../../l10n/app_localizations.dart';
+
 import '../../services/auth_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/ui_kit.dart';
+import 'login_screen.dart' show AuthButtonSpinner, AuthValidators;
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -26,134 +32,84 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
-      await _authService.resetPassword(
-        email: _emailController.text.trim(),
-      );
-
+      await _authService.resetPassword(email: _emailController.text.trim());
       if (!mounted) return;
-
       setState(() => _emailSent = true);
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
+        backgroundColor: AppColors.surface,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
+          tooltip: 'Back',
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: _emailSent ? _buildSuccessView() : _buildFormView(),
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: EntranceFade(
+            child: _emailSent ? _buildSuccessView() : _buildFormView(),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildFormView() {
+    // State.context — this is a State method, not a static helper.
+    final l10n = AppL10n.of(context);
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 20),
-
-          // Icon
-          Center(
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.lock_reset,
-                size: 40,
-                color: Color(0xFF2563EB),
-              ),
-            ),
+          _AuthIcon(
+            icon: Icons.lock_reset_rounded,
+            color: AppColors.primary,
           ),
-          const SizedBox(height: 30),
-
-          // Title
-          const Text(
-            'Forgot Password?',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
-            ),
-            textAlign: TextAlign.center,
+          const SizedBox(height: AppSpacing.xl),
+          Text(l10n.authResetYourPassword, style: AppText.displayMedium),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Enter the email you signed up with and we will send you a link '
+            'to set a new password.',
+            style: AppText.bodyLarge.copyWith(color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 8),
-
-          const Text(
-            'Enter your email address and we\'ll send you instructions to reset your password',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF6B7280),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-
-          // Email field
+          const SizedBox(height: AppSpacing.xxl),
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.email],
             onFieldSubmitted: (_) => _handleResetPassword(),
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined),
+            decoration: InputDecoration(
+              labelText: l10n.authEmail,
+              prefixIcon: Icon(Icons.mail_outline_rounded),
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!value.contains('@')) {
-                return 'Please enter a valid email';
-              }
-              return null;
-            },
+            validator: AuthValidators.email,
           ),
-          const SizedBox(height: 32),
-
-          // Reset button
+          const SizedBox(height: AppSpacing.xl),
           SizedBox(
             height: 56,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleResetPassword,
               child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text('Send Reset Link'),
+                  ? AuthButtonSpinner()
+                  : Text(l10n.authSendResetLink),
             ),
           ),
         ],
@@ -162,59 +118,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Widget _buildSuccessView() {
+    // State.context — this is a State method, not a static helper.
+    final l10n = AppL10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 40),
-
-        // Success icon
-        Center(
-          child: Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_circle,
-              size: 50,
-              color: Colors.green,
-            ),
-          ),
+        _AuthIcon(
+          icon: Icons.mark_email_read_rounded,
+          color: AppColors.success,
         ),
-        const SizedBox(height: 30),
-
-        const Text(
-          'Check Your Email',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-
+        const SizedBox(height: AppSpacing.xl),
+        Text(l10n.authCheckYourEmail, style: AppText.displayMedium),
+        const SizedBox(height: AppSpacing.md),
         Text(
-          'We\'ve sent password reset instructions to\n${_emailController.text.trim()}',
-          style: const TextStyle(
-            fontSize: 16,
-            color: Color(0xFF6B7280),
-          ),
-          textAlign: TextAlign.center,
+          'We sent password reset instructions to '
+          '${_emailController.text.trim()}. The link expires in an hour.',
+          style: AppText.bodyLarge.copyWith(color: AppColors.textSecondary),
         ),
-        const SizedBox(height: 40),
-
+        const SizedBox(height: AppSpacing.xxl),
         SizedBox(
           height: 56,
           child: ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Back to Login'),
+            child: Text(l10n.authBackToSignIn),
           ),
         ),
-        const SizedBox(height: 16),
-
+        const SizedBox(height: AppSpacing.sm),
         TextButton(
           onPressed: () {
             setState(() {
@@ -222,9 +151,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               _emailController.clear();
             });
           },
-          child: const Text('Didn\'t receive email? Try again'),
+          child: Text(l10n.authUseDifferentEmail),
         ),
       ],
+    );
+  }
+}
+
+class _AuthIcon extends StatelessWidget {
+  const _AuthIcon({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: 0.18),
+              color.withValues(alpha: 0.05),
+            ],
+          ),
+        ),
+        child: Icon(icon, size: 34, color: color),
+      ),
     );
   }
 }

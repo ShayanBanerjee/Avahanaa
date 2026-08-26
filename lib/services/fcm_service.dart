@@ -14,12 +14,32 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'notification_navigation_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../firebase_options.dart';
+import '../models/alert_reply.dart';
 import 'notification_payload.dart';
 
 @pragma('vm:entry-point')
+/// Runs in a background isolate when the notification is acted on while the app
+/// is not in the foreground.
+///
+/// A plain tap is still handled in the main isolate via
+/// `getNotificationAppLaunchDetails()` — the app is being opened anyway. What
+/// has to happen *here* is the reply, because the entire point of a lock-screen
+/// action is that the app never opens.
+///
+/// This isolate has nothing: no Firebase, no `main()`, no widget tree. It has
+/// to bootstrap everything it needs and finish quickly, and it must not throw —
+/// an uncaught error here is invisible to the user, who will believe they told
+/// somebody they were coming.
+@pragma('vm:entry-point')
 void notificationTapBackgroundHandler(NotificationResponse response) {
-  final _ = response;
-  // Handled via getNotificationAppLaunchDetails() in the main isolate.
+  final actionId = response.actionId;
+  if (actionId == null || !actionId.startsWith(FCMService.replyActionPrefix)) {
+    // A plain tap. The main isolate picks it up on launch.
+    return;
+  }
+  unawaited(FCMService.replyFromNotificationAction(response));
 }
 
 class FCMService {
@@ -30,10 +50,47 @@ class FCMService {
   static const String _stateFileName =
       'avahanaa_notification_orchestrator_state_v1.json';
 
+  /// The loud channel.
+  ///
+  /// `_v3` rather than a change to `_v2`, because a channel's sound and
+  /// importance are frozen the moment Android creates it — an existing install
+  /// would keep the old default tone forever. A new id is the only way to
+  /// change how an alert sounds, and it costs the user's per-channel settings,
+  /// so do not do it casually.
+  ///
+  /// The alarm stream is deliberate. This fires when a stranger is standing at
+  /// the owner's car; the notification tone the phone uses for a promotional
+  /// email is the wrong instrument. `avahanaa_alarm.wav` shipped in
+  /// `assets/audio/` for months without being referenced by anything — this is
+  /// the feature it was added for.
+  ///
+  /// **Review-visible.** Alarm-stream audio and full-screen intent are both
+  /// things Play looks at. See docs/play_store_compliance.md before touching
+  /// this, and ship changes to it in an isolated release.
   static final AndroidNotificationChannel _criticalChannel =
       AndroidNotificationChannel(
-        'avahanaa_critical_alerts_v2',
+        'avahanaa_critical_alerts_v3',
         'Avahanaa Critical Alerts',
+        description:
+            'Someone is at your vehicle. Loud by design — these are the alerts '
+            'you asked to be interrupted for.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('avahanaa_alarm'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        enableVibration: true,
+        enableLights: true,
+      );
+
+  /// The previous critical channel.
+  ///
+  /// Still created, and still cancelled against, because an install that
+  /// upgrades mid-alert has notifications posted on it. Nothing new is sent
+  /// here.
+  static final AndroidNotificationChannel _criticalChannelV2 =
+      AndroidNotificationChannel(
+        'avahanaa_critical_alerts_v2',
+        'Avahanaa Critical Alerts (previous)',
         description: 'Critical vehicle alerts that require quick action',
         importance: Importance.max,
         playSound: true,
@@ -139,7 +196,14 @@ class FCMService {
           AndroidFlutterLocalNotificationsPlugin
         >();
     await androidPlugin?.createNotificationChannel(_legacyChannel);
+    await androidPlugin?.createNotificationChannel(_criticalChannelV2);
     await androidPlugin?.createNotificationChannel(_criticalChannel);
+
+    // Asked for, never assumed. On Android 14+ this is only default-granted to
+    // apps whose core function is calling or alarms, and Avahanaa is neither.
+    // A refusal is fine: the alert still arrives as a heads-up on a
+    // max-importance channel, which is exactly what shipped before this.
+    await androidPlugin?.requestFullScreenIntentPermission();
 
     await FirebaseMessaging.instance
         .setForegroundNotificationPresentationOptions(
@@ -160,6 +224,16 @@ class FCMService {
   }
 
   static void _handleLocalNotificationResponse(NotificationResponse response) {
+    // A reply action taken while the app happens to be running. Same write as
+    // the background isolate, and it must not also deep-link into the alert —
+    // the owner answered from the shade precisely so they would not have to
+    // look at it.
+    final actionId = response.actionId;
+    if (actionId != null && actionId.startsWith(replyActionPrefix)) {
+      unawaited(replyFromNotificationAction(response));
+      return;
+    }
+
     final tapPayload = NotificationPayload.parseTapPayload(response.payload);
     if (tapPayload == null) {
       return;
@@ -333,6 +407,88 @@ class FCMService {
     await _persistState();
   }
 
+  /// The replies offered on the notification itself.
+  ///
+  /// This is the whole point of the reply channel. The owner is asleep, or
+  /// driving, or in a meeting; the alert wakes them and the answer that calms
+  /// the person in the street is one tap away on the lock screen. Making them
+  /// unlock, find the app and open a sheet is three steps too many for
+  /// something that has to happen in seconds.
+  ///
+  /// Two actions, not five. Android shows at most three and truncates hard,
+  /// and a lock screen is not a place to make a nuanced choice.
+  static const String replyActionPrefix = 'avahanaa_reply_';
+
+  static List<AndroidNotificationAction> _replyActions() {
+    return const <AndroidNotificationAction>[
+      AndroidNotificationAction(
+        '${replyActionPrefix}omw_5',
+        'On my way — 5 min',
+        // Handled in the background isolate: no UI, no unlock, no app launch.
+        showsUserInterface: false,
+        cancelNotification: true,
+      ),
+      AndroidNotificationAction(
+        '${replyActionPrefix}omw_now',
+        "I'm right here",
+        showsUserInterface: false,
+        cancelNotification: true,
+      ),
+    ];
+  }
+
+  /// Sends the owner's reply from a notification action.
+  ///
+  /// Called from the background isolate, so it initialises Firebase itself and
+  /// resolves the signed-in user from the persisted auth state rather than from
+  /// anything the app is holding — there is no app.
+  ///
+  /// Deliberately writes straight to Firestore instead of going through
+  /// `FirestoreService`: the offline queue in the Firestore SDK will hold this
+  /// write and replay it when connectivity returns, which is the behaviour you
+  /// want from a basement car park.
+  static Future<void> replyFromNotificationAction(
+    NotificationResponse response,
+  ) async {
+    final actionId = response.actionId;
+    if (actionId == null || !actionId.startsWith(replyActionPrefix)) return;
+
+    final replyId = actionId.substring(replyActionPrefix.length);
+    final reply = AlertReply.fromId(replyId);
+    if (reply == null) return;
+
+    final payload = NotificationPayload.parseTapPayload(response.payload);
+    if (payload == null) return;
+
+    try {
+      // Cheap when the isolate already has it, required when it does not.
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc(payload.notificationId)
+          .update({
+            'acknowledgedAt': FieldValue.serverTimestamp(),
+            'acknowledgementEta': reply.id,
+            'read': true,
+            'readAt': FieldValue.serverTimestamp(),
+          });
+
+      // Replying is reading. Stop the escalation ladder.
+      await cancelNotificationLifecycleById(payload.notificationId);
+      log('Replied "\${reply.id}" from the lock screen');
+    } catch (e) {
+      // Nothing to surface this on — there is no UI in this isolate. The alert
+      // stays unread, so the reminders keep running, which is the safe failure:
+      // the owner is nagged again rather than believing they answered.
+      log('Lock-screen reply failed: \$e');
+    }
+  }
+
   static Future<void> _showImmediateNotification(
     NotificationPayload payload,
   ) async {
@@ -355,13 +511,19 @@ class FCMService {
           styleInformation: BigTextStyleInformation(payload.body),
           icon: '@mipmap/launcher_icon',
           ticker: payload.title,
-          color: const Color(0xFFDC2626),
+          color: const Color(0xFFC81B30),
           channelAction: AndroidNotificationChannelAction.createIfNotExists,
+          // Takes over the screen when the phone is locked. Degrades to an
+          // ordinary heads-up when the permission was refused, which is why
+          // nothing here depends on it.
+          fullScreenIntent: true,
+          actions: _replyActions(),
         ),
         iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+          interruptionLevel: InterruptionLevel.critical,
         ),
       ),
       payload: payload.toLocalPayloadString(isReminder: false, reminderStep: 0),

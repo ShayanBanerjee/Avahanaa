@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+
+import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n_global.dart';
+
 import '../../services/auth_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/hero_header.dart';
+import '../../widgets/metal.dart';
+import '../../widgets/ui_kit.dart';
 import '../home_screen.dart';
-import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import 'signup_screen.dart';
 import 'verify_email_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -32,6 +40,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
       final userCredential = await _authService.signIn(
@@ -43,8 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final user = userCredential?.user;
       if (user != null && !user.emailVerified) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
+        navigator.pushReplacement(
+          MaterialPageRoute<void>(
             builder: (_) => VerifyEmailScreen(
               email: user.email ?? _emailController.text.trim(),
             ),
@@ -53,203 +63,252 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Navigate to home screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      navigator.pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => HomeScreen()),
       );
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 40),
-
-                // Logo
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-
-                // Title
-                const Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-
-                const Text(
-                  'Sign in to continue to Avahanaa',
-                  style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _handleLogin(),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 8),
-
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text('Forgot Password?'),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Login button
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text('Sign In'),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Divider
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Sign up link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Don't have an account? ",
-                      style: TextStyle(color: Color(0xFF6B7280)),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SignUpScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('Sign Up'),
-                    ),
-                  ],
-                ),
-              ],
+      backgroundColor: AppColors.surface,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AuthBrandHeader(
+              title: l10n.authWelcomeBack,
+              subtitle: l10n.authSignInBlurb,
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: EntranceFade(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.email],
+                        decoration: InputDecoration(
+                          labelText: l10n.authEmail,
+                          prefixIcon: Icon(Icons.mail_outline_rounded),
+                        ),
+                        validator: AuthValidators.email,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                        onFieldSubmitted: (_) => _handleLogin(),
+                        decoration: InputDecoration(
+                          labelText: l10n.authPassword,
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            tooltip: _obscurePassword
+                                ? l10n.commonShowPassword
+                                : l10n.commonHidePassword,
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                          ),
+                        ),
+                        validator: AuthValidators.password,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(l10n.authForgotPassword),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      MetalButton(
+                        label: l10n.authSignIn,
+                        icon: Icons.lock_open_rounded,
+                        busy: _isLoading,
+                        onPressed: _handleLogin,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "New to Avahanaa?",
+                            style: AppText.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => SignUpScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(l10n.authCreateAnAccount),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared auth chrome
+// ---------------------------------------------------------------------------
+
+/// Brand gradient panel used at the top of every unauthenticated screen, so
+/// sign-in, sign-up and password reset read as one flow.
+class AuthBrandHeader extends StatelessWidget {
+  const AuthBrandHeader({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.showLogo = true,
+    this.onBack,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool showLogo;
+
+  /// When set, a back control is laid out *above* the title. It is part of the
+  /// column rather than stacked over it, so it can never overlap the heading.
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return HeroSurface(
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(AppRadius.hero),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        onBack == null ? AppSpacing.xl : AppSpacing.sm,
+        AppSpacing.xl,
+        AppSpacing.xxl,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (onBack != null) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  color: AppColors.onDark,
+                  onPressed: onBack,
+                  tooltip: 'Back',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            if (showLogo) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+            Text(
+              title,
+              style: AppText.displayMedium.copyWith(color: AppColors.onDark),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              subtitle,
+              style: AppText.bodyLarge.copyWith(color: AppColors.onDarkMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AuthButtonSpinner extends StatelessWidget {
+  const AuthButtonSpinner({super.key, this.color = AppColors.onDark});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(color),
+      ),
+    );
+  }
+}
+
+abstract final class AuthValidators {
+  static String? email(String? value) {
+    final l10n = appL10n;
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return l10n.valEnterEmail;
+    // Deliberately loose — Firebase is the real authority on deliverability.
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) {
+      return l10n.valInvalidEmail;
+    }
+    return null;
+  }
+
+  static String? password(String? value) {
+    final l10n = appL10n;
+    final text = value ?? '';
+    if (text.isEmpty) return l10n.valEnterPassword;
+    if (text.length < 6) return l10n.valPasswordLength;
+    return null;
   }
 }

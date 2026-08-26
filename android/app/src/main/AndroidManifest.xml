@@ -2,6 +2,18 @@
     <!-- Notification related permissions -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Full-screen intent, for the loud alert.
+
+      This permission makes a Play Console declaration mandatory, and on
+      Android 14+ it is only default-granted to apps whose core function is
+      calling or alarms. Avahanaa is neither, so it is requested at runtime and
+      the alert path never depends on it: without the grant the same
+      notification still arrives as a heads-up on a max-importance channel.
+      See docs/play_store_compliance.md.
+    -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <application
         android:label="Avahanaa"
         android:name="${applicationName}"
@@ -38,7 +50,7 @@
             android:value="2" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="congestion_free_channel" />
+            android:value="avahanaa_critical_alerts_v3" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

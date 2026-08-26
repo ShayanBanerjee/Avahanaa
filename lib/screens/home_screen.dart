@@ -1,13 +1,23 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter/services.dart';
 
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../services/firestore_service.dart';
+import '../l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
+import '../utils/sticker_renderer.dart';
+import '../utils/sticker_sheet.dart';
 import '../widgets/admob_banner.dart';
+import '../widgets/alert_reply_panel.dart';
+import '../widgets/hero_header.dart';
+import '../widgets/metal.dart';
+import '../widgets/qr_visual.dart';
+import '../widgets/ui_kit.dart';
+import '../widgets/vehicle_panel.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'qr_code_screen.dart';
@@ -28,223 +38,91 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isGeneratingQrCode = false;
   bool _isBootstrappingLegacyVehicle = false;
 
+  /// Which vehicle's QR the home tab is showing. Local only — switching the
+  /// view must not rewrite the account's primary vehicle.
+  String? _viewedVehicleId;
+
+  void _openTab(int index) => setState(() => _selectedIndex = index);
+
+  void _viewVehicle(VehicleModel vehicle) {
+    setState(() => _viewedVehicleId = vehicle.id);
+  }
+
+  /// One listener on `notifications`, shared by everything that needs it.
+  ///
+  /// The nav badge, the home stat tile and the panic banner all want the same
+  /// thing, and each used to open its own Firestore stream — three live
+  /// listeners on one collection, three sets of socket traffic, three rebuild
+  /// cascades per alert. Held here and passed down instead.
+  late final Stream<List<NotificationModel>> _notifications = _firestoreService
+      .streamUserNotifications(_currentUser!.uid)
+      .asBroadcastStream();
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<int>(
-      stream: _firestoreService.streamUnreadNotificationCount(
-        _currentUser!.uid,
-      ),
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _notifications,
       builder: (context, snapshot) {
-        final unreadCount = snapshot.data ?? 0;
-        final List<Widget> screens = [
-          _buildHomeContent(),
-          const NotificationsScreen(),
-          const ProfileScreen(),
+        final all = snapshot.data ?? const <NotificationModel>[];
+        final unread = all.where((n) => !n.read).toList(growable: false);
+        final unreadCount = unread.length;
+        final screens = <Widget>[
+          _HomeTab(
+            state: this,
+            unreadCount: unreadCount,
+            unread: unread,
+            onOpenInbox: () => _openTab(1),
+          ),
+          NotificationsScreen(),
+          ProfileScreen(),
         ];
 
         return Scaffold(
-          body: screens[_selectedIndex],
-          bottomNavigationBar: BottomNavigationBar(
-            backgroundColor: Colors.white,
+          // IndexedStack keeps all three tabs alive (so scroll position and
+          // Firestore listeners survive a tab switch); the fade just stops the
+          // swap being a hard cut.
+          body: AnimatedSwitcher(
+            duration: AppMotion.fast,
+            child: KeyedSubtree(
+              key: ValueKey<int>(_selectedIndex),
+              child: IndexedStack(index: _selectedIndex, children: screens),
+            ),
+          ),
+          bottomNavigationBar: _AppNavBar(
             currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: _buildNotificationsNavIcon(unreadCount, isActive: false),
-                activeIcon: _buildNotificationsNavIcon(
-                  unreadCount,
-                  isActive: true,
-                ),
-                label: 'Notifications',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
+            unreadCount: unreadCount,
+            onTap: _openTab,
           ),
         );
       },
     );
   }
 
-  Widget _buildNotificationsNavIcon(int unreadCount, {required bool isActive}) {
-    final baseIcon = Icon(
-      isActive ? Icons.notifications : Icons.notifications_outlined,
-    );
-    if (unreadCount <= 0) {
-      return baseIcon;
-    }
-
-    final badgeText = unreadCount > 99 ? '99+' : unreadCount.toString();
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        baseIcon,
-        Positioned(
-          right: -8,
-          top: -6,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDC2626),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              badgeText,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHomeContent() {
-    return StreamBuilder<UserModel?>(
-      stream: _firestoreService.streamUserData(_currentUser!.uid),
-      builder: (context, userSnapshot) {
-        if (userSnapshot.connectionState == ConnectionState.waiting) {
-          return const Column(
-            children: [
-              Expanded(child: Center(child: CircularProgressIndicator())),
-              AdMobBanner(),
-            ],
-          );
-        }
-
-        if (userSnapshot.hasError) {
-          return Column(
-            children: [
-              Expanded(
-                child: Center(child: Text('Error: ${userSnapshot.error}')),
-              ),
-              const AdMobBanner(),
-            ],
-          );
-        }
-
-        final user = userSnapshot.data;
-
-        if (user == null) {
-          return const Column(
-            children: [
-              Expanded(child: Center(child: Text('User data not found'))),
-              AdMobBanner(),
-            ],
-          );
-        }
-
-        return StreamBuilder<List<VehicleModel>>(
-          stream: _firestoreService.streamUserVehicles(user.id),
-          builder: (context, vehicleSnapshot) {
-            if (vehicleSnapshot.connectionState == ConnectionState.waiting) {
-              return const Column(
-                children: [
-                  Expanded(child: Center(child: CircularProgressIndicator())),
-                  AdMobBanner(),
-                ],
-              );
-            }
-
-            if (vehicleSnapshot.hasError) {
-              return Column(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: Text('Error: ${vehicleSnapshot.error}'),
-                    ),
-                  ),
-                  const AdMobBanner(),
-                ],
-              );
-            }
-
-            final vehicles = vehicleSnapshot.data ?? const <VehicleModel>[];
-
-            if (vehicles.isEmpty) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _bootstrapLegacyVehicle(user);
-              });
-
-              final waitingOnMigration =
-                  user.hasLegacyVehicleData || user.qrCodeId.trim().isNotEmpty;
-
-              return Column(
-                children: [
-                  Expanded(
-                    child: _buildWaitingForQRCode(
-                      title: waitingOnMigration
-                          ? 'Preparing your vehicle...'
-                          : 'No vehicles found',
-                      subtitle: waitingOnMigration
-                          ? 'Migrating your existing profile data'
-                          : 'Add a vehicle from Profile to generate QR',
-                    ),
-                  ),
-                  const AdMobBanner(),
-                ],
-              );
-            }
-
-            final selectedVehicle = _selectVehicle(user, vehicles);
-
-            if (selectedVehicle.qrCodeId.trim().isEmpty) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _generateQrCode(user, selectedVehicle);
-              });
-              return Column(
-                children: [
-                  Expanded(child: _buildWaitingForQRCode()),
-                  const AdMobBanner(),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                Expanded(child: _buildMainContent(user, selectedVehicle)),
-                const AdMobBanner(),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  // -- Data plumbing (unchanged behaviour) --------------------------------
 
   VehicleModel _selectVehicle(UserModel user, List<VehicleModel> vehicles) {
+    final viewedId = _viewedVehicleId;
+    if (viewedId != null) {
+      for (final vehicle in vehicles) {
+        if (vehicle.id == viewedId) return vehicle;
+      }
+    }
+
     final primaryId = user.primaryVehicleId.trim();
     if (primaryId.isNotEmpty) {
       for (final vehicle in vehicles) {
-        if (vehicle.id == primaryId) {
-          return vehicle;
-        }
+        if (vehicle.id == primaryId) return vehicle;
       }
     }
     return vehicles.first;
   }
 
   Future<void> _bootstrapLegacyVehicle(UserModel user) async {
-    if (_isBootstrappingLegacyVehicle) {
-      return;
-    }
+    if (_isBootstrappingLegacyVehicle) return;
 
     final needsMigration =
         user.hasLegacyVehicleData || user.qrCodeId.trim().isNotEmpty;
-    if (!needsMigration) {
-      return;
-    }
+    if (!needsMigration) return;
 
     _isBootstrappingLegacyVehicle = true;
     try {
@@ -256,428 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildWaitingForQRCode({
-    String title = 'Generating your QR code...',
-    String subtitle = 'This usually takes a few seconds',
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMainContent(UserModel user, VehicleModel vehicle) {
-    final qrPayload = QrPayloadBuilder.buildPayload(
-      user: user,
-      vehicle: vehicle,
-    );
-
-    if (vehicle.qrCodeId.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _syncQrMetadata(user, vehicle, qrPayload);
-      });
-    }
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color.fromARGB(255, 10, 10, 10), Color(0xFF002b5c)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Welcome back!',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (vehicle.licensePlate.trim().isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      vehicle.licensePlate,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Critical unread alerts banner
-            _buildCriticalAlertsBanner(user),
-
-            // QR Code Card
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Card(
-                elevation: 4,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            QRCodeScreen(user: user, vehicle: vehicle),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Your Vehicle QR Code',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Tap to view full size',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // QR Code
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: QrImageView(
-                            data: qrPayload,
-                            version: QrVersions.auto,
-                            size: 200,
-                            backgroundColor: Colors.white,
-                            dataModuleStyle: const QrDataModuleStyle(
-                              dataModuleShape: QrDataModuleShape.square,
-                              color: Colors.black,
-                            ),
-                            errorCorrectionLevel: QrErrorCorrectLevel.L,
-                            gapless: true,
-                            eyeStyle: QrEyeStyle(
-                              eyeShape: QrEyeShape.square,
-                              color: const Color(0xFF2563EB),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        const Icon(
-                          Icons.touch_app,
-                          color: Color(0xFF2563EB),
-                          size: 24,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // Quick Stats
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: StreamBuilder<int>(
-                stream: _firestoreService.streamUnreadNotificationCount(
-                  _currentUser!.uid,
-                ),
-                builder: (context, snapshot) {
-                  final unreadCount = snapshot.data ?? 0;
-
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatItem(
-                            icon: Icons.notifications_active,
-                            label: 'Unread',
-                            value: unreadCount.toString(),
-                            color: const Color(0xFF2563EB),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 40,
-                            color: Colors.grey[300],
-                          ),
-                          _buildStatItem(
-                            icon: Icons.qr_code,
-                            label: 'QR Status',
-                            value: vehicle.isActive ? 'Active' : 'Inactive',
-                            color: vehicle.isActive
-                                ? const Color(0xFF10B981)
-                                : const Color(0xFFEF4444),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Instructions Card
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Card(
-                color: const Color(0xFFF0F9FF),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Color(0xFF2563EB)),
-                          SizedBox(width: 12),
-                          Text(
-                            'How it works',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1F2937),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInstructionStep('1', 'Print your QR code'),
-                      _buildInstructionStep(
-                        '2',
-                        'Place it on your car windshield',
-                      ),
-                      _buildInstructionStep(
-                        '3',
-                        'Receive instant notifications',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-      ],
-    );
-  }
-
-  Widget _buildCriticalAlertsBanner(UserModel user) {
-    return StreamBuilder<List<NotificationModel>>(
-      stream: _firestoreService.streamUserNotifications(user.id),
-      builder: (context, snapshot) {
-        final notifications = snapshot.data ?? const <NotificationModel>[];
-        final unread = notifications.where(
-          (notification) => !notification.read,
-        );
-        if (unread.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        final latestUnread = unread.first;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFFCA5A5)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Color(0xFFB91C1C),
-                      ),
-                      SizedBox(width: 10),
-                      Text(
-                        'Unread Critical Alerts',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF7F1D1D),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${unread.length} alert${unread.length == 1 ? '' : 's'} pending',
-                    style: const TextStyle(
-                      color: Color(0xFF7F1D1D),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    latestUnread.message.isEmpty
-                        ? latestUnread.reasonText
-                        : latestUnread.message,
-                    style: const TextStyle(
-                      color: Color(0xFF991B1B),
-                      fontSize: 13,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => NotificationsScreen(
-                                  initialNotificationId: latestUnread.id,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.visibility),
-                          label: const Text('View latest alert'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFB91C1C),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: () {
-                          setState(() => _selectedIndex = 1);
-                        },
-                        child: const Text('Open inbox'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInstructionStep(String number, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: Color(0xFF2563EB),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _generateQrCode(UserModel user, VehicleModel vehicle) async {
-    if (_isGeneratingQrCode || vehicle.qrCodeId.trim().isNotEmpty) {
-      return;
-    }
+    if (_isGeneratingQrCode || vehicle.qrCodeId.trim().isNotEmpty) return;
 
     _isGeneratingQrCode = true;
     try {
@@ -721,5 +179,1007 @@ class _HomeScreenState extends State<HomeScreen> {
         .whenComplete(() {
           _isSyncingQrMetadata = false;
         });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Home tab
+// ---------------------------------------------------------------------------
+
+class _HomeTab extends StatelessWidget {
+  const _HomeTab({
+    required this.state,
+    required this.unreadCount,
+    required this.unread,
+    required this.onOpenInbox,
+  });
+
+  final _HomeScreenState state;
+  final int unreadCount;
+  final List<NotificationModel> unread;
+  final VoidCallback onOpenInbox;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return StreamBuilder<UserModel?>(
+      stream: state._firestoreService.streamUserData(state._currentUser!.uid),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return _HomeScaffold(child: _HomeSkeleton());
+        }
+
+        if (userSnapshot.hasError) {
+          return _HomeScaffold(
+            child: AppEmptyState(
+              icon: Icons.cloud_off_rounded,
+              title: l10n.homeCannotReach,
+              message:
+                  'Check your connection — your QR code keeps working for '
+                  'anyone who scans it, this screen just cannot refresh.',
+              accent: AppColors.alert,
+            ),
+          );
+        }
+
+        final user = userSnapshot.data;
+        if (user == null) {
+          return _HomeScaffold(
+            child: AppEmptyState(
+              icon: Icons.person_off_outlined,
+              title: l10n.homeAccountMissing,
+              message:
+                  'We could not load your profile. Sign out and back in to '
+                  'restore it.',
+            ),
+          );
+        }
+
+        return StreamBuilder<List<VehicleModel>>(
+          stream: state._firestoreService.streamUserVehicles(user.id),
+          builder: (context, vehicleSnapshot) {
+            if (vehicleSnapshot.connectionState == ConnectionState.waiting) {
+              return _HomeScaffold(child: _HomeSkeleton());
+            }
+
+            final vehicles = vehicleSnapshot.data ?? const <VehicleModel>[];
+
+            if (vehicles.isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                state._bootstrapLegacyVehicle(user);
+              });
+
+              final waitingOnMigration =
+                  user.hasLegacyVehicleData || user.qrCodeId.trim().isNotEmpty;
+
+              return _HomeScaffold(
+                child: waitingOnMigration
+                    ? _PreparingView(
+                        title: l10n.homeSettingUpVehicle,
+                        subtitle: l10n.homeSettingUpBody,
+                      )
+                    : AppEmptyState(
+                        icon: Icons.directions_car_outlined,
+                        title: l10n.homeAddFirstVehicle,
+                        message:
+                            'Avahanaa needs a vehicle before it can create the '
+                            'QR code for your windshield.',
+                        action: ElevatedButton.icon(
+                          onPressed: onOpenInbox,
+                          icon: const Icon(Icons.add_rounded),
+                          label: Text(l10n.homeGoToProfile),
+                        ),
+                      ),
+              );
+            }
+
+            final vehicle = state._selectVehicle(user, vehicles);
+
+            if (vehicle.qrCodeId.trim().isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                state._generateQrCode(user, vehicle);
+              });
+              return _HomeScaffold(
+                child: _PreparingView(
+                  title: l10n.homeCreatingQr,
+                  subtitle: l10n.homeCreatingQrBody,
+                ),
+              );
+            }
+
+            return _HomeScaffold(
+              child: _HomeBody(
+                state: state,
+                user: user,
+                vehicles: vehicles,
+                vehicle: vehicle,
+                unreadCount: unreadCount,
+                unread: unread,
+                onOpenInbox: onOpenInbox,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Every home state shares the same shell: content above, ad strip pinned
+/// below. Keeping it in one place stops the ad from jumping between states.
+class _HomeScaffold extends StatelessWidget {
+  const _HomeScaffold({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(child: child),
+        AdMobBanner(),
+      ],
+    );
+  }
+}
+
+class _HomeBody extends StatelessWidget {
+  const _HomeBody({
+    required this.state,
+    required this.user,
+    required this.vehicles,
+    required this.vehicle,
+    required this.unreadCount,
+    required this.unread,
+    required this.onOpenInbox,
+  });
+
+  final _HomeScreenState state;
+  final UserModel user;
+  final List<VehicleModel> vehicles;
+  final VehicleModel vehicle;
+  final int unreadCount;
+  final List<NotificationModel> unread;
+  final VoidCallback onOpenInbox;
+
+  @override
+  Widget build(BuildContext context) {
+    final qrPayload = QrPayloadBuilder.buildPayload(
+      user: user,
+      vehicle: vehicle,
+    );
+
+    if (vehicle.qrCodeId.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        state._syncQrMetadata(user, vehicle, qrPayload);
+      });
+    }
+
+    final isLive = vehicle.isActive && user.notificationsEnabled;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _HomeHero(
+            user: user,
+            vehicle: vehicle,
+            vehicles: vehicles,
+            isLive: isLive,
+            unreadCount: unreadCount,
+            onSelectVehicle: state._viewVehicle,
+          ),
+
+          // Panic mode: an unread alert outranks everything below it.
+          _CriticalAlertBanner(unread: unread, onOpenInbox: onOpenInbox),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.lg,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                EntranceFade(
+                  delay: const Duration(milliseconds: 60),
+                  // Swiping the vehicle rail changes the code underneath it.
+                  // Swapping it instantly reads as a glitch — the panel is the
+                  // largest thing on the screen — so it cross-fades, keyed by
+                  // vehicle so the switcher is what drives it.
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.normal,
+                    switchInCurve: AppMotion.entrance,
+                    switchOutCurve: Curves.easeIn,
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[
+                        ...previous,
+                        if (current != null) current,
+                      ],
+                    ),
+                    child: _QrCard(
+                      key: ValueKey<String>(vehicle.id),
+                      user: user,
+                      vehicle: vehicle,
+                      payload: qrPayload,
+                      isLive: isLive,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                EntranceFade(
+                  delay: const Duration(milliseconds: 120),
+                  child: _StatsRow(
+                    unreadCount: unreadCount,
+                    vehicleCount: vehicles.length,
+                    isLive: isLive,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                EntranceFade(
+                  delay: const Duration(milliseconds: 180),
+                  child: _HowItWorksCard(),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                EntranceFade(
+                  delay: const Duration(milliseconds: 240),
+                  child: _PrivacyPromiseCard(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hero
+// ---------------------------------------------------------------------------
+
+class _HomeHero extends StatelessWidget {
+  const _HomeHero({
+    required this.user,
+    required this.vehicle,
+    required this.vehicles,
+    required this.isLive,
+    required this.unreadCount,
+    required this.onSelectVehicle,
+  });
+
+  final UserModel user;
+  final VehicleModel vehicle;
+  final List<VehicleModel> vehicles;
+  final bool isLive;
+  final int unreadCount;
+  final ValueChanged<VehicleModel> onSelectVehicle;
+
+  /// Takes the localizations rather than reaching for a context — it is static,
+  /// and the greeting is the first thing on the screen.
+  static String _greeting(AppL10n l10n) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return l10n.homeGoodMorning;
+    if (hour < 17) return l10n.homeGoodAfternoon;
+    return l10n.homeGoodEvening;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return HeroSurface(
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(AppRadius.hero),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _greeting(l10n),
+                        style: AppText.bodyMedium.copyWith(
+                          color: AppColors.onDarkMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isLive
+                            ? l10n.homeVehicleReachable
+                            : l10n.homeQrPaused,
+                        style: AppText.headlineLarge.copyWith(
+                          color: AppColors.onDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                StatusPill(
+                  label: isLive ? l10n.commonLive : l10n.commonPaused,
+                  color: isLive ? AppColors.success : AppColors.warning,
+                  icon: isLive
+                      ? Icons.shield_rounded
+                      : Icons.pause_circle_outline_rounded,
+                  onDark: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // The vehicle itself, not a control that names one. With more than
+            // one car this becomes a swipeable rail that says where you are in
+            // the fleet.
+            VehicleCarousel(
+              vehicles: vehicles,
+              selected: vehicle,
+              isLive: isLive,
+              onSelect: onSelectVehicle,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cards
+// ---------------------------------------------------------------------------
+
+/// The QR, presented as the object the whole product is about.
+///
+/// Everything an owner does with the code lives on this one panel: look at it,
+/// print it, hand the link to someone, or open the studio to restyle it. The
+/// print action goes straight to the system print dialog with a sensible sheet
+/// — A4, one sticker — because the common case is "I want this on paper now",
+/// and the dialog is where paper size and printer get chosen anyway.
+class _QrCard extends StatefulWidget {
+  const _QrCard({
+    super.key,
+    required this.user,
+    required this.vehicle,
+    required this.payload,
+    required this.isLive,
+  });
+
+  final UserModel user;
+  final VehicleModel vehicle;
+  final String payload;
+  final bool isLive;
+
+  @override
+  State<_QrCard> createState() => _QrCardState();
+}
+
+class _QrCardState extends State<_QrCard> {
+  bool _isPrinting = false;
+
+  String get _descriptor => [
+    widget.vehicle.color,
+    widget.vehicle.carModel,
+  ].where((part) => part.trim().isNotEmpty).join(' ');
+
+  StickerSpec get _spec => StickerSpec(
+    qrData: widget.payload,
+    plate: widget.vehicle.licensePlate,
+    descriptor: _descriptor,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return QrShowcasePanel(
+      data: widget.payload,
+      isActive: widget.isLive,
+      plate: widget.vehicle.licensePlate,
+      descriptor: _descriptor,
+      onTap: _openStudio,
+      actions: [
+        QrPanelAction(
+          icon: Icons.print_rounded,
+          label: _isPrinting ? l10n.homePreparing : 'Print',
+          onPressed: _isPrinting ? null : _printSheet,
+        ),
+        QrPanelAction(
+          icon: Icons.link_rounded,
+          label: l10n.homeCopyLink,
+          onPressed: _copyLink,
+        ),
+        QrPanelAction(
+          icon: Icons.auto_awesome_rounded,
+          label: l10n.homeDesign,
+          onPressed: _openStudio,
+        ),
+      ],
+    );
+  }
+
+  void _openStudio() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            QRCodeScreen(user: widget.user, vehicle: widget.vehicle),
+      ),
+    );
+  }
+
+  void _copyLink() {
+    final l10n = AppL10n.of(context);
+    Clipboard.setData(ClipboardData(text: widget.payload));
+    showAppSnackBar(
+      ScaffoldMessenger.of(context),
+      l10n.homeScanLinkCopied,
+      kind: AppSnackKind.success,
+    );
+  }
+
+  Future<void> _printSheet() async {
+    final l10n = AppL10n.of(context);
+    // Captured before the first await — the home tab rebuilds on every
+    // Firestore tick and this widget may be gone by the time printing returns.
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isPrinting = true);
+
+    try {
+      await printStickerSheet(
+        spec: _spec,
+        paper: SheetPaper.a4,
+        jobName: 'Avahanaa sticker ${widget.vehicle.licensePlate}'.trim(),
+      );
+    } catch (_) {
+      showAppSnackBar(
+        messenger,
+        l10n.homePrinterFailed,
+        kind: AppSnackKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
+    }
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({
+    required this.unreadCount,
+    required this.vehicleCount,
+    required this.isLive,
+  });
+
+  final int unreadCount;
+  final int vehicleCount;
+  final bool isLive;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppStatTile(
+              icon: Icons.mark_email_unread_rounded,
+              value: unreadCount.toString(),
+              label: unreadCount == 1 ? l10n.homeUnreadAlert : l10n.homeUnreadAlerts,
+              color: unreadCount > 0 ? AppColors.alert : AppColors.primary,
+            ),
+          ),
+          _StatDivider(),
+          Expanded(
+            child: AppStatTile(
+              icon: Icons.directions_car_rounded,
+              value: vehicleCount.toString(),
+              label: vehicleCount == 1 ? l10n.homeVehicle : l10n.homeVehicles,
+            ),
+          ),
+          _StatDivider(),
+          Expanded(
+            child: AppStatTile(
+              icon: isLive
+                  ? Icons.verified_user_rounded
+                  : Icons.shield_outlined,
+              value: isLive ? 'On' : 'Off',
+              label: l10n.homeProtection,
+              color: isLive ? AppColors.success : AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 56,
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      color: AppColors.border,
+    );
+  }
+}
+
+class _HowItWorksCard extends StatelessWidget {
+  const _HowItWorksCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            overline: l10n.homeGettingSetUp,
+            title: l10n.homeHowItWorks,
+          ),
+          NumberedStep(
+            number: '1',
+            title: l10n.homeStepPrint,
+            detail: l10n.homeStepPrintBody,
+          ),
+          NumberedStep(
+            number: '2',
+            title: l10n.homeStepStick,
+            detail: l10n.homeStepStickBody,
+          ),
+          NumberedStep(
+            number: '3',
+            title: l10n.homeStepAlert,
+            detail: l10n.homeStepAlertBody,
+            accent: AppColors.success,
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The product promise, stated plainly. This is the reason someone chooses
+/// Avahanaa over writing their number on a card, so it earns a place on the
+/// home screen rather than being buried in the privacy policy.
+class _PrivacyPromiseCard extends StatelessWidget {
+  const _PrivacyPromiseCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return AppCard(
+      color: AppColors.infoSurface,
+      borderColor: AppColors.infoBorder,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppIconBadge(
+            icon: Icons.lock_person_rounded,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.homeNumberStaysYours, style: AppText.titleMedium),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l10n.homeNumberStaysYoursBody,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Panic mode
+// ---------------------------------------------------------------------------
+
+/// Shown at the top of home whenever an alert is unread.
+///
+/// Designed panic-first: oversized type, maximum contrast, a single primary
+/// action, and no competing decoration. Someone reading this may be walking
+/// fast toward their car.
+class _CriticalAlertBanner extends StatelessWidget {
+  const _CriticalAlertBanner({required this.unread, required this.onOpenInbox});
+
+  final List<NotificationModel> unread;
+  final VoidCallback onOpenInbox;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    if (unread.isEmpty) return const SizedBox.shrink();
+
+    final latest = unread.first;
+    final detail = latest.message.trim().isEmpty
+        ? latest.reasonText
+        : latest.message.trim();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.heroAll,
+          // Machined, but a shallow ramp: this is panic mode, and the
+          // white text on it must never lose contrast.
+          gradient: MetalPalette.alert.gradient(),
+          boxShadow: AppShadows.glow(AppColors.alert),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                // Top-aligned so the icon tracks the first line of the
+                // headline instead of drifting to the middle when it wraps.
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: BreathingPulse(
+                      child: Icon(
+                        Icons.warning_rounded,
+                        color: AppColors.onDark,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      unread.length == 1
+                          ? l10n.panicHeadlineOne
+                          : l10n.panicHeadlineMany(unread.length),
+                      style: AppText.panicTitle,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                detail,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.bodyLarge.copyWith(color: AppColors.onDark),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                latest.timeAgoIn(l10n),
+                style: AppText.labelMedium.copyWith(
+                  color: AppColors.onDarkMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+
+              // The reply is the primary action here, not "see what happened".
+              // The reason, the note and the time are already on this card —
+              // the owner knows what is wrong. What has not happened yet is
+              // anyone telling the person in the street that help is coming,
+              // and that is the thing this product exists to do.
+              AlertQuickReplyButton(
+                // This sits on the alert banner, which is red in both themes,
+                // so its colours are pinned rather than themed. Left to the
+                // palette it became a dark navy button on red at night.
+                background: AppColors.onDark,
+                foreground: AppColors.inkOnAlertFill,
+                onReply: (reply) => FirestoreService().replyToNotification(
+                  notificationId: latest.id,
+                  reply: reply,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => NotificationsScreen(
+                          initialNotificationId: latest.id,
+                        ),
+                      ),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.onDark,
+                  ),
+                  child: Text(l10n.panicSeeWhatHappened),
+                ),
+              ),
+              if (unread.length > 1) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: onOpenInbox,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.onDark,
+                    ),
+                    child: Text(l10n.panicViewAll(unread.length)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Loading + placeholder states
+// ---------------------------------------------------------------------------
+
+class _PreparingView extends StatelessWidget {
+  const _PreparingView({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: AppText.headlineMedium,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mirrors the real layout so the screen does not reflow when data lands.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSkeleton(height: 208, radius: 0),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: const [
+                AppSkeleton(height: 480),
+                SizedBox(height: AppSpacing.lg),
+                AppSkeleton(height: 120),
+                SizedBox(height: AppSpacing.lg),
+                AppSkeleton(height: 200),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bottom navigation
+// ---------------------------------------------------------------------------
+
+class _AppNavBar extends StatelessWidget {
+  const _AppNavBar({
+    required this.currentIndex,
+    required this.unreadCount,
+    required this.onTap,
+  });
+
+  final int currentIndex;
+  final int unreadCount;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              _NavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: l10n.navHome,
+                isActive: currentIndex == 0,
+                onTap: () => onTap(0),
+              ),
+              _NavItem(
+                icon: Icons.notifications_outlined,
+                activeIcon: Icons.notifications_rounded,
+                label: l10n.navAlerts,
+                badgeCount: unreadCount,
+                isActive: currentIndex == 1,
+                onTap: () => onTap(1),
+              ),
+              _NavItem(
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: l10n.navProfile,
+                isActive: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.badgeCount = 0,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive ? AppColors.primary : AppColors.textTertiary;
+
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        label: badgeCount > 0 ? '$label, $badgeCount unread' : label,
+        excludeSemantics: true,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AppRadius.controlAll,
+            child: AnimatedContainer(
+              duration: AppMotion.fast,
+              // 48dp minimum tap target.
+              constraints: const BoxConstraints(minHeight: 52),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.primaryTint : Colors.transparent,
+                borderRadius: AppRadius.controlAll,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        isActive ? activeIcon : icon,
+                        color: color,
+                        size: 24,
+                      ),
+                      if (badgeCount > 0)
+                        Positioned(
+                          right: -9,
+                          top: -5,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1,
+                            ),
+                            constraints: const BoxConstraints(minWidth: 18),
+                            decoration: BoxDecoration(
+                              color: AppColors.alert,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: AppColors.surface,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              badgeCount > 99 ? '99+' : '$badgeCount',
+                              textAlign: TextAlign.center,
+                              style: AppText.labelSmall.copyWith(
+                                color: AppColors.onDark,
+                                fontSize: 10,
+                                letterSpacing: 0,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: AppText.labelSmall.copyWith(
+                      color: color,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

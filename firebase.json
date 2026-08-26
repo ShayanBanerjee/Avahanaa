@@ -1,1 +1,106 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"congestion-free","appId":"1:76007537447:android:66324bbac6e4fd575a4702","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"congestion-free","configurations":{"android":"1:76007537447:android:66324bbac6e4fd575a4702","ios":"1:76007537447:ios:363330c166f9ac3a5a4702","macos":"1:76007537447:ios:363330c166f9ac3a5a4702","web":"1:76007537447:web:57a848570f39091b5a4702","windows":"1:76007537447:web:25b02a6b02cb65675a4702"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "congestion-free",
+          "appId": "1:76007537447:android:66324bbac6e4fd575a4702",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "congestion-free",
+          "configurations": {
+            "android": "1:76007537447:android:66324bbac6e4fd575a4702",
+            "ios": "1:76007537447:ios:363330c166f9ac3a5a4702",
+            "macos": "1:76007537447:ios:363330c166f9ac3a5a4702",
+            "web": "1:76007537447:web:57a848570f39091b5a4702",
+            "windows": "1:76007537447:web:25b02a6b02cb65675a4702"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/qr/**",
+        "function": "resolveQr",
+        "region": "asia-south1"
+      },
+      {
+        "source": "/api/notify",
+        "function": "notify",
+        "region": "asia-south1"
+      },
+      {
+        "source": "/n/**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          }
+        ]
+      }
+    ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099,
+      "host": "0.0.0.0"
+    },
+    "firestore": {
+      "port": 8080,
+      "host": "0.0.0.0"
+    },
+    "functions": {
+      "port": 5001,
+      "host": "0.0.0.0"
+    },
+    "hosting": {
+      "port": 5055,
+      "host": "0.0.0.0"
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  }
+}

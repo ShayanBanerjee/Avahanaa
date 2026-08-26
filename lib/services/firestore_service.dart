@@ -1,8 +1,10 @@
+import '../l10n/l10n_global.dart';
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../models/alert_reply.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
@@ -138,7 +140,7 @@ class FirestoreService {
       );
     } catch (e) {
       debugPrint('Error upserting vehicle: $e');
-      throw 'Failed to save vehicle';
+      throw appL10n.errSaveVehicle;
     }
   }
 
@@ -175,7 +177,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error deleting vehicle: $e');
-      throw 'Failed to delete vehicle';
+      throw appL10n.errDeleteVehicle;
     }
   }
 
@@ -190,7 +192,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error setting primary vehicle: $e');
-      throw 'Failed to set primary vehicle';
+      throw appL10n.errSetPrimary;
     }
   }
 
@@ -368,7 +370,7 @@ class FirestoreService {
       await batch.commit();
     } catch (e) {
       debugPrint('Error toggling vehicle QR code status: $e');
-      throw 'Failed to update QR code status';
+      throw appL10n.errQrStatus;
     }
   }
 
@@ -405,7 +407,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error updating user profile: $e');
-      throw 'Failed to update profile';
+      throw appL10n.errUpdateProfile;
     }
   }
 
@@ -491,7 +493,7 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Error toggling QR code status: $e');
-      throw 'Failed to update QR code status';
+      throw appL10n.errQrStatus;
     }
   }
 
@@ -580,12 +582,45 @@ class FirestoreService {
   }
 
   // Delete notification
+  /// Records the owner's reply to an alert.
+  ///
+  /// This is the only write in the app that a stranger will read. It goes to
+  /// `notifications/{id}`, and the scan page — which is still open in
+  /// somebody's hand a few metres from the vehicle — polls for it through
+  /// `/api/status`. Nothing about the owner travels with it; the reply is an
+  /// id from [AlertReply] and a timestamp, and the endpoint that serves it
+  /// returns only those two things.
+  ///
+  /// Replying also marks the alert read, because it plainly is, and that is
+  /// what stops the escalating reminders. Callers still cancel the local
+  /// notification lifecycle themselves — this method only owns the document.
+  ///
+  /// Throws a human-readable string on failure, like every other user-initiated
+  /// write here, because the owner is watching for confirmation that the person
+  /// at their car has been told.
+  Future<void> replyToNotification({
+    required String notificationId,
+    required AlertReply reply,
+  }) async {
+    try {
+      await _firestore.collection('notifications').doc(notificationId).update({
+        'acknowledgedAt': FieldValue.serverTimestamp(),
+        'acknowledgementEta': reply.id,
+        'read': true,
+        'readAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error replying to notification: $e');
+      throw appL10n.replyFailed;
+    }
+  }
+
   Future<void> deleteNotification(String notificationId) async {
     try {
       await _firestore.collection('notifications').doc(notificationId).delete();
     } catch (e) {
       debugPrint('Error deleting notification: $e');
-      throw 'Failed to delete notification';
+      throw appL10n.errDeleteNotification;
     }
   }
 
@@ -647,6 +682,38 @@ class FirestoreService {
     }
   }
 
+  // Mark every unread notification for a user as read.
+  //
+  // Returns the ids that were flipped so the caller can cancel their escalation
+  // reminders — a notification the owner has acknowledged must stop nagging.
+  Future<List<String>> markAllNotificationsAsRead(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .where('read', isEqualTo: false)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return const <String>[];
+      }
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'read': true,
+          'readAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      debugPrint('Error marking all notifications as read: $e');
+      throw appL10n.errMarkRead;
+    }
+  }
+
   // Clear all notifications for user
   Future<void> clearAllNotifications(String userId) async {
     try {
@@ -663,7 +730,7 @@ class FirestoreService {
       await batch.commit();
     } catch (e) {
       debugPrint('Error clearing notifications: $e');
-      throw 'Failed to clear notifications';
+      throw appL10n.errClearNotifications;
     }
   }
 }

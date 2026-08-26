@@ -1,3 +1,4 @@
+import '../l10n/l10n_global.dart';
 import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -43,7 +44,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'An unexpected error occurred. Please try again.';
+      throw appL10n.errUnexpected;
     }
   }
 
@@ -64,7 +65,7 @@ class AuthService {
       });
     } catch (e) {
       log('Error creating user document: $e');
-      throw 'Failed to create user profile. Please try again.';
+      throw appL10n.errCreateProfile;
     }
   }
 
@@ -83,7 +84,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'An unexpected error occurred. Please try again.';
+      throw appL10n.errUnexpected;
     }
   }
 
@@ -107,7 +108,7 @@ class AuthService {
     try {
       await _auth.signOut();
     } catch (e) {
-      throw 'Failed to sign out. Please try again.';
+      throw appL10n.errSignOut;
     }
   }
 
@@ -124,7 +125,7 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       log('Password reset failed: $e');
-      throw 'Failed to send password reset email. Please try again.';
+      throw appL10n.errResetEmail;
     }
   }
 
@@ -133,7 +134,7 @@ class AuthService {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        throw 'No user is currently signed in.';
+        throw appL10n.errNoUser;
       }
       await user.sendEmailVerification(_buildActionCodeSettings());
     } on FirebaseAuthException catch (e) {
@@ -141,7 +142,7 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       log('Email verification failed: $e');
-      throw 'Failed to send verification email. Please try again.';
+      throw appL10n.errVerifyEmail;
     }
   }
 
@@ -158,7 +159,7 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       log('Reload failed: $e');
-      throw 'Failed to refresh user. Please try again.';
+      throw appL10n.errRefreshUser;
     }
   }
 
@@ -172,7 +173,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'Failed to update email. Please try again.';
+      throw appL10n.errUpdateEmail;
     }
   }
 
@@ -183,7 +184,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'Failed to update password. Please try again.';
+      throw appL10n.errUpdatePassword;
     }
   }
 
@@ -192,7 +193,7 @@ class AuthService {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        throw 'No user is currently signed in.';
+        throw appL10n.errNoUser;
       }
 
       if (credential != null) {
@@ -220,7 +221,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'Failed to delete account. Please try again.';
+      throw appL10n.errDeleteAccount;
     }
   }
 
@@ -282,23 +283,23 @@ class AuthService {
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'weak-password':
-        return 'The password is too weak. Please use at least 6 characters.';
+        return appL10n.errWeakPassword;
       case 'email-already-in-use':
-        return 'An account already exists with this email.';
+        return appL10n.errEmailInUse;
       case 'invalid-email':
-        return 'Please enter a valid email address.';
+        return appL10n.errInvalidEmail;
       case 'user-not-found':
-        return 'No account found with this email.';
+        return appL10n.errUserNotFound;
       case 'wrong-password':
-        return 'Incorrect password. Please try again.';
+        return appL10n.errWrongPassword;
       case 'user-disabled':
-        return 'This account has been disabled.';
+        return appL10n.errUserDisabled;
       case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
+        return appL10n.errTooManyRequests;
       case 'operation-not-allowed':
-        return 'This operation is not allowed.';
+        return appL10n.errNotAllowed;
       case 'requires-recent-login':
-        return 'Please sign in again to complete this action.';
+        return appL10n.errNeedsRecentLogin;
       default:
         return 'Authentication failed: ${e.message ?? "Unknown error"}';
     }
