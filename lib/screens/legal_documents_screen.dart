@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_theme.dart';
@@ -13,13 +15,14 @@ class LegalDocumentsScreen extends StatelessWidget {
       'https://avahanaa.com/terms-and-conditions.html';
 
   Future<void> _openExternalUrl(BuildContext context, String rawUrl) async {
+    final l10n = AppL10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final uri = Uri.parse(rawUrl);
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched) {
       showAppSnackBar(
         messenger,
-        'Could not open the link right now.',
+        l10n.legalCouldNotOpen,
         kind: AppSnackKind.error,
       );
     }
@@ -27,8 +30,9 @@ class LegalDocumentsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Legal & Privacy')),
+      appBar: AppBar(title: Text(l10n.legalTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
@@ -45,7 +49,7 @@ class LegalDocumentsScreen extends StatelessWidget {
                     color: AppColors.primary,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text('The short version', style: AppText.titleMedium),
+                  Text(l10n.legalShortVersion, style: AppText.titleMedium),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Avahanaa never reveals your phone number, email or name '
@@ -69,8 +73,8 @@ class LegalDocumentsScreen extends StatelessWidget {
                 children: [
                   AppListRow(
                     icon: Icons.shield_outlined,
-                    title: 'Privacy Policy',
-                    subtitle: 'What we collect, why, and how long we keep it',
+                    title: l10n.legalPrivacyPolicy,
+                    subtitle: l10n.legalPrivacySubtitle,
                     trailing: Icon(
                       Icons.open_in_new_rounded,
                       size: 18,
@@ -84,8 +88,8 @@ class LegalDocumentsScreen extends StatelessWidget {
                   ),
                   AppListRow(
                     icon: Icons.description_outlined,
-                    title: 'Terms of Service',
-                    subtitle: 'The rules for using Avahanaa',
+                    title: l10n.legalTermsOfService,
+                    subtitle: l10n.legalTermsSubtitle,
                     trailing: Icon(
                       Icons.open_in_new_rounded,
                       size: 18,

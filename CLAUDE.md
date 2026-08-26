@@ -167,6 +167,33 @@ background isolate can cancel them without reading state.
 - **No state-management package.** The app uses `StatefulWidget` +
   `StreamBuilder` over Firestore streams. Do not introduce Provider/Riverpod/Bloc
   without being asked.
+- **Every user-facing string goes through `AppL10n`.** English and Kannada ARBs
+  live in `lib/l10n/`; `AppL10n.of(context)` in widgets. Two exceptions, both
+  deliberate:
+  - Code with no `BuildContext` — models, static validators, the services that
+    `throw` their own error strings — uses `appL10n` from
+    `lib/l10n/l10n_global.dart`, which resolves through the navigator and falls
+    back to English. Do not reach for it where a context exists.
+  - Models and enums that are also read from the background isolate keep their
+    English form (`reasonText`, `ownerLabel`, `StickerStyle.label`) *alongside*
+    a localized accessor (`reasonTextIn(l10n)`, …). The English one names
+    exported files and builds notification actions before a locale exists.
+
+  `DateFormat` must be given `Localizations.localeOf(context).toLanguageTag()`
+  — untold, it silently keeps speaking English. `initializeDateFormatting()`
+  runs before `runApp`; without it a non-default locale throws rather than
+  degrades. `test/l10n_test.dart` fails the build when the two ARBs drift.
+- **Two themes.** `AvahanaaPalette.light` / `.dark`, swapped by
+  `ThemeController` immediately *before* the tree rebuilds. Because tokens are
+  getters over one active palette, a `const` widget would keep painting the old
+  colours — so this app's own widgets are deliberately not `const`. Framework
+  widgets are fine either way.
+
+  Anything drawn on a surface that does **not** follow the theme — the brand
+  gradient, the alert banner, a vehicle's paint swatch — must use pinned
+  colours (`AppColors.inkOnLightFill`, `inkOnAlertFill`, `onDark`,
+  `AppPrint.*`). Getting this wrong is invisible in light mode and glaring at
+  night. `test/contrast_test.dart` gates both palettes.
 - **All Firestore access goes through `FirestoreService`.** Screens never touch
   `FirebaseFirestore.instance` directly. `AuthService` and `FCMService` are the
   only exceptions, and only for their own concerns.
@@ -190,6 +217,8 @@ background isolate can cancel them without reading state.
 - **Sticker designs are data, not code paths.** A look is a `StickerTheme`
   (colours) on a `StickerLayout` (geometry) in `sticker_renderer.dart`. Add a
   row, never a new `case` in the painter — and never colour the code itself.
+- The bundled **Noto Sans Kannada** subset now serves the app UI as well as the
+  printed sticker, so any string added to `app_kn.arb` renders on every device.
 - Fonts are bundled: **Inter** for body/labels, **Plus Jakarta Sans** for
   display. Both are variable fonts, so `AppText` sets `fontVariations` as well
   as `fontWeight` — setting only `fontWeight` renders at the default axis

@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:avahanaa/widgets/qr_visual.dart';
 import 'package:flutter/material.dart';
+import 'package:avahanaa/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr/qr.dart';
 
@@ -89,7 +90,9 @@ void main() {
   group('painting', () {
     testWidgets('renders without throwing at a realistic size', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+          localizationsDelegates: AppL10n.localizationsDelegates,
+          supportedLocales: AppL10n.supportedLocales,
           home: Scaffold(
             body: Center(
               child: SizedBox(
@@ -112,7 +115,9 @@ void main() {
       // the app is in for the first few frames of a cold start.
       expect(AvahanaaQr.logo, isNull);
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+          localizationsDelegates: AppL10n.localizationsDelegates,
+          supportedLocales: AppL10n.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 200,

@@ -1,3 +1,5 @@
+import '../l10n/l10n_global.dart';
+
 class VehicleRegistrationValidator {
   const VehicleRegistrationValidator._();
 
@@ -25,10 +27,10 @@ class VehicleRegistrationValidator {
   static String? validationError(String? value) {
     final rawValue = value ?? '';
     if (normalize(rawValue).isEmpty) {
-      return 'Please enter your registration number';
+      return appL10n.valEnterRegistration;
     }
     if (!isValid(rawValue)) {
-      return 'Please enter a valid registration number';
+      return appL10n.valInvalidRegistration;
     }
     return null;
   }

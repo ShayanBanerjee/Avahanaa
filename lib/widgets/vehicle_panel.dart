@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../models/vehicle_model.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import 'hero_header.dart';
 import 'ui_kit.dart';
@@ -69,6 +70,7 @@ class VehicleFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final descriptor = [
       vehicle.color,
       vehicle.carModel,
@@ -95,15 +97,15 @@ class VehicleFace extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  descriptor.isEmpty ? 'Your vehicle' : descriptor,
+                  descriptor.isEmpty ? l10n.vehicleYourVehicle : descriptor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.titleSmall.copyWith(color: AppColors.onDark),
                 ),
                 Text(
                   isLive
-                      ? 'Reachable — your number stays hidden'
-                      : 'Paused — scans are not reaching you',
+                      ? l10n.vehicleReachable
+                      : l10n.vehiclePaused,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.bodySmall.copyWith(
@@ -295,6 +297,7 @@ class _CarouselPosition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     // Past half a dozen vehicles a dot rail stops being scannable and starts
     // overflowing a 320dp screen. The sentence still says where you are.
     final showDots = count <= 6;
@@ -304,7 +307,7 @@ class _CarouselPosition extends StatelessWidget {
       children: [
         Flexible(
           child: Text(
-            'Vehicle ${index + 1} of $count',
+            l10n.vehicleCountOf(index + 1, count),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppText.labelSmall.copyWith(color: AppColors.onDarkMuted),
@@ -316,7 +319,7 @@ class _CarouselPosition extends StatelessWidget {
             Semantics(
               button: true,
               selected: i == index,
-              label: 'Show vehicle ${i + 1}',
+              label: l10n.vehicleShowNumber(i + 1),
               excludeSemantics: true,
               child: InkWell(
                 onTap: () => onSelect(i),

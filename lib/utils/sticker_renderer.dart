@@ -27,6 +27,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/qr_visual.dart';
 
@@ -205,8 +206,36 @@ enum StickerStyle {
 
   const StickerStyle(this.label, this.description, this.theme);
 
+  /// English. Also the exported file's name stem, so it must not move with
+  /// the locale — a Kannada filename is not what anyone wants to email to a
+  /// print shop.
   final String label;
   final String description;
+
+  /// The name shown in the picker.
+  String labelIn(AppL10n l10n) => switch (this) {
+    StickerStyle.signature => l10n.styleSignature,
+    StickerStyle.bold => l10n.styleBold,
+    StickerStyle.minimal => l10n.styleMinimal,
+    StickerStyle.midnight => l10n.styleMidnight,
+    StickerStyle.ember => l10n.styleEmber,
+    StickerStyle.emerald => l10n.styleEmerald,
+    StickerStyle.indigo => l10n.styleIndigo,
+    StickerStyle.ivory => l10n.styleIvory,
+  };
+
+  /// The line under the name, which is what actually decides the choice —
+  /// "uses a lot of ink" is the useful part.
+  String descriptionIn(AppL10n l10n) => switch (this) {
+    StickerStyle.signature => l10n.styleSignatureDesc,
+    StickerStyle.bold => l10n.styleBoldDesc,
+    StickerStyle.minimal => l10n.styleMinimalDesc,
+    StickerStyle.midnight => l10n.styleMidnightDesc,
+    StickerStyle.ember => l10n.styleEmberDesc,
+    StickerStyle.emerald => l10n.styleEmeraldDesc,
+    StickerStyle.indigo => l10n.styleIndigoDesc,
+    StickerStyle.ivory => l10n.styleIvoryDesc,
+  };
   final StickerTheme theme;
 }
 

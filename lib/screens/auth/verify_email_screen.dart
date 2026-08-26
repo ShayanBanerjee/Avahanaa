@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/hero_header.dart';
@@ -118,6 +120,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final email = widget.email.trim();
 
     return Scaffold(
@@ -230,7 +233,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                       ),
                       child: _isResending
                           ? AuthButtonSpinner()
-                          : const Text('Resend the email'),
+                          : Text(l10n.authResendEmail),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     TextButton.icon(
@@ -239,7 +242,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                         foregroundColor: AppColors.onDarkMuted,
                       ),
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                      label: const Text('Use a different email'),
+                      label: Text(l10n.authUseDifferentEmail),
                     ),
                   ],
                 ),

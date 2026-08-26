@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ui_kit.dart';
@@ -68,6 +70,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Widget _buildFormView() {
+    // State.context — this is a State method, not a static helper.
+    final l10n = AppL10n.of(context);
     return Form(
       key: _formKey,
       child: Column(
@@ -78,7 +82,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.primary,
           ),
           const SizedBox(height: AppSpacing.xl),
-          Text('Reset your password', style: AppText.displayMedium),
+          Text(l10n.authResetYourPassword, style: AppText.displayMedium),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Enter the email you signed up with and we will send you a link '
@@ -92,8 +96,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.email],
             onFieldSubmitted: (_) => _handleResetPassword(),
-            decoration: const InputDecoration(
-              labelText: 'Email',
+            decoration: InputDecoration(
+              labelText: l10n.authEmail,
               prefixIcon: Icon(Icons.mail_outline_rounded),
             ),
             validator: AuthValidators.email,
@@ -105,7 +109,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               onPressed: _isLoading ? null : _handleResetPassword,
               child: _isLoading
                   ? AuthButtonSpinner()
-                  : const Text('Send reset link'),
+                  : Text(l10n.authSendResetLink),
             ),
           ),
         ],
@@ -114,6 +118,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Widget _buildSuccessView() {
+    // State.context — this is a State method, not a static helper.
+    final l10n = AppL10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -122,7 +128,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           color: AppColors.success,
         ),
         const SizedBox(height: AppSpacing.xl),
-        Text('Check your email', style: AppText.displayMedium),
+        Text(l10n.authCheckYourEmail, style: AppText.displayMedium),
         const SizedBox(height: AppSpacing.md),
         Text(
           'We sent password reset instructions to '
@@ -134,7 +140,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           height: 56,
           child: ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Back to sign in'),
+            child: Text(l10n.authBackToSignIn),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -145,7 +151,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               _emailController.clear();
             });
           },
-          child: const Text('Use a different email'),
+          child: Text(l10n.authUseDifferentEmail),
         ),
       ],
     );

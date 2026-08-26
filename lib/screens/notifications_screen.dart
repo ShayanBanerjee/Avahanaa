@@ -28,6 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(AppL10n.of(context).alertsTitle),
@@ -40,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               final unread = snapshot.data ?? 0;
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.more_horiz_rounded),
-                tooltip: 'Alert options',
+                tooltip: l10n.alertsOptions,
                 onSelected: _handleMenuAction,
                 itemBuilder: (context) => [
                   PopupMenuItem(
@@ -48,14 +49,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     enabled: unread > 0,
                     child: _MenuRow(
                       icon: Icons.done_all_rounded,
-                      label: 'Mark all as read',
+                      label: l10n.alertsMarkAllRead,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'clear_all',
                     child: _MenuRow(
                       icon: Icons.delete_sweep_rounded,
-                      label: 'Clear all',
+                      label: l10n.alertsClearAll,
                       isDestructive: true,
                     ),
                   ),
@@ -80,7 +81,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (snapshot.hasError) {
                   return AppEmptyState(
                     icon: Icons.cloud_off_rounded,
-                    title: 'Could not load your alerts',
+                    title: l10n.alertsLoadFailed,
                     message:
                         'Check your connection and try again. New alerts will '
                         'still ring your phone.',
@@ -94,7 +95,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (notifications.isEmpty) {
                   return AppEmptyState(
                     icon: Icons.shield_moon_rounded,
-                    title: 'Nothing to worry about',
+                    title: l10n.alertsEmptyTitle,
                     message:
                         'No one has needed to reach you about your vehicle. '
                         'When someone scans your code, the alert lands here — '
@@ -190,6 +191,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _maybeOpenInitialNotification(List<NotificationModel> notifications) {
+    final l10n = AppL10n.of(context);
     if (_didHandleInitialNotification) return;
 
     final initialId = widget.initialNotificationId?.trim() ?? '';
@@ -220,7 +222,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         if (!mounted) return;
         showAppSnackBar(
           ScaffoldMessenger.of(context),
-          'That alert is no longer available.',
+          l10n.alertsNoLongerAvailable,
         );
       });
     }
@@ -229,12 +231,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   // -- Actions ------------------------------------------------------------
 
   Future<void> _deleteNotification(NotificationModel notification) async {
+    final l10n = AppL10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
       await _firestoreService.deleteNotification(notification.id);
       await FCMService.cancelNotificationLifecycleById(notification.id);
       if (!mounted) return;
-      showAppSnackBar(messenger, 'Alert deleted');
+      showAppSnackBar(messenger, l10n.alertsDeleted);
     } catch (e) {
       if (!mounted) return;
       showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);
@@ -274,6 +277,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _handleMenuAction(String action) async {
+    final l10n = AppL10n.of(context);
     final userId = _currentUser?.uid;
     if (userId == null || userId.isEmpty) return;
 
@@ -286,7 +290,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         showAppSnackBar(
           messenger,
           ids.isEmpty
-              ? 'Nothing left to mark'
+              ? l10n.alertsNothingToMark
               : 'Marked ${ids.length} alert${ids.length == 1 ? '' : 's'} as read',
           kind: AppSnackKind.success,
         );
@@ -302,7 +306,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear all alerts?'),
+        title: Text(l10n.alertsClearAllQ),
         content: const Text(
           'Every alert will be deleted from this device and your account. '
           'This cannot be undone.',
@@ -310,12 +314,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.profileCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.alert),
-            child: const Text('Clear all'),
+            child: Text(l10n.alertsClearAll),
           ),
         ],
       ),
@@ -334,7 +338,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         existing.map((notification) => notification.id),
       );
       if (!mounted) return;
-      showAppSnackBar(messenger, 'All alerts cleared', kind: AppSnackKind.success);
+      showAppSnackBar(messenger, l10n.alertsCleared, kind: AppSnackKind.success);
     } catch (e) {
       if (!mounted) return;
       showAppSnackBar(messenger, e.toString(), kind: AppSnackKind.error);

@@ -201,6 +201,7 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return StreamBuilder<UserModel?>(
       stream: state._firestoreService.streamUserData(state._currentUser!.uid),
       builder: (context, userSnapshot) {
@@ -212,7 +213,7 @@ class _HomeTab extends StatelessWidget {
           return _HomeScaffold(
             child: AppEmptyState(
               icon: Icons.cloud_off_rounded,
-              title: 'Cannot reach your account',
+              title: l10n.homeCannotReach,
               message:
                   'Check your connection — your QR code keeps working for '
                   'anyone who scans it, this screen just cannot refresh.',
@@ -226,7 +227,7 @@ class _HomeTab extends StatelessWidget {
           return _HomeScaffold(
             child: AppEmptyState(
               icon: Icons.person_off_outlined,
-              title: 'Account details missing',
+              title: l10n.homeAccountMissing,
               message:
                   'We could not load your profile. Sign out and back in to '
                   'restore it.',
@@ -254,19 +255,19 @@ class _HomeTab extends StatelessWidget {
               return _HomeScaffold(
                 child: waitingOnMigration
                     ? _PreparingView(
-                        title: 'Setting up your vehicle',
-                        subtitle: 'Moving your details over. One moment.',
+                        title: l10n.homeSettingUpVehicle,
+                        subtitle: l10n.homeSettingUpBody,
                       )
                     : AppEmptyState(
                         icon: Icons.directions_car_outlined,
-                        title: 'Add your first vehicle',
+                        title: l10n.homeAddFirstVehicle,
                         message:
                             'Avahanaa needs a vehicle before it can create the '
                             'QR code for your windshield.',
                         action: ElevatedButton.icon(
                           onPressed: onOpenInbox,
                           icon: const Icon(Icons.add_rounded),
-                          label: const Text('Go to Profile'),
+                          label: Text(l10n.homeGoToProfile),
                         ),
                       ),
               );
@@ -280,8 +281,8 @@ class _HomeTab extends StatelessWidget {
               });
               return _HomeScaffold(
                 child: _PreparingView(
-                  title: 'Creating your QR code',
-                  subtitle: 'This usually takes a few seconds.',
+                  title: l10n.homeCreatingQr,
+                  subtitle: l10n.homeCreatingQrBody,
                 ),
               );
             }
@@ -458,15 +459,18 @@ class _HomeHero extends StatelessWidget {
   final int unreadCount;
   final ValueChanged<VehicleModel> onSelectVehicle;
 
-  static String _greeting() {
+  /// Takes the localizations rather than reaching for a context — it is static,
+  /// and the greeting is the first thing on the screen.
+  static String _greeting(AppL10n l10n) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return l10n.homeGoodMorning;
+    if (hour < 17) return l10n.homeGoodAfternoon;
+    return l10n.homeGoodEvening;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return HeroSurface(
       borderRadius: const BorderRadius.vertical(
         bottom: Radius.circular(AppRadius.hero),
@@ -490,7 +494,7 @@ class _HomeHero extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _greeting(),
+                        _greeting(l10n),
                         style: AppText.bodyMedium.copyWith(
                           color: AppColors.onDarkMuted,
                         ),
@@ -498,8 +502,8 @@ class _HomeHero extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         isLive
-                            ? 'Your vehicle is reachable'
-                            : 'Your QR code is paused',
+                            ? l10n.homeVehicleReachable
+                            : l10n.homeQrPaused,
                         style: AppText.headlineLarge.copyWith(
                           color: AppColors.onDark,
                         ),
@@ -509,7 +513,7 @@ class _HomeHero extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.md),
                 StatusPill(
-                  label: isLive ? 'LIVE' : 'PAUSED',
+                  label: isLive ? l10n.commonLive : l10n.commonPaused,
                   color: isLive ? AppColors.success : AppColors.warning,
                   icon: isLive
                       ? Icons.shield_rounded
@@ -581,6 +585,7 @@ class _QrCardState extends State<_QrCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return QrShowcasePanel(
       data: widget.payload,
       isActive: widget.isLive,
@@ -590,17 +595,17 @@ class _QrCardState extends State<_QrCard> {
       actions: [
         QrPanelAction(
           icon: Icons.print_rounded,
-          label: _isPrinting ? 'Preparing…' : 'Print',
+          label: _isPrinting ? l10n.homePreparing : 'Print',
           onPressed: _isPrinting ? null : _printSheet,
         ),
         QrPanelAction(
           icon: Icons.link_rounded,
-          label: 'Copy link',
+          label: l10n.homeCopyLink,
           onPressed: _copyLink,
         ),
         QrPanelAction(
           icon: Icons.auto_awesome_rounded,
-          label: 'Design',
+          label: l10n.homeDesign,
           onPressed: _openStudio,
         ),
       ],
@@ -618,15 +623,17 @@ class _QrCardState extends State<_QrCard> {
   }
 
   void _copyLink() {
+    final l10n = AppL10n.of(context);
     Clipboard.setData(ClipboardData(text: widget.payload));
     showAppSnackBar(
       ScaffoldMessenger.of(context),
-      'Scan link copied',
+      l10n.homeScanLinkCopied,
       kind: AppSnackKind.success,
     );
   }
 
   Future<void> _printSheet() async {
+    final l10n = AppL10n.of(context);
     // Captured before the first await — the home tab rebuilds on every
     // Firestore tick and this widget may be gone by the time printing returns.
     final messenger = ScaffoldMessenger.of(context);
@@ -641,7 +648,7 @@ class _QrCardState extends State<_QrCard> {
     } catch (_) {
       showAppSnackBar(
         messenger,
-        'Could not open the printer. Try Design to save the sheet instead.',
+        l10n.homePrinterFailed,
         kind: AppSnackKind.error,
       );
     } finally {
@@ -663,6 +670,7 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return AppCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,7 +679,7 @@ class _StatsRow extends StatelessWidget {
             child: AppStatTile(
               icon: Icons.mark_email_unread_rounded,
               value: unreadCount.toString(),
-              label: unreadCount == 1 ? 'Unread alert' : 'Unread alerts',
+              label: unreadCount == 1 ? l10n.homeUnreadAlert : l10n.homeUnreadAlerts,
               color: unreadCount > 0 ? AppColors.alert : AppColors.primary,
             ),
           ),
@@ -680,7 +688,7 @@ class _StatsRow extends StatelessWidget {
             child: AppStatTile(
               icon: Icons.directions_car_rounded,
               value: vehicleCount.toString(),
-              label: vehicleCount == 1 ? 'Vehicle' : 'Vehicles',
+              label: vehicleCount == 1 ? l10n.homeVehicle : l10n.homeVehicles,
             ),
           ),
           _StatDivider(),
@@ -690,7 +698,7 @@ class _StatsRow extends StatelessWidget {
                   ? Icons.verified_user_rounded
                   : Icons.shield_outlined,
               value: isLive ? 'On' : 'Off',
-              label: 'Protection',
+              label: l10n.homeProtection,
               color: isLive ? AppColors.success : AppColors.textTertiary,
             ),
           ),
@@ -719,29 +727,30 @@ class _HowItWorksCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionHeader(
-            overline: 'Getting set up',
-            title: 'How it works',
+            overline: l10n.homeGettingSetUp,
+            title: l10n.homeHowItWorks,
           ),
           NumberedStep(
             number: '1',
-            title: 'Print the sticker',
-            detail: 'Share or save it, then print on plain white paper.',
+            title: l10n.homeStepPrint,
+            detail: l10n.homeStepPrintBody,
           ),
           NumberedStep(
             number: '2',
-            title: 'Put it on your windshield',
-            detail: 'Inside the glass, driver-side corner, facing out.',
+            title: l10n.homeStepStick,
+            detail: l10n.homeStepStickBody,
           ),
           NumberedStep(
             number: '3',
-            title: 'Get alerted in seconds',
-            detail: 'A scan rings your phone, even on silent.',
+            title: l10n.homeStepAlert,
+            detail: l10n.homeStepAlertBody,
             accent: AppColors.success,
             isLast: true,
           ),
@@ -759,6 +768,7 @@ class _PrivacyPromiseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return AppCard(
       color: AppColors.infoSurface,
       borderColor: AppColors.infoBorder,
@@ -775,12 +785,10 @@ class _PrivacyPromiseCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your number stays yours', style: AppText.titleMedium),
+                Text(l10n.homeNumberStaysYours, style: AppText.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Whoever scans your code can tell you something is wrong — '
-                  'and that is all. They never see your phone number, your '
-                  'email, or your name.',
+                  l10n.homeNumberStaysYoursBody,
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -1030,6 +1038,7 @@ class _AppNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -1047,14 +1056,14 @@ class _AppNavBar extends StatelessWidget {
               _NavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
-                label: 'Home',
+                label: l10n.navHome,
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
               _NavItem(
                 icon: Icons.notifications_outlined,
                 activeIcon: Icons.notifications_rounded,
-                label: 'Alerts',
+                label: l10n.navAlerts,
                 badgeCount: unreadCount,
                 isActive: currentIndex == 1,
                 onTap: () => onTap(1),
@@ -1062,7 +1071,7 @@ class _AppNavBar extends StatelessWidget {
               _NavItem(
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,
-                label: 'Profile',
+                label: l10n.navProfile,
                 isActive: currentIndex == 2,
                 onTap: () => onTap(2),
               ),

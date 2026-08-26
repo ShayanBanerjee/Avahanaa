@@ -1,3 +1,4 @@
+import '../l10n/l10n_global.dart';
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -139,7 +140,7 @@ class FirestoreService {
       );
     } catch (e) {
       debugPrint('Error upserting vehicle: $e');
-      throw 'Failed to save vehicle';
+      throw appL10n.errSaveVehicle;
     }
   }
 
@@ -176,7 +177,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error deleting vehicle: $e');
-      throw 'Failed to delete vehicle';
+      throw appL10n.errDeleteVehicle;
     }
   }
 
@@ -191,7 +192,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error setting primary vehicle: $e');
-      throw 'Failed to set primary vehicle';
+      throw appL10n.errSetPrimary;
     }
   }
 
@@ -369,7 +370,7 @@ class FirestoreService {
       await batch.commit();
     } catch (e) {
       debugPrint('Error toggling vehicle QR code status: $e');
-      throw 'Failed to update QR code status';
+      throw appL10n.errQrStatus;
     }
   }
 
@@ -406,7 +407,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error updating user profile: $e');
-      throw 'Failed to update profile';
+      throw appL10n.errUpdateProfile;
     }
   }
 
@@ -492,7 +493,7 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Error toggling QR code status: $e');
-      throw 'Failed to update QR code status';
+      throw appL10n.errQrStatus;
     }
   }
 
@@ -610,7 +611,7 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Error replying to notification: $e');
-      throw 'Could not send your reply. Check your connection and try again.';
+      throw appL10n.replyFailed;
     }
   }
 
@@ -619,7 +620,7 @@ class FirestoreService {
       await _firestore.collection('notifications').doc(notificationId).delete();
     } catch (e) {
       debugPrint('Error deleting notification: $e');
-      throw 'Failed to delete notification';
+      throw appL10n.errDeleteNotification;
     }
   }
 
@@ -709,7 +710,7 @@ class FirestoreService {
       return snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {
       debugPrint('Error marking all notifications as read: $e');
-      throw 'Failed to mark alerts as read';
+      throw appL10n.errMarkRead;
     }
   }
 
@@ -729,7 +730,7 @@ class FirestoreService {
       await batch.commit();
     } catch (e) {
       debugPrint('Error clearing notifications: $e');
-      throw 'Failed to clear notifications';
+      throw appL10n.errClearNotifications;
     }
   }
 }

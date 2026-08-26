@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
 import '../utils/sticker_renderer.dart';
@@ -65,6 +66,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final shareableLink = QrPayloadBuilder.buildShareableLink(
       user: widget.user,
       vehicle: widget.vehicle,
@@ -72,12 +74,12 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sticker studio'),
+        title: Text(l10n.studioTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share_rounded),
             onPressed: _isExporting ? null : _shareSticker,
-            tooltip: 'Share sticker image',
+            tooltip: l10n.studioShareImage,
           ),
         ],
       ),
@@ -131,6 +133,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   // -- Preview ------------------------------------------------------------
 
   Widget _buildPreview() {
+    final l10n = AppL10n.of(context);
     return Center(
       child: ConstrainedBox(
         // A tall sticker on a tall phone would otherwise push the controls
@@ -149,9 +152,10 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
             child: ClipRRect(
               borderRadius: AppRadius.heroAll,
               child: Semantics(
-                label:
-                    'Preview of your ${_style.label} sticker for '
-                    '${widget.vehicle.licensePlate}',
+                label: l10n.studioPreviewOf(
+                  _style.labelIn(l10n),
+                  widget.vehicle.licensePlate,
+                ),
                 image: true,
                 child: CustomPaint(
                   painter: StickerPainter(spec: _spec),
@@ -168,10 +172,11 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   // -- Design -------------------------------------------------------------
 
   Widget _buildStylePicker() {
+    final l10n = AppL10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(overline: 'Choose a look', title: 'Sticker design'),
+        SectionHeader(overline: l10n.studioChooseALook, title: l10n.studioStickerDesign),
         SizedBox(
           height: 132,
           child: ListView.separated(
@@ -206,7 +211,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                _style.description,
+                _style.descriptionIn(l10n),
                 style: AppText.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -221,14 +226,15 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   // -- Paper --------------------------------------------------------------
 
   Widget _buildPrintCard() {
+    final l10n = AppL10n.of(context);
     final plan = SheetPlan.compute(pageSize: _paper.sizePt, copies: _copies);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(
-          overline: 'Put it on paper',
-          title: 'Print a sheet',
+          overline: l10n.studioPutItOnPaper,
+          title: l10n.studioPrintASheet,
         ),
         AppCard(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -236,7 +242,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _OptionRail<SheetPaper>(
-                label: 'Paper',
+                label: l10n.studioPaper,
                 values: SheetPaper.values,
                 selected: _paper,
                 labelOf: (paper) => paper.label,
@@ -244,7 +250,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               _OptionRail<int>(
-                label: 'Per sheet',
+                label: l10n.studioPerSheet,
                 values: kSheetCopyOptions,
                 selected: _copies,
                 labelOf: (copies) => '$copies',
@@ -266,7 +272,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
               ],
               const SizedBox(height: AppSpacing.lg),
               MetalButton(
-                label: _isPrinting ? 'Preparing…' : 'Print this sheet',
+                label: _isPrinting ? l10n.studioPreparing : l10n.studioPrintThisSheet,
                 icon: Icons.print_rounded,
                 busy: _isPrinting,
                 onPressed: _printSheet,
@@ -277,7 +283,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _isPrinting ? null : _sharePdf,
                   icon: const Icon(Icons.picture_as_pdf_rounded),
-                  label: const Text('Send PDF to a print shop'),
+                  label: Text(l10n.studioSendPdf),
                 ),
               ),
             ],
@@ -288,7 +294,8 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   }
 
   String _sheetCaption(SheetPlan plan) {
-    if (plan.slots.isEmpty) return 'This paper is too small for a sticker.';
+    final l10n = AppL10n.of(context);
+    if (plan.slots.isEmpty) return l10n.studioPaperTooSmall;
     final mm = plan.stickerSizeMm;
     final each = plan.copies == 1 ? 'sticker' : 'stickers';
     return '${plan.copies} $each on one ${_paper.label} sheet · '
@@ -299,12 +306,13 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   // -- Image --------------------------------------------------------------
 
   Widget _buildImageCard(String shareableLink) {
+    final l10n = AppL10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(
-          overline: 'Or send it as a picture',
-          title: 'Share the image',
+          overline: l10n.studioOrSendPicture,
+          title: l10n.studioShareTheImage,
         ),
         AppCard(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -332,7 +340,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
                   onPressed: _isExporting ? null : _shareSticker,
                   icon: const Icon(Icons.ios_share_rounded),
                   label: Text(
-                    _isExporting ? 'Preparing…' : 'Share or save image',
+                    _isExporting ? l10n.studioPreparing : l10n.studioShareOrSave,
                   ),
                 ),
               ),
@@ -342,7 +350,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
                 child: TextButton.icon(
                   onPressed: () => _copyToClipboard(shareableLink),
                   icon: const Icon(Icons.link_rounded),
-                  label: const Text('Copy scan link'),
+                  label: Text(l10n.studioCopyScanLink),
                 ),
               ),
             ],
@@ -355,33 +363,34 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   // -- Cards --------------------------------------------------------------
 
   Widget _buildPrintingTipsCard() {
+    final l10n = AppL10n.of(context);
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(overline: 'Make it last', title: 'Getting it printed'),
+          SectionHeader(overline: l10n.studioMakeItLast, title: l10n.studioGettingItPrinted),
           NumberedStep(
             number: '1',
-            title: 'Print at 100%',
+            title: l10n.studioPrintFullSize,
             detail:
                 'Turn off "fit to page" or "shrink to fit". The sheet is '
                 'already sized for the paper you picked.',
           ),
           NumberedStep(
             number: '2',
-            title: 'Cut at the corner marks',
-            detail: 'They sit outside the sticker, so nothing gets clipped.',
+            title: l10n.studioCutAtMarks,
+            detail: l10n.studioCutAtMarksBody,
           ),
           NumberedStep(
             number: '3',
-            title: 'Laminate it',
-            detail: 'A clear sleeve works too. Bangalore sun fades ink fast.',
+            title: l10n.studioLaminate,
+            detail: l10n.studioLaminateBody,
           ),
           NumberedStep(
             number: '4',
-            title: 'Fix it inside the windshield',
-            detail: 'Driver-side corner, code facing out, nothing covering it.',
+            title: l10n.studioFixInside,
+            detail: l10n.studioFixInsideBody,
             accent: AppColors.success,
             isLast: true,
           ),
@@ -391,6 +400,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   }
 
   Widget _buildScanTipCard() {
+    final l10n = AppL10n.of(context);
     return AppCard(
       color: AppColors.infoSurface,
       borderColor: AppColors.infoBorder,
@@ -406,7 +416,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Anyone can scan it', style: AppText.titleMedium),
+                Text(l10n.studioAnyoneCanScan, style: AppText.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'No app required — a phone camera or Google Lens is enough. '
@@ -427,15 +437,17 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   // -- Actions ------------------------------------------------------------
 
   void _copyToClipboard(String text) {
+    final l10n = AppL10n.of(context);
     Clipboard.setData(ClipboardData(text: text));
     showAppSnackBar(
       ScaffoldMessenger.of(context),
-      'Scan link copied',
+      l10n.studioScanLinkCopied,
       kind: AppSnackKind.success,
     );
   }
 
   Future<void> _printSheet() async {
+    final l10n = AppL10n.of(context);
     // Captured before the first await — the widget may be gone afterwards.
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isPrinting = true);
@@ -450,7 +462,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     } catch (_) {
       showAppSnackBar(
         messenger,
-        'Could not reach a printer. Try sending the PDF instead.',
+        l10n.studioPrinterFailed,
         kind: AppSnackKind.error,
       );
     } finally {
@@ -459,6 +471,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   }
 
   Future<void> _sharePdf() async {
+    final l10n = AppL10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isPrinting = true);
 
@@ -472,7 +485,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
     } catch (_) {
       showAppSnackBar(
         messenger,
-        'Could not create the PDF.',
+        l10n.studioPdfFailed,
         kind: AppSnackKind.error,
       );
     } finally {
@@ -481,6 +494,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   }
 
   Future<void> _shareSticker() async {
+    final l10n = AppL10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isExporting = true);
 
@@ -498,8 +512,8 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path, mimeType: 'image/png')],
-          text: 'Scan this Avahanaa code to reach me about my vehicle.',
-          subject: 'My Avahanaa QR sticker',
+          text: l10n.studioShareText,
+          subject: l10n.studioShareSubject,
         ),
       );
     } catch (_) {
@@ -510,9 +524,10 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
   }
 
   void _showExportError(ScaffoldMessengerState messenger) {
+    final l10n = AppL10n.of(context);
     showAppSnackBar(
       messenger,
-      'Could not create the sticker image.',
+      l10n.studioImageFailed,
       kind: AppSnackKind.error,
     );
   }
@@ -643,10 +658,11 @@ class _StyleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Semantics(
       button: true,
       selected: isSelected,
-      label: '${style.label} design. ${style.description}',
+      label: '${style.labelIn(l10n)}. ${style.descriptionIn(l10n)}',
       excludeSemantics: true,
       child: Material(
         color: isSelected ? AppColors.primaryTint : AppColors.surface,
@@ -704,7 +720,7 @@ class _StyleChip extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        style.label,
+                        style.labelIn(l10n),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.labelMedium.copyWith(

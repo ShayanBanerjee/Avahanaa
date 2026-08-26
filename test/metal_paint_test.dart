@@ -1,6 +1,7 @@
 import 'package:avahanaa/theme/app_theme.dart';
 import 'package:avahanaa/widgets/metal.dart';
 import 'package:flutter/material.dart';
+import 'package:avahanaa/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Metal surfaces have to actually paint.
@@ -19,6 +20,8 @@ void main() {
   Future<void> pumpAndPaint(WidgetTester tester, Widget child) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppL10n.localizationsDelegates,
+        supportedLocales: AppL10n.supportedLocales,
         theme: AvahanaaTheme.light(),
         home: Scaffold(
           body: Center(child: SizedBox(width: 320, child: child)),

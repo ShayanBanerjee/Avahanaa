@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/user_model.dart';
@@ -134,6 +136,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SingleChildScrollView(
@@ -141,7 +144,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AuthBrandHeader(
-              title: 'Create your account',
+              title: l10n.authCreateYourAccount,
               subtitle:
                   'Two minutes, and your vehicle becomes reachable '
                   'without giving your number to anyone.',
@@ -161,15 +164,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         children: [
                           SectionHeader(
                             overline: 'Step 1 of 2',
-                            title: 'Your account',
+                            title: l10n.authYourAccount,
                           ),
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             autofillHints: const [AutofillHints.email],
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
+                            decoration: InputDecoration(
+                              labelText: l10n.authEmail,
                               prefixIcon: Icon(Icons.mail_outline_rounded),
                             ),
                             validator: AuthValidators.email,
@@ -180,14 +183,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             obscureText: _obscurePassword,
                             textInputAction: TextInputAction.next,
                             decoration: InputDecoration(
-                              labelText: 'Password',
-                              helperText: 'At least 6 characters',
+                              labelText: l10n.authPassword,
+                              helperText: l10n.valPasswordLength,
                               prefixIcon:
                                   const Icon(Icons.lock_outline_rounded),
                               suffixIcon: IconButton(
                                 tooltip: _obscurePassword
-                                    ? 'Show password'
-                                    : 'Hide password',
+                                    ? l10n.commonShowPassword
+                                    : l10n.commonHidePassword,
                                 icon: Icon(
                                   _obscurePassword
                                       ? Icons.visibility_off_rounded
@@ -206,13 +209,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             obscureText: _obscureConfirmPassword,
                             textInputAction: TextInputAction.next,
                             decoration: InputDecoration(
-                              labelText: 'Confirm password',
+                              labelText: l10n.authConfirmPassword,
                               prefixIcon:
                                   const Icon(Icons.lock_reset_rounded),
                               suffixIcon: IconButton(
                                 tooltip: _obscureConfirmPassword
-                                    ? 'Show password'
-                                    : 'Hide password',
+                                    ? l10n.commonShowPassword
+                                    : l10n.commonHidePassword,
                                 icon: Icon(
                                   _obscureConfirmPassword
                                       ? Icons.visibility_off_rounded
@@ -226,10 +229,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Confirm your password';
+                                return l10n.authConfirmPassword;
                               }
                               if (value != _passwordController.text) {
-                                return 'The passwords do not match';
+                                return l10n.valPasswordsDiffer;
                               }
                               return null;
                             },
@@ -239,8 +242,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Phone number (optional)',
+                            decoration: InputDecoration(
+                              labelText: l10n.authPhoneOptional,
                               helperText:
                                   'For account recovery only. Never shared '
                                   'with anyone who scans your code.',
@@ -262,7 +265,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         children: [
                           SectionHeader(
                             overline: 'Step 2 of 2',
-                            title: 'Your vehicle',
+                            title: l10n.authYourVehicle,
                           ),
                           TextFormField(
                             controller: _carLicenseController,
@@ -270,8 +273,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             textInputAction: TextInputAction.next,
                             autocorrect: false,
                             inputFormatters: [_UpperCaseFormatter()],
-                            decoration: const InputDecoration(
-                              labelText: 'Registration number',
+                            decoration: InputDecoration(
+                              labelText: l10n.authRegistrationNumber,
                               prefixIcon: Icon(
                                 Icons.confirmation_number_outlined,
                               ),
@@ -285,14 +288,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             controller: _carColorController,
                             textCapitalization: TextCapitalization.words,
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Colour',
+                            decoration: InputDecoration(
+                              labelText: l10n.authColour,
                               prefixIcon: Icon(Icons.palette_outlined),
                               hintText: 'White',
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Enter your vehicle colour';
+                                return l10n.valEnterColour;
                               }
                               return null;
                             },
@@ -303,14 +306,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             textCapitalization: TextCapitalization.words,
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _handleSignUp(),
-                            decoration: const InputDecoration(
-                              labelText: 'Make and model',
+                            decoration: InputDecoration(
+                              labelText: l10n.authMakeAndModel,
                               prefixIcon: Icon(Icons.directions_car_outlined),
                               hintText: 'Maruti Swift',
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Enter your vehicle model';
+                                return l10n.valEnterModel;
                               }
                               return null;
                             },
@@ -324,7 +327,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: AppSpacing.xxl),
 
                     MetalButton(
-                      label: 'Create account',
+                      label: l10n.authCreateAccount,
                       icon: Icons.arrow_forward_rounded,
                       busy: _isLoading,
                       onPressed: _handleSignUp,
@@ -342,7 +345,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                         _InlineLink(
-                          label: 'Terms of Service',
+                          label: l10n.legalTermsOfService,
                           onTap: _openLegalDocuments,
                         ),
                         Text(
@@ -352,7 +355,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                         _InlineLink(
-                          label: 'Privacy Policy',
+                          label: l10n.legalPrivacyPolicy,
                           onTap: _openLegalDocuments,
                         ),
                       ],

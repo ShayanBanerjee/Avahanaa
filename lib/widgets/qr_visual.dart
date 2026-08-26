@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:qr/qr.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import 'metal.dart';
 import 'ui_kit.dart';
@@ -388,8 +389,9 @@ class AvahanaaQrView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Semantics(
-      label: 'QR code for your vehicle',
+      label: l10n.qrSemanticLabel,
       image: true,
       child: RepaintBoundary(
         child: CustomPaint(
@@ -606,7 +608,7 @@ class QrShowcasePanel extends StatelessWidget {
     required this.isActive,
     this.plate = '',
     this.descriptor = '',
-    this.title = 'Your windshield code',
+    this.title,
     this.codeSize = 176,
     this.actions = const <QrPanelAction>[],
     this.onTap,
@@ -616,7 +618,10 @@ class QrShowcasePanel extends StatelessWidget {
   final bool isActive;
   final String plate;
   final String descriptor;
-  final String title;
+
+  /// Null means "use the default heading", which has to be resolved against a
+  /// context — it is translated, and a default parameter value cannot be.
+  final String? title;
   final double codeSize;
   final List<QrPanelAction> actions;
 
@@ -639,7 +644,11 @@ class QrShowcasePanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Rail(title: title, isActive: isActive, accent: accent),
+            _Rail(
+              title: title ?? AppL10n.of(context).qrYourWindshieldCode,
+              isActive: isActive,
+              accent: accent,
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
@@ -683,6 +692,7 @@ class _Rail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -701,7 +711,7 @@ class _Rail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('SCAN TO ALERT ME', style: AppText.overline),
+                Text(l10n.qrScanToAlertMe, style: AppText.overline),
                 const SizedBox(height: 2),
                 Text(
                   title,
@@ -714,7 +724,7 @@ class _Rail extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           StatusPill(
-            label: isActive ? 'LIVE' : 'PAUSED',
+            label: isActive ? l10n.commonLive : l10n.qrPaused,
             color: accent,
             icon: isActive
                 ? Icons.shield_rounded

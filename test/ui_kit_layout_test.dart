@@ -5,6 +5,7 @@ import 'package:avahanaa/widgets/qr_visual.dart';
 import 'package:avahanaa/widgets/ui_kit.dart';
 import 'package:avahanaa/widgets/vehicle_panel.dart';
 import 'package:flutter/material.dart';
+import 'package:avahanaa/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The design system requires every surface to survive 320dp width and heavy
@@ -29,6 +30,8 @@ Future<void> pumpAtScale(
     MediaQuery(
       data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
       child: MaterialApp(
+        localizationsDelegates: AppL10n.localizationsDelegates,
+        supportedLocales: AppL10n.supportedLocales,
         theme: AvahanaaTheme.light(),
         home: Scaffold(
           body: SingleChildScrollView(
@@ -284,6 +287,8 @@ void main() {
     testWidgets('renders one snackbar per call', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppL10n.localizationsDelegates,
+          supportedLocales: AppL10n.supportedLocales,
           theme: AvahanaaTheme.light(),
           home: Scaffold(
             body: Builder(

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n_global.dart';
+
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/hero_header.dart';
@@ -73,6 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SingleChildScrollView(
@@ -80,8 +84,8 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AuthBrandHeader(
-              title: 'Welcome back',
-              subtitle: 'Sign in to stay reachable.',
+              title: l10n.authWelcomeBack,
+              subtitle: l10n.authSignInBlurb,
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
@@ -96,8 +100,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.email],
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
+                        decoration: InputDecoration(
+                          labelText: l10n.authEmail,
                           prefixIcon: Icon(Icons.mail_outline_rounded),
                         ),
                         validator: AuthValidators.email,
@@ -110,12 +114,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         autofillHints: const [AutofillHints.password],
                         onFieldSubmitted: (_) => _handleLogin(),
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: l10n.authPassword,
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                           suffixIcon: IconButton(
                             tooltip: _obscurePassword
-                                ? 'Show password'
-                                : 'Hide password',
+                                ? l10n.commonShowPassword
+                                : l10n.commonHidePassword,
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off_rounded
@@ -140,12 +144,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             );
                           },
-                          child: const Text('Forgot password?'),
+                          child: Text(l10n.authForgotPassword),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       MetalButton(
-                        label: 'Sign in',
+                        label: l10n.authSignIn,
                         icon: Icons.lock_open_rounded,
                         busy: _isLoading,
                         onPressed: _handleLogin,
@@ -169,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: const Text('Create an account'),
+                            child: Text(l10n.authCreateAnAccount),
                           ),
                         ],
                       ),
@@ -290,19 +294,21 @@ class AuthButtonSpinner extends StatelessWidget {
 
 abstract final class AuthValidators {
   static String? email(String? value) {
+    final l10n = appL10n;
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Enter your email address';
+    if (text.isEmpty) return l10n.valEnterEmail;
     // Deliberately loose — Firebase is the real authority on deliverability.
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) {
-      return 'That does not look like an email address';
+      return l10n.valInvalidEmail;
     }
     return null;
   }
 
   static String? password(String? value) {
+    final l10n = appL10n;
     final text = value ?? '';
-    if (text.isEmpty) return 'Enter your password';
-    if (text.length < 6) return 'Use at least 6 characters';
+    if (text.isEmpty) return l10n.valEnterPassword;
+    if (text.length < 6) return l10n.valPasswordLength;
     return null;
   }
 }
