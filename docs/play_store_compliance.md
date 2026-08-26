@@ -6,12 +6,32 @@ file records what was learned so it is not relearned the hard way.
 
 ## Standing constraints
 
-**Notifications.** The app currently ships a high-importance channel with strong
-vibration and the default sound, deliberately *without* full-screen intent, to
-avoid the declaration requirement. Any change that adds alarm-stream audio, DND
-bypass, or full-screen intent is a review-visible change. Read
-`docs/alert_escalation_options.md` §Stage 2 first, and ship it in an isolated
-release.
+**Notifications — CHANGED Aug 2026, NOT YET SUBMITTED.** The app now ships
+`avahanaa_critical_alerts_v3`: max importance, `avahanaa_alarm.wav` on the
+**alarm stream** (`AudioAttributesUsage.alarm`), and **full-screen intent**.
+Both were previously avoided precisely to dodge the declaration requirement, so
+this is a review-visible change and it has not been through review yet.
+
+Before the next upload:
+
+1. **Complete the full-screen-intent declaration in Play Console.** It is
+   mandatory once `USE_FULL_SCREEN_INTENT` is in the manifest, and it is.
+2. **Ship this in an isolated release.** If review pushes back, the thing to
+   argue is the product: an alert that arrives silently is worthless when
+   somebody is standing next to the vehicle. If that fails, the fallback is to
+   drop FSI and keep the alarm channel — they are independent.
+3. DND bypass is still **not** requested. Leave it that way.
+
+What has not changed: the alert path does not depend on FSI. The permission is
+requested at runtime and a refusal is expected — the same notification still
+arrives as a heads-up on a max-importance channel, which is exactly what
+shipped before. On Android 14+ the permission is only default-granted to apps
+whose core function is calling or alarms, and Avahanaa is neither.
+
+The manifest's `default_notification_channel_id` was also corrected from the
+legacy `congestion_free_channel` to the v3 channel (known issue #1). A
+notification-payload push handled by the system used to land on the quiet
+legacy channel.
 
 **Full-screen intent.** If `USE_FULL_SCREEN_INTENT` is ever added to the
 manifest, a Play Console declaration becomes mandatory. For apps targeting
@@ -23,6 +43,13 @@ without it. Never make the alert path depend on it.
 registration/colour/model, and an FCM token. The form must match reality. When
 you add a field to `users`, `vehicles`, or `notifications`, check whether the
 Data Safety declaration still matches before the next upload.
+
+Added Aug 2026 and worth a look before submitting: `notifications` gained
+`acknowledgedAt`, `acknowledgementEta` and `statusToken`, and
+`qrCodes.metadata.vehicle` gained `licensePlateCanonical`. None of it is new
+*kinds* of data — the reply fields are the owner's own action and the canonical
+plate is a normalised copy of a plate already declared — so the existing
+declaration should still hold. Confirm rather than assume.
 
 **Privacy policy.** Must be reachable both from the Play listing and in-app.
 In-app it lives at `lib/screens/legal_documents_screen.dart`, pointing at

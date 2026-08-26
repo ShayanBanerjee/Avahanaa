@@ -74,6 +74,32 @@ void main() {
     });
   });
 
+  group('notification action ids', () {
+    // The action id is `avahanaa_reply_` + the wire id, and it is parsed in a
+    // background isolate with no UI. A mismatch there is silent: the owner taps
+    // "On my way" on their lock screen, nothing is written, and they walk to
+    // their car believing the person waiting has been told.
+    const prefix = 'avahanaa_reply_';
+
+    test('the ids offered on the notification round-trip', () {
+      for (final id in <String>['omw_5', 'omw_now']) {
+        final actionId = '$prefix$id';
+        expect(actionId.startsWith(prefix), isTrue);
+        final parsed = AlertReply.fromId(actionId.substring(prefix.length));
+        expect(parsed, isNotNull);
+        expect(parsed!.id, id);
+        expect(parsed.isOnTheWay, isTrue,
+            reason: 'a lock-screen action should only ever say someone is coming');
+      }
+    });
+
+    test('a foreign action id resolves to nothing actionable', () {
+      // Anything not carrying the prefix must be treated as a plain tap.
+      const tapOnly = 'some_other_action';
+      expect(tapOnly.startsWith(prefix), isFalse);
+    });
+  });
+
   group('parity with the backend', () {
     /// Skipped unless `Avahanaa-Web` is checked out next to this repo, so CI
     /// on this repo alone stays green.

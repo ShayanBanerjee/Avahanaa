@@ -2,25 +2,16 @@
 
 Ordered roughly by risk. Update this file when one is closed.
 
-## 1. Notification channel mismatch in the manifest
+## 1. Manifest default channel — CLOSED (Aug 2026)
 
-`android/app/src/main/AndroidManifest.xml` declares:
+The manifest pointed `default_notification_channel_id` at the legacy
+`congestion_free_channel`, so any push carrying a `notification` block — which
+the system auto-displays in background/terminated state — landed on the quiet
+channel rather than the max-importance one.
 
-```xml
-<meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
-           android:value="congestion_free_channel" />
-```
-
-but the app's real critical channel is `avahanaa_critical_alerts_v2`
-(`lib/services/fcm_service.dart`). Any push that carries a `notification` block
-is auto-displayed by the system in background/terminated state, and lands on the
-**legacy quiet channel** rather than the max-importance one. The reminder logic
-never runs for those either, because `main.dart` only calls
-`showNotificationForMessage` when `message.notification == null`.
-
-Fix: point the manifest at the current critical channel, and/or make the sender
-emit data-only pushes so the app fully controls presentation. The two must be
-decided together with the out-of-repo sender.
+Now points at `avahanaa_critical_alerts_v3`. Both halves of the original fix are
+in place: the sender emits data-only pushes (`Avahanaa-Web/functions/index.js`),
+*and* the manifest default is correct for anything that slips through.
 
 ## 2b. Legacy sticker artwork is bundled but unused (Aug 2026)
 
@@ -32,12 +23,21 @@ The file is deliberately left in place rather than deleted — it is the owner's
 artwork and restoring the old design should stay a one-line decision. If it is
 not coming back, delete it and the app bundle drops 230KB.
 
-## 2. The alarm sound is shipped but unused
+## 2. The alarm asset is unused — CLOSED (Aug 2026)
 
-`assets/audio/avahanaa_alarm.wav` is bundled via `pubspec.yaml` and referenced
-nowhere in `lib/`. The "loud buzzer" feature is unbuilt. Android custom
-notification sounds must live in `android/app/src/main/res/raw/`, not in Flutter
-assets. See `docs/alert_escalation_options.md` §Stage 1.
+`avahanaa_alarm.wav` shipped for months referenced by nothing. It is now the
+sound of `avahanaa_critical_alerts_v3`, on the **alarm stream**, copied to
+`android/app/src/main/res/raw/` — Android will not take a notification sound
+from Flutter assets.
+
+Verified on device via `dumpsys notification`:
+`mSound=android.resource://com.avahanaa.congestion_free/raw/avahanaa_alarm`,
+`usage=USAGE_ALARM`, `mImportance=5`.
+
+Full-screen intent shipped alongside it. **Neither has been through Play review
+yet** and both are review-visible — see `docs/play_store_compliance.md` before
+the next upload. The copy in `assets/audio/` is now redundant; it is left in
+place because deleting it is a separate decision from wiring it up.
 
 ## 3. Dead AES helper with a hardcoded key
 
