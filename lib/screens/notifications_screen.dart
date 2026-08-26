@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/notification_model.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
@@ -29,7 +30,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Alerts'),
+        title: Text(AppL10n.of(context).alertsTitle),
         actions: [
           StreamBuilder<int>(
             stream: _firestoreService.streamUnreadNotificationCount(
@@ -102,7 +103,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   );
                 }
 
-                return _buildGroupedList(notifications);
+                return _buildGroupedList(context, notifications);
               },
             ),
           ),
@@ -116,13 +117,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   /// Groups alerts under Today / Yesterday / date headings. A flat list of
   /// "3h ago" strings loses the sense of when a problem happened.
-  Widget _buildGroupedList(List<NotificationModel> notifications) {
+  Widget _buildGroupedList(
+    BuildContext context,
+    List<NotificationModel> notifications,
+  ) {
+    final l10n = AppL10n.of(context);
+    final localeName = Localizations.localeOf(context).toLanguageTag();
     final entries = <Widget>[];
     String? currentHeading;
 
     for (var i = 0; i < notifications.length; i++) {
       final notification = notifications[i];
-      final heading = _dateHeading(notification.sentAt);
+      final heading = _dateHeading(l10n, localeName, notification.sentAt);
 
       if (heading != currentHeading) {
         currentHeading = heading;
@@ -165,17 +171,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  static String _dateHeading(DateTime date) {
+  /// Takes the localizations and the locale, because the dates below have to
+  /// move too — "Wednesday" in a Kannada UI is a half-translated screen, and
+  /// `DateFormat` will happily keep speaking English unless it is told not to.
+  static String _dateHeading(AppL10n l10n, String localeName, DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final that = DateTime(date.year, date.month, date.day);
     final difference = today.difference(that).inDays;
 
-    if (difference == 0) return 'Today';
-    if (difference == 1) return 'Yesterday';
-    if (difference < 7) return DateFormat('EEEE').format(date);
-    if (date.year == now.year) return DateFormat('d MMMM').format(date);
-    return DateFormat('d MMMM y').format(date);
+    if (difference == 0) return l10n.alertsToday;
+    if (difference == 1) return l10n.alertsYesterday;
+    if (difference < 7) return DateFormat('EEEE', localeName).format(date);
+    if (date.year == now.year) {
+      return DateFormat('d MMMM', localeName).format(date);
+    }
+    return DateFormat('d MMMM y', localeName).format(date);
   }
 
   void _maybeOpenInitialNotification(List<NotificationModel> notifications) {
@@ -348,6 +359,7 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final visual = ReasonVisual.of(notification.reason);
     final isUnread = !notification.read;
     final reply = notification.reply;
@@ -407,7 +419,7 @@ class _NotificationCard extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    notification.reasonText,
+                                    notification.reasonTextIn(l10n),
                                     style: isUnread
                                         ? AppText.titleMedium
                                         : AppText.titleSmall.copyWith(
@@ -418,7 +430,7 @@ class _NotificationCard extends StatelessWidget {
                                 if (isUnread) ...[
                                   const SizedBox(width: AppSpacing.sm),
                                   StatusPill(
-                                    label: 'NEW',
+                                    label: l10n.alertsNew,
                                     color: visual.color,
                                   ),
                                 ],
@@ -445,7 +457,7 @@ class _NotificationCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  notification.timeAgo,
+                                  notification.timeAgoIn(l10n),
                                   style: AppText.caption.copyWith(
                                     color: AppColors.textTertiary,
                                   ),
@@ -472,7 +484,7 @@ class _NotificationCard extends StatelessWidget {
                                         const SizedBox(width: 4),
                                         Flexible(
                                           child: Text(
-                                            'You replied',
+                                            l10n.replyYouReplied,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: AppText.caption.copyWith(
@@ -514,6 +526,7 @@ class _NotificationDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final visual = ReasonVisual.of(notification.reason);
 
     return SingleChildScrollView(
@@ -552,10 +565,10 @@ class _NotificationDetailSheet extends StatelessWidget {
               children: [
                 Icon(visual.icon, color: AppColors.onDark, size: 34),
                 const SizedBox(height: AppSpacing.md),
-                Text(notification.reasonText, style: AppText.panicTitle),
+                Text(notification.reasonTextIn(l10n), style: AppText.panicTitle),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  ReasonVisual.guidance(notification.reason),
+                  ReasonVisual.guidanceIn(l10n, notification.reason),
                   style: AppText.bodyMedium.copyWith(
                     color: AppColors.onDarkMuted,
                   ),
@@ -566,7 +579,7 @@ class _NotificationDetailSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
 
           if (notification.message.trim().isNotEmpty) ...[
-            Text('WHAT THEY SAID', style: AppText.overline),
+            Text(l10n.alertsWhatTheySaid, style: AppText.overline),
             const SizedBox(height: AppSpacing.sm),
             Container(
               width: double.infinity,
@@ -584,7 +597,7 @@ class _NotificationDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
           ],
 
-          Text('WHEN', style: AppText.overline),
+          Text(l10n.alertsWhen, style: AppText.overline),
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
@@ -596,8 +609,8 @@ class _NotificationDetailSheet extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  '${DateFormat('EEEE d MMMM, h:mm a').format(notification.sentAt)}'
-                  '  ·  ${notification.timeAgo}',
+                  '${DateFormat('EEEE d MMMM, h:mm a', Localizations.localeOf(context).toLanguageTag()).format(notification.sentAt)}'
+                  '  ·  ${notification.timeAgoIn(l10n)}',
                   style: AppText.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -624,8 +637,7 @@ class _NotificationDetailSheet extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    'Whoever sent this stayed anonymous, and they never saw '
-                    'your contact details either.',
+                    l10n.alertsAnonymityNote,
                     style: AppText.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),

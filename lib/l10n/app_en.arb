@@ -1,0 +1,95 @@
+{
+  "@@locale": "en",
+  "reasonBlockingDriveway": "Blocking Driveway",
+  "reasonIllegalParking": "Illegal Parking",
+  "reasonBlockingTraffic": "Blocking Traffic",
+  "reasonDoubleParked": "Double Parked",
+  "reasonEmergency": "Emergency",
+  "reasonPrivateProperty": "Private Property",
+  "reasonOther": "Other",
+  "reasonUnknown": "Vehicle Notification",
+  "guidanceEmergency": "Treat this as urgent. Get to your vehicle now.",
+  "guidanceBlockingDriveway": "Someone cannot get in or out. Move your vehicle soon.",
+  "guidanceBlockingTraffic": "Your vehicle is holding up traffic. Move it soon.",
+  "guidanceIllegalParking": "Your vehicle may be towed or fined. Check on it.",
+  "guidanceDoubleParked": "You are boxing someone in. They are waiting.",
+  "guidancePrivateProperty": "You are parked on private land. You may be asked to move.",
+  "guidanceOther": "Someone at your vehicle wanted you to know.",
+  "replyOnMyWayNowOwner": "I'm right here",
+  "replyOnMyWayFiveOwner": "On my way — 5 min",
+  "replyOnMyWayFifteenOwner": "On my way — 15 min",
+  "replyCannotComeOwner": "I can't get there",
+  "replySeenOwner": "Seen — thank you",
+  "replySectionTitle": "REPLY TO THEM",
+  "replySectionBlurb": "They are still standing at your vehicle with the page open. One tap tells them you are coming.",
+  "replySending": "Sending…",
+  "replyTelling": "Telling them…",
+  "replyToldThem": "They know you are coming",
+  "replySentTitle": "They have been told",
+  "replySentBody": "Their page now reads: \"{scannerLabel}\".",
+  "@replySentBody": {
+    "placeholders": {
+      "scannerLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "replyFailed": "Could not send your reply. Check your connection and try again.",
+  "replyYouReplied": "You replied",
+  "alertsTitle": "Alerts",
+  "alertsWhatTheySaid": "WHAT THEY SAID",
+  "alertsWhen": "WHEN",
+  "alertsAnonymityNote": "Whoever sent this stayed anonymous, and they never saw your contact details either.",
+  "alertsNew": "NEW",
+  "alertsToday": "TODAY",
+  "alertsYesterday": "YESTERDAY",
+  "panicHeadlineOne": "Someone needs you at your vehicle",
+  "panicHeadlineMany": "{count} people need you at your vehicle",
+  "@panicHeadlineMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "panicSeeWhatHappened": "See what happened",
+  "panicViewAll": "View all {count} alerts",
+  "@panicViewAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "appearanceOverline": "APPEARANCE",
+  "appearanceTitle": "How Avahanaa looks",
+  "appearanceSystem": "Match my phone",
+  "appearanceLight": "Always light",
+  "appearanceDark": "Always dark",
+  "settingsAppearance": "Appearance",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{minutes}m ago",
+  "timeHoursAgo": "{hours}h ago",
+  "timeDaysAgo": "{days}d ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
+}

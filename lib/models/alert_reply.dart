@@ -17,6 +17,8 @@
 /// get used.
 library;
 
+import '../l10n/app_localizations.dart';
+
 /// A reply the owner can send. The `id` is the wire value and is written to
 /// `notifications/{id}.acknowledgementEta`; never renumber or rename one, as
 /// old app versions stay installed for months.
@@ -62,8 +64,18 @@ enum AlertReply {
   /// Wire value. Stable — the backend and the scan page both key off it.
   final String id;
 
-  /// What the owner taps, written from the owner's point of view.
+  /// What the owner taps, in English. Kept for logs and for the notification
+  /// actions, which Android builds before any locale is resolved.
   final String ownerLabel;
+
+  /// What the owner taps, in the reader's language.
+  String ownerLabelIn(AppL10n l10n) => switch (this) {
+    AlertReply.onMyWayNow => l10n.replyOnMyWayNowOwner,
+    AlertReply.onMyWayFive => l10n.replyOnMyWayFiveOwner,
+    AlertReply.onMyWayFifteen => l10n.replyOnMyWayFifteenOwner,
+    AlertReply.cannotCome => l10n.replyCannotComeOwner,
+    AlertReply.acknowledged => l10n.replySeenOwner,
+  };
 
   /// What the scanner reads. Written in the third person, because the person
   /// reading it is a stranger who should not be addressed as though the owner

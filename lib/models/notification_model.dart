@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../l10n/app_localizations.dart';
 import 'alert_reply.dart';
 
 class NotificationModel {
@@ -113,6 +114,34 @@ class NotificationModel {
   }
 
   // Get formatted reason text
+  /// The reason, in the reader's language.
+  ///
+  /// Takes the localizations rather than reading them from a `BuildContext`,
+  /// because this is a model — it is also read from a background isolate where
+  /// there is no tree to look anything up in.
+  String reasonTextIn(AppL10n l10n) {
+    switch (reason) {
+      case 'blocking_driveway':
+        return l10n.reasonBlockingDriveway;
+      case 'illegal_parking':
+        return l10n.reasonIllegalParking;
+      case 'blocking_traffic':
+        return l10n.reasonBlockingTraffic;
+      case 'double_parked':
+        return l10n.reasonDoubleParked;
+      case 'emergency':
+        return l10n.reasonEmergency;
+      case 'private_property':
+        return l10n.reasonPrivateProperty;
+      case 'other':
+        return l10n.reasonOther;
+      default:
+        return l10n.reasonUnknown;
+    }
+  }
+
+  /// The English reason, for logs and for the notification built in the
+  /// background isolate before any locale is resolved.
   String get reasonText {
     switch (reason) {
       case 'blocking_driveway':
@@ -157,6 +186,20 @@ class NotificationModel {
   }
 
   // Get time ago string
+  /// How long ago, in the reader's language.
+  String timeAgoIn(AppL10n l10n) {
+    final difference = DateTime.now().difference(sentAt);
+
+    if (difference.inSeconds < 60) return l10n.timeJustNow;
+    if (difference.inMinutes < 60) return l10n.timeMinutesAgo(difference.inMinutes);
+    if (difference.inHours < 24) return l10n.timeHoursAgo(difference.inHours);
+    if (difference.inDays < 7) return l10n.timeDaysAgo(difference.inDays);
+    // Past a week the exact date is more use than a count, and digits read the
+    // same either way.
+    return '${sentAt.day}/${sentAt.month}/${sentAt.year}';
+  }
+
+  /// English, for logs.
   String get timeAgo {
     final now = DateTime.now();
     final difference = now.difference(sentAt);

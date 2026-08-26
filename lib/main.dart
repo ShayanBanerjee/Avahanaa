@@ -15,6 +15,10 @@ import 'screens/home_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+import 'l10n/app_localizations.dart';
+import 'l10n/locale_controller.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 import 'widgets/hero_header.dart';
@@ -76,7 +80,13 @@ void main() async {
   // Awaited, unlike the ads init below it. This is one small file read, and
   // launching in the wrong theme and snapping to the right one a frame later
   // is exactly the kind of flash people notice at night.
+  // Required before DateFormat is asked for anything but the default locale.
+  // Without it "Wednesday" in a Kannada UI is not merely untranslated — the
+  // format call throws, and the alert list is where it would throw.
+  await initializeDateFormatting();
+
   await themeController.load();
+  await localeController.load();
 
   runApp(AvahanaaApp());
 }
@@ -94,6 +104,9 @@ class AvahanaaApp extends StatefulWidget {
 /// instance, it is read from `main` before the tree exists, and the codebase
 /// deliberately has no state-management package.
 final ThemeController themeController = ThemeController();
+
+/// The app's language choice. Same reasoning as [themeController].
+final LocaleController localeController = LocaleController();
 
 class _AvahanaaAppState extends State<AvahanaaApp> {
   @override
@@ -123,7 +136,7 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
     // *before* it notifies, so this rebuild already reads the new palette —
     // see the note at the top of theme_controller.dart.
     return ListenableBuilder(
-      listenable: themeController,
+      listenable: Listenable.merge([themeController, localeController]),
       builder: (context, _) => _buildApp(context),
     );
   }
@@ -136,6 +149,9 @@ class _AvahanaaAppState extends State<AvahanaaApp> {
       theme: AvahanaaTheme.light(),
       darkTheme: AvahanaaTheme.dark(),
       themeMode: themeController.mode.materialMode,
+      locale: localeController.locale,
+      supportedLocales: AppL10n.supportedLocales,
+      localizationsDelegates: AppL10n.localizationsDelegates,
       builder: (context, child) {
         // Clamp runaway system font scaling. Above 1.6x the alert surfaces
         // start to truncate, and a truncated alert is a failed alert.

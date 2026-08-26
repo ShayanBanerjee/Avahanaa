@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// How each alert reason is drawn.
@@ -97,6 +98,27 @@ class ReasonVisual {
   }
 
   /// A short line telling the owner what this actually means for them.
+  /// The one-line instruction, in the reader's language.
+  static String guidanceIn(AppL10n l10n, String reason) {
+    switch (reason) {
+      case 'emergency':
+        return l10n.guidanceEmergency;
+      case 'blocking_driveway':
+        return l10n.guidanceBlockingDriveway;
+      case 'blocking_traffic':
+        return l10n.guidanceBlockingTraffic;
+      case 'illegal_parking':
+        return l10n.guidanceIllegalParking;
+      case 'double_parked':
+        return l10n.guidanceDoubleParked;
+      case 'private_property':
+        return l10n.guidancePrivateProperty;
+      default:
+        return l10n.guidanceOther;
+    }
+  }
+
+  /// English, for logs and background-isolate notification text.
   static String guidance(String reason) {
     switch (reason) {
       case 'emergency':

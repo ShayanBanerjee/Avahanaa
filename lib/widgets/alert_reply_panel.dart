@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/alert_reply.dart';
 import '../models/notification_model.dart';
 import '../theme/app_theme.dart';
@@ -79,6 +80,7 @@ class _AlertReplyPanelState extends State<AlertReplyPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final sent = _justSent ?? widget.notification.reply;
     if (sent != null) return _ReplySentPanel(reply: sent);
 
@@ -93,11 +95,10 @@ class _AlertReplyPanelState extends State<AlertReplyPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('REPLY TO THEM', style: AppText.overline),
+        Text(l10n.replySectionTitle, style: AppText.overline),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'They are still standing at your vehicle with the page open. One tap '
-          'tells them you are coming.',
+          l10n.replySectionBlurb,
           style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -118,7 +119,7 @@ class _AlertReplyPanelState extends State<AlertReplyPanel> {
                   )
                 : const Icon(Icons.directions_run_rounded, size: 24),
             label: Text(
-              _sending == primary ? 'Sending…' : primary.ownerLabel,
+              _sending == primary ? l10n.replySending : primary.ownerLabelIn(l10n),
               style: AppText.labelLarge.copyWith(
                 color: AppColors.onDark,
                 fontSize: 17,
@@ -162,6 +163,7 @@ class _ReplyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     // "I can't get there" is a real answer and needs to be reachable, but it
     // should never be the one a thumb finds by accident.
     final isDecline = !reply.isOnTheWay;
@@ -192,7 +194,7 @@ class _ReplyChip extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
               ],
               Text(
-                reply.ownerLabel,
+                reply.ownerLabelIn(l10n),
                 style: AppText.labelMedium.copyWith(
                   color: isDecline
                       ? AppColors.textSecondary
@@ -219,6 +221,7 @@ class _ReplySentPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -241,14 +244,14 @@ class _ReplySentPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'They have been told',
+                  l10n.replySentTitle,
                   style: AppText.titleSmall.copyWith(
                     color: AppColors.successDark,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Their page now reads: "${reply.scannerLabel}".',
+                  l10n.replySentBody(reply.scannerLabel),
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -319,11 +322,12 @@ class _AlertQuickReplyButtonState extends State<AlertQuickReplyButton> {
     // Once sent, the button holds its confirmed state rather than disappearing.
     // A control that vanishes under a thumb reads as a misfire, and this one
     // sits directly above another button.
+    final l10n = AppL10n.of(context);
     final label = _sent
-        ? 'They know you are coming'
+        ? l10n.replyToldThem
         : _sending
-        ? 'Telling them…'
-        : widget.reply.ownerLabel;
+        ? l10n.replyTelling
+        : widget.reply.ownerLabelIn(l10n);
 
     return SizedBox(
       width: double.infinity,

@@ -6,6 +6,7 @@ import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../services/firestore_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
 import '../utils/sticker_renderer.dart';
@@ -810,6 +811,7 @@ class _CriticalAlertBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     if (unread.isEmpty) return const SizedBox.shrink();
 
     final latest = unread.first;
@@ -856,8 +858,8 @@ class _CriticalAlertBanner extends StatelessWidget {
                   Expanded(
                     child: Text(
                       unread.length == 1
-                          ? 'Someone needs you at your vehicle'
-                          : '${unread.length} people need you at your vehicle',
+                          ? l10n.panicHeadlineOne
+                          : l10n.panicHeadlineMany(unread.length),
                       style: AppText.panicTitle,
                     ),
                   ),
@@ -872,7 +874,7 @@ class _CriticalAlertBanner extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                latest.timeAgo,
+                latest.timeAgoIn(l10n),
                 style: AppText.labelMedium.copyWith(
                   color: AppColors.onDarkMuted,
                 ),
@@ -912,7 +914,7 @@ class _CriticalAlertBanner extends StatelessWidget {
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.onDark,
                   ),
-                  child: const Text('See what happened'),
+                  child: Text(l10n.panicSeeWhatHappened),
                 ),
               ),
               if (unread.length > 1) ...[
@@ -924,7 +926,7 @@ class _CriticalAlertBanner extends StatelessWidget {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.onDark,
                     ),
-                    child: Text('View all ${unread.length} alerts'),
+                    child: Text(l10n.panicViewAll(unread.length)),
                   ),
                 ),
               ],

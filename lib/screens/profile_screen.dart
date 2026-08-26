@@ -9,6 +9,8 @@ import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
 import '../main.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/locale_controller.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../utils/vehicle_registration_validator.dart';
@@ -343,9 +345,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 listenable: themeController,
                 builder: (context, _) => AppListRow(
                   icon: themeController.mode.icon,
-                  title: 'Appearance',
+                  title: AppL10n.of(context).settingsAppearance,
                   subtitle: themeController.mode.label,
                   onTap: _showAppearanceSheet,
+                ),
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              ListenableBuilder(
+                listenable: localeController,
+                builder: (context, _) => AppListRow(
+                  icon: Icons.translate_rounded,
+                  title: 'Language',
+                  // The endonym, so someone looking for Kannada sees ಕನ್ನಡ
+                  // rather than the English word for it.
+                  subtitle: localeController.language.endonym,
+                  onTap: _showLanguageSheet,
                 ),
               ),
               const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
@@ -633,6 +647,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
         kind: AppSnackKind.success,
       );
     }
+  }
+
+  /// English, Kannada, or follow the phone.
+  ///
+  /// Separate from Appearance rather than bundled into one "Preferences"
+  /// screen: these are two of the four things anyone ever changes in here, and
+  /// burying a language switch one level deeper than it needs to be is how
+  /// people conclude an app does not speak their language.
+  Future<void> _showLanguageSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.hero)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: ListenableBuilder(
+          listenable: localeController,
+          builder: (context, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              const SheetGrabber(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('LANGUAGE', style: AppText.overline),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('What Avahanaa speaks', style: AppText.headlineMedium),
+                  ],
+                ),
+              ),
+              for (final language in AppLanguage.values)
+                _LanguageOption(
+                  language: language,
+                  selected: localeController.language == language,
+                  onTap: () => localeController.setLanguage(language),
+                ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Light, dark, or follow the phone.
@@ -1602,6 +1668,48 @@ class _AppearanceOption extends StatelessWidget {
             Expanded(
               child: Text(
                 mode.label,
+                style: selected
+                    ? AppText.titleMedium.copyWith(color: AppColors.primary)
+                    : AppText.titleMedium,
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_rounded, size: 22, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One row in the language sheet.
+class _LanguageOption extends StatelessWidget {
+  const _LanguageOption({
+    required this.language,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppLanguage language;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
+        color: selected ? AppColors.primaryTint : Colors.transparent,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                language.endonym,
                 style: selected
                     ? AppText.titleMedium.copyWith(color: AppColors.primary)
                     : AppText.titleMedium,
