@@ -88,6 +88,16 @@ class ReasonVisual {
           color: AppColors.primary,
           severity: 0,
         );
+      // Severity 0, deliberately, even though the push itself arrives at full
+      // alarm strength. The alarm is the thing being tested; the row in the
+      // inbox afterwards is not an emergency and dressing it in alert red would
+      // teach people to discount the colour that matters.
+      case 'test':
+        return ReasonVisual(
+          icon: Icons.notifications_active_rounded,
+          color: AppColors.success,
+          severity: 0,
+        );
       default:
         return ReasonVisual(
           icon: Icons.notifications_rounded,
@@ -113,6 +123,8 @@ class ReasonVisual {
         return l10n.guidanceDoubleParked;
       case 'private_property':
         return l10n.guidancePrivateProperty;
+      case 'test':
+        return l10n.guidanceTest;
       default:
         return l10n.guidanceOther;
     }
@@ -133,6 +145,8 @@ class ReasonVisual {
         return 'You are boxing someone in. They are waiting.';
       case 'private_property':
         return 'You are parked on private land. You may be asked to move.';
+      case 'test':
+        return 'You asked for this one. A real alert arrives exactly like it.';
       default:
         return 'Someone at your vehicle wanted you to know.';
     }

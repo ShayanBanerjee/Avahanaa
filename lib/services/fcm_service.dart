@@ -97,6 +97,31 @@ class FCMService {
         enableVibration: true,
       );
 
+  /// Where an alert lands once the owner's alert budget is spent.
+  ///
+  /// A real channel at default importance: it makes the phone's ordinary
+  /// notification sound once and then sits in the shade. It carries the alert's
+  /// own words — the reason someone scanned, and whatever they typed — because
+  /// hiding that behind an upsell would be withholding the thing the owner
+  /// actually needs. What it withholds is the *urgency*: no alarm tone, no
+  /// screen takeover, no escalating reminders.
+  ///
+  /// It has to be a separate channel rather than the alert channel posted at
+  /// lower priority. Android freezes a channel's importance the moment it is
+  /// created and lets the user own it thereafter; a sender cannot turn one
+  /// down. Two channels is the only way the distinction survives.
+  static final AndroidNotificationChannel _quietChannel =
+      AndroidNotificationChannel(
+        'avahanaa_quiet_notices_v1',
+        'Avahanaa Notices',
+        description:
+            'Alerts that arrive when your alert credits have run out, and '
+            'other non-urgent notices.',
+        importance: Importance.defaultImportance,
+        playSound: true,
+        enableVibration: true,
+      );
+
   static final AndroidNotificationChannel _legacyChannel =
       AndroidNotificationChannel(
         'congestion_free_channel',
@@ -198,6 +223,7 @@ class FCMService {
     await androidPlugin?.createNotificationChannel(_legacyChannel);
     await androidPlugin?.createNotificationChannel(_criticalChannelV2);
     await androidPlugin?.createNotificationChannel(_criticalChannel);
+    await androidPlugin?.createNotificationChannel(_quietChannel);
 
     // Asked for, never assumed. On Android 14+ this is only default-granted to
     // apps whose core function is calling or alarms, and Avahanaa is neither.
@@ -363,7 +389,12 @@ class FCMService {
 
     _markNotificationAsSeen(payload.notificationId, payload.sentAtUtc);
     await _showImmediateNotification(payload);
-    await _scheduleReminders(payload);
+    // The escalating ladder is the loud half of the product, and it is the half
+    // the alert budget actually meters. A quiet notice arrives once and then
+    // leaves the owner alone.
+    if (payload.tier == AlertTier.full) {
+      await _scheduleReminders(payload);
+    }
     await _persistState();
   }
 
@@ -492,6 +523,11 @@ class FCMService {
   static Future<void> _showImmediateNotification(
     NotificationPayload payload,
   ) async {
+    if (payload.tier == AlertTier.quiet) {
+      await _showQuietNotice(payload);
+      return;
+    }
+
     await _localNotifications.show(
       NotificationReminderIds.primaryId(payload.notificationId),
       payload.title,
@@ -524,6 +560,49 @@ class FCMService {
           presentBadge: true,
           presentSound: true,
           interruptionLevel: InterruptionLevel.critical,
+        ),
+      ),
+      payload: payload.toLocalPayloadString(isReminder: false, reminderStep: 0),
+    );
+  }
+
+  /// The same alert, without the alarm.
+  ///
+  /// Note what is kept: the title, the body, and the reply actions. Somebody
+  /// whose budget has run out can still tell the person at their car that they
+  /// are on the way, which is the half of the product that de-escalates the
+  /// moment — metering that would be metering the wrong thing entirely.
+  ///
+  /// What is dropped: the alarm channel, the alarm audio usage, the full-screen
+  /// intent, the heavy vibration, and the reminders.
+  static Future<void> _showQuietNotice(NotificationPayload payload) async {
+    await _localNotifications.show(
+      NotificationReminderIds.primaryId(payload.notificationId),
+      payload.title,
+      payload.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _quietChannel.id,
+          _quietChannel.name,
+          channelDescription: _quietChannel.description,
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          playSound: true,
+          enableVibration: true,
+          category: AndroidNotificationCategory.message,
+          visibility: NotificationVisibility.private,
+          styleInformation: BigTextStyleInformation(payload.body),
+          icon: '@mipmap/launcher_icon',
+          ticker: payload.title,
+          color: const Color(0xFFF59E0B),
+          channelAction: AndroidNotificationChannelAction.createIfNotExists,
+          actions: _replyActions(),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.active,
         ),
       ),
       payload: payload.toLocalPayloadString(isReminder: false, reminderStep: 0),

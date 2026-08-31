@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../models/alert_wallet.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
+import '../services/alert_credits.dart';
+import '../services/avahanaa_api.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
@@ -14,11 +17,12 @@ import '../l10n/locale_controller.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../utils/vehicle_registration_validator.dart';
-import '../widgets/admob_banner.dart';
 import '../widgets/hero_header.dart';
+import '../widgets/metal.dart';
 import '../widgets/ui_kit.dart';
 import 'auth/login_screen.dart';
 import 'legal_documents_screen.dart';
+import 'plans_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -33,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _currentUser = FirebaseAuth.instance.currentUser;
   final _fcmService = FCMService();
   bool _isUpdatingNotificationPreference = false;
+  bool _sendingTestAlert = false;
 
   @override
   Widget build(BuildContext context) {
@@ -95,22 +100,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 60),
+                                  delay: AppMotion.staggerFor(0),
                                   child: _buildVehiclesSection(user, vehicles),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 120),
+                                  delay: AppMotion.staggerFor(1),
                                   child: _buildStatsCard(),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 180),
+                                  delay: AppMotion.staggerFor(2),
                                   child: _buildAccountSection(user),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 240),
+                                  delay: AppMotion.staggerFor(3),
                                   child: _buildDangerZone(),
                                 ),
                               ],
@@ -124,7 +129,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
           ),
-          AdMobBanner(),
+          // The shell owns the single ad strip. All three tabs stay mounted in
+          // its IndexedStack, so a banner per tab meant three simultaneous ad
+          // loads and three WebViews for one visible slot.
         ],
       ),
     );
@@ -338,6 +345,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? l10n.profilePhoneNotSet
                     : user.phoneNumber,
                 onTap: () => _showEditPhoneSheet(user),
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              // Directly above the plan row on purpose. "Does this actually
+              // work on my phone?" and "what does it cost me?" are the two
+              // questions an owner has about a product they are trusting with
+              // something they cannot see, and they belong together.
+              AppListRow(
+                icon: Icons.notifications_active_rounded,
+                iconColor: AppColors.success,
+                title: l10n.selfTestTitle,
+                subtitle: _sendingTestAlert
+                    ? l10n.selfTestSending
+                    : l10n.selfTestSubtitle,
+                onTap: _sendingTestAlert ? null : _showSelfTestSheet,
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              // The plan row carries the live balance as its subtitle, so the
+              // number is findable somewhere permanent. The home screen only
+              // surfaces it when it is running out.
+              StreamBuilder<AlertWallet>(
+                stream: _firestoreService.streamAlertWallet(user.id),
+                builder: (context, snapshot) {
+                  final wallet = snapshot.data ?? AlertWallet.empty;
+                  final subscribed = wallet.isSubscribed();
+                  return AppListRow(
+                    icon: subscribed
+                        ? Icons.all_inclusive_rounded
+                        : Icons.bolt_rounded,
+                    iconColor: subscribed
+                        ? AppColors.success
+                        : AppColors.primary,
+                    title: l10n.settingsPlan,
+                    subtitle: subscribed
+                        ? l10n.planUnlimited
+                        : l10n.creditsRemainingShort(wallet.totalRemaining()),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PlansScreen(
+                          wallet: wallet,
+                          onWatchAd: () => AlertCredits.topUp(context),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
               AppListRow(
@@ -719,6 +771,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// pick a meaning for "off", and neither answer is right — a person who has
   /// their phone on a sunset schedule wants the app to follow it, and a person
   /// who wants dark at noon wants it pinned. A switch cannot say both.
+  /// Sends a real alert to this phone, and explains why that is worth doing.
+  ///
+  /// The sheet exists rather than a bare button because the test only helps if
+  /// the owner locks their phone to watch it land. Firing an alarm at somebody
+  /// who is staring at a settings screen proves that FCM works and nothing
+  /// about the thing they actually care about.
+  Future<void> _showSelfTestSheet() async {
+    final l10n = AppL10n.of(context);
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.hero),
+        ),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.md,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SheetGrabber(),
+              const SizedBox(height: AppSpacing.lg),
+              AppIconBadge(
+                icon: Icons.notifications_active_rounded,
+                color: AppColors.success,
+                size: 56,
+                iconSize: 28,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(l10n.selfTestSheetTitle, style: AppText.headlineMedium),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                l10n.selfTestSheetBody,
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              MetalButton(
+                label: l10n.selfTestSheetCta,
+                icon: Icons.send_rounded,
+                onPressed: () => Navigator.of(sheetContext).pop(true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    await _sendTestAlert();
+  }
+
+  Future<void> _sendTestAlert() async {
+    setState(() => _sendingTestAlert = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppL10n.of(context);
+
+    final result = await AvahanaaApi.instance.sendTestAlert();
+
+    if (!mounted) return;
+    setState(() => _sendingTestAlert = false);
+
+    showAppSnackBar(
+      messenger,
+      result.isOk ? l10n.selfTestSent : (result.error ?? l10n.selfTestSent),
+      kind: result.isOk ? AppSnackKind.success : AppSnackKind.error,
+    );
+  }
+
   Future<void> _showAppearanceSheet() async {
     final l10n = AppL10n.of(context);
     await showModalBottomSheet<void>(

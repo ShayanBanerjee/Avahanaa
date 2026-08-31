@@ -13,6 +13,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/notifications_screen.dart';
+import 'services/billing_service.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -73,6 +74,16 @@ void main() async {
           defaultTargetPlatform == TargetPlatform.iOS)) {
     unawaited(MobileAds.instance.initialize());
   }
+
+  // Connect to Google Play billing.
+  //
+  // Not awaited, for the same reason the ads init above it is not — it talks
+  // to Play Services. But it does have to be *started* here rather than on the
+  // plan screen: Play delivers a purchase asynchronously, sometimes minutes
+  // later when it was pending on a bank confirmation, and a purchase that
+  // arrives with nobody listening is a subscription that was paid for and
+  // never activated.
+  unawaited(BillingService.instance.start());
 
   // Initialize FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

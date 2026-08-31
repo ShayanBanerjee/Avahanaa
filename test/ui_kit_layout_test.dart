@@ -1,6 +1,12 @@
+import 'package:avahanaa/models/alert_wallet.dart';
+import 'package:avahanaa/models/scan_location.dart';
 import 'package:avahanaa/models/vehicle_model.dart';
+import 'package:avahanaa/services/alert_readiness.dart';
 import 'package:avahanaa/theme/app_theme.dart';
+import 'package:avahanaa/widgets/alert_credit_meter.dart';
+import 'package:avahanaa/widgets/alert_readiness_card.dart';
 import 'package:avahanaa/widgets/hero_header.dart';
+import 'package:avahanaa/widgets/scan_location_card.dart';
 import 'package:avahanaa/widgets/qr_visual.dart';
 import 'package:avahanaa/widgets/ui_kit.dart';
 import 'package:avahanaa/widgets/vehicle_panel.dart';
@@ -313,6 +319,94 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
   });
+
+  // The monetisation and diagnostic surfaces, at the same worst case. These
+  // are the newest cards in the app and the ones most likely to regress: the
+  // credit meter puts a metric-scale number beside two lines of prose, and the
+  // readiness card puts a full sentence beside a badge.
+  for (final scale in <double>[1.0, 1.6, 2.0]) {
+    group('new surfaces at ${scale}x text scale on a 320dp screen', () {
+      testWidgets('the credit meter card, with a full balance', (tester) async {
+        await pumpAtScale(
+          tester,
+          AlertCreditMeter(
+            wallet: AlertWallet(
+              cycleStartedAt: DateTime.now(),
+              earnedCredits: 9,
+            ),
+            onManage: () {},
+            onWatchAd: () {},
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+      });
+
+      testWidgets('the credit meter card, empty', (tester) async {
+        // The worst case for this widget: the longest copy, the amber
+        // treatment, and both buttons side by side on a 320dp row.
+        await pumpAtScale(
+          tester,
+          AlertCreditMeter(
+            wallet: AlertWallet(
+              cycleStartedAt: DateTime.now(),
+              freeUsed: AlertBudget.freeAlertsPerCycle,
+            ),
+            onManage: () {},
+            onWatchAd: () {},
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+      });
+
+      testWidgets('the credit meter, subscribed', (tester) async {
+        await pumpAtScale(
+          tester,
+          AlertCreditMeter(
+            wallet: AlertWallet(
+              plan: AvahanaaPlan.yearly,
+              planExpiresAt: DateTime.now().add(const Duration(days: 300)),
+            ),
+            onManage: () {},
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+      });
+
+      testWidgets('the readiness card at its longest', (tester) async {
+        await pumpAtScale(
+          tester,
+          AlertReadinessCard(
+            report: const ReadinessReport(
+              failures: {ReadinessCheck.notificationPermission},
+              advisories: {},
+            ),
+            onFixed: () {},
+            onOpenPreference: () {},
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+      });
+
+      testWidgets('the scan location card', (tester) async {
+        await pumpAtScale(
+          tester,
+          ScanLocationCard(
+            location: const ScanLocation(
+              latitude: 12.971,
+              longitude: 77.594,
+              accuracyMetres: 1200,
+            ),
+          ),
+          textScale: scale,
+        );
+        expectNoOverflow(tester);
+      });
+    });
+  }
 }
 
 /// Three vehicles with awkward values: a long descriptor, an empty one, and a

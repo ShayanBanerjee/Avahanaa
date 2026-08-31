@@ -378,5 +378,167 @@
   "paperA5Desc": "Half of A4 — one sticker fills it",
   "paperA6Desc": "Postcard size — a small windscreen tile",
   "paperLetterDesc": "US office paper",
-  "profileVehicleCountOne": "1 VEHICLE"
+  "profileVehicleCountOne": "1 VEHICLE",
+  "creditsTitle": "Alert credits",
+  "creditsRemaining": "{count} full-strength alerts left",
+  "@creditsRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsRemainingShort": "{count} alerts left",
+  "@creditsRemainingShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsEmptyShort": "Out of alerts",
+  "creditsEmptyTitle": "You're out of alert credits",
+  "creditsEmptyBody": "Alerts still reach you — quietly, without the alarm.",
+  "creditsBreakdown": "{free} free (resets in {days} days) · {earned} earned",
+  "@creditsBreakdown": {
+    "placeholders": {
+      "free": {
+        "type": "int"
+      },
+      "earned": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsEmergencyAlwaysFree": "Emergencies always ring at full volume, credits or not.",
+  "creditsWatchAd": "Watch {count} ads",
+  "@creditsWatchAd": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsGoUnlimited": "Go unlimited",
+  "creditsEarnedOne": "Credit added",
+  "creditsAdUnavailable": "No ad is available right now. Try again in a minute.",
+  "creditsAdDismissed": "Watch the whole ad to earn a credit.",
+  "plansTitle": "Never miss the one that matters",
+  "plansSubtitle": "{count} full-strength alerts a month are free, forever. Top up with ads, or take the meter off entirely.",
+  "@plansSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plansPromiseEmergency": "Emergencies are never metered. A fire, a crash or an injury rings your phone at full volume whatever your balance says.",
+  "plansPromiseNeverSilent": "You are never uncontactable. At zero credits alerts still arrive — quietly, without the alarm or the reminders.",
+  "plansPromisePrivate": "Whoever scans your sticker is told nothing about your plan, and still never learns who you are.",
+  "plansFreeOverline": "FREE",
+  "plansAdTitle": "Trade attention for alerts",
+  "plansAdBody": "Watch {ads} short ads, get {credits} more full-strength alerts. Each one is banked the moment it finishes — stop whenever you like.",
+  "@plansAdBody": {
+    "placeholders": {
+      "ads": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
+  "plansAdProgress": "{watched} of {total} watched this sitting",
+  "@plansAdProgress": {
+    "placeholders": {
+      "watched": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "plansAdCapped": "You're holding the maximum of {count} earned credits.",
+  "@plansAdCapped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plansAdCta": "Watch an ad",
+  "plansPaidOverline": "AVAHANAA PLUS",
+  "plansPaidTitle": "Take the meter off",
+  "plansChangeTitle": "Change your plan",
+  "plansRecommended": "POPULAR",
+  "plansCurrent": "CURRENT",
+  "plansSaving": "Save {percent}% against weekly",
+  "@plansSaving": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "planWeekly": "Weekly",
+  "planMonthly": "Monthly",
+  "planYearly": "Yearly",
+  "planFree": "Free",
+  "planPerWeek": "Billed every week",
+  "planPerMonth": "Billed every month",
+  "planPerYear": "Billed every year",
+  "planUnlimited": "Unlimited",
+  "planActiveTitle": "Avahanaa Plus is active",
+  "planActiveBody": "Unlimited full-strength alerts on every vehicle you own.",
+  "planRenewsOn": "Renews on {date}",
+  "@planRenewsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "planActivated": "Avahanaa Plus is active. Alerts are unlimited.",
+  "planPurchaseFailed": "Google Play could not complete that purchase.",
+  "planRestore": "Restore a previous purchase",
+  "planLegalNote": "Subscriptions renew automatically until cancelled. Manage or cancel any time in Google Play. Prices include taxes.",
+  "settingsPlan": "Alert credits & plan",
+  "reasonTest": "Test alert",
+  "guidanceTest": "You asked for this one. A real alert arrives exactly like it.",
+  "selfTestTitle": "Test the alarm",
+  "selfTestSubtitle": "Send yourself a real alert",
+  "selfTestSending": "Sending…",
+  "selfTestSent": "Sent. Lock your phone — it should go off within seconds.",
+  "selfTestSheetTitle": "Send yourself a real alert",
+  "selfTestSheetBody": "This walks the whole path a stranger's scan would: the same alarm, the same lock screen takeover, the same reminders. It costs no credits.\n\nIf nothing arrives, your phone is blocking Avahanaa in the background — the alerts screen will tell you how to fix it.",
+  "selfTestSheetCta": "Send the test alert",
+  "selfTestLockHint": "Lock your phone now, so you see what an alert really looks like.",
+  "alertsWhereTitle": "Where your vehicle is",
+  "alertsWhereApprox": "Approximate — tap to open in Maps",
+  "alertsWhereAccuracy": "Accurate to about {metres} m — tap to open in Maps",
+  "@alertsWhereAccuracy": {
+    "placeholders": {
+      "metres": {
+        "type": "int"
+      }
+    }
+  },
+  "alertsOpenInMaps": "Open in Maps",
+  "alertsNoMapApp": "No map app could open that location.",
+  "alertsWhereOverline": "WHERE",
+  "readinessPermissionTitle": "Alerts can't reach this phone",
+  "readinessPermissionBody": "Notifications are switched off for Avahanaa in your phone's settings. Nothing will arrive until they're back on — not even an emergency.",
+  "readinessPreferenceTitle": "You've paused your own alerts",
+  "readinessPreferenceBody": "Alerts are turned off in Avahanaa's settings. Your QR code still works, but nothing will reach you.",
+  "readinessTokenTitle": "This phone isn't registered yet",
+  "readinessTokenBody": "Avahanaa hasn't been able to register this device for alerts. Reopening the app usually fixes it.",
+  "readinessFullScreenTitle": "Alerts won't take over the lock screen",
+  "readinessFullScreenBody": "They'll still arrive and still make a noise — they just won't fill the screen when your phone is locked.",
+  "readinessGrantCta": "Turn alerts on",
+  "readinessPreferenceCta": "Open alert settings",
+  "readinessTokenCta": "Try again"
 }

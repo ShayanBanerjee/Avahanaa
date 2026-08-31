@@ -1,16 +1,22 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/notification_model.dart';
+import '../services/alert_readiness.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/notification_visuals.dart';
-import '../widgets/admob_banner.dart';
+import '../widgets/alert_readiness_card.dart';
 import '../widgets/alert_reply_panel.dart';
+import '../widgets/scan_location_card.dart';
 import '../widgets/ui_kit.dart';
+import 'home_screen.dart';
+import 'profile_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final String? initialNotificationId;
@@ -25,6 +31,39 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final _firestoreService = FirestoreService();
   final _currentUser = FirebaseAuth.instance.currentUser;
   bool _didHandleInitialNotification = false;
+
+  /// Whether this phone can actually be woken up.
+  ///
+  /// Held as state rather than recomputed in `build`, because inspecting it
+  /// touches platform channels and `build` runs on every keystroke of the
+  /// list beneath it. Refreshed on entry and whenever the app returns to the
+  /// foreground — which is exactly when somebody has come back from the
+  /// settings screen having fixed it.
+  ReadinessReport _readiness = ReadinessReport.healthy;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshReadiness());
+  }
+
+  Future<void> _refreshReadiness() async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    // The two pieces of state that live in Firestore rather than on the
+    // device. Read once rather than streamed: a permission diagnostic that
+    // repaints live is a diagnostic nobody asked for.
+    final profile = await _firestoreService.getUserData(user.uid);
+
+    final report = await AlertReadiness.inspect(
+      appPreferenceEnabled: profile?.notificationsEnabled ?? true,
+      hasStoredToken: (profile?.fcmToken ?? '').trim().isNotEmpty,
+    );
+
+    if (!mounted || report == _readiness) return;
+    setState(() => _readiness = report);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +107,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: Column(
         children: [
+          // Absent unless something is actually wrong. A permanent
+          // "notifications: OK" panel is read once and then never again, so by
+          // the time it turns red nobody is looking at it.
+          if (_readiness.hasAnything)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                0,
+              ),
+              child: AlertReadinessCard(
+                report: _readiness,
+                onFixed: _refreshReadiness,
+                onOpenPreference: _openAlertPreference,
+              ),
+            ),
           Expanded(
             child: StreamBuilder<List<NotificationModel>>(
               stream: _firestoreService.streamUserNotifications(
@@ -108,9 +164,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               },
             ),
           ),
-          AdMobBanner(),
+          // No ad strip here, and that is deliberate on two counts. It is a
+          // panic surface — somebody reading this screen is deciding whether to
+          // walk out of a meeting — and the design brief for those is one
+          // unmistakable action with nothing competing. And with all three tabs
+          // alive in the shell's IndexedStack, a banner here was a *second*
+          // banner loading beside the home tab's. The shell owns the one.
         ],
       ),
+    );
+  }
+
+  /// Sends the owner to the switch they turned off themselves.
+  ///
+  /// It lives on the profile screen, which is a sibling tab rather than
+  /// something this screen can push — so this asks the shell to switch tabs,
+  /// falling back to a push when the alerts screen was opened standalone from
+  /// a notification tap.
+  void _openAlertPreference() {
+    final shell = HomeScreenScope.maybeOf(context);
+    if (shell != null) {
+      shell.openProfileTab();
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
     );
   }
 
@@ -148,7 +226,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       entries.add(
         EntranceFade(
-          delay: Duration(milliseconds: 30 * (i.clamp(0, 8))),
+          delay: AppMotion.staggerFor(i),
           child: Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
             child: _NotificationCard(
@@ -598,6 +676,16 @@ class _NotificationDetailSheet extends StatelessWidget {
                 style: AppText.bodyLarge,
               ),
             ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+
+          // Only present when the person scanning chose to share it, which is
+          // the minority of alerts — so it sits above the timestamp rather
+          // than in a fixed slot, and its absence leaves no gap.
+          if (notification.location != null) ...[
+            Text(l10n.alertsWhereOverline, style: AppText.overline),
+            const SizedBox(height: AppSpacing.sm),
+            ScanLocationCard(location: notification.location!),
             const SizedBox(height: AppSpacing.xl),
           ],
 

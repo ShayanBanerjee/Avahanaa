@@ -963,4 +963,265 @@ class AppL10nKn extends AppL10n {
 
   @override
   String get profileVehicleCountOne => '1 ವಾಹನ';
+
+  @override
+  String get creditsTitle => 'ಎಚ್ಚರಿಕೆ ಕ್ರೆಡಿಟ್‌ಗಳು';
+
+  @override
+  String creditsRemaining(int count) {
+    return '$count ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳು ಬಾಕಿ';
+  }
+
+  @override
+  String creditsRemainingShort(int count) {
+    return '$count ಎಚ್ಚರಿಕೆಗಳು ಬಾಕಿ';
+  }
+
+  @override
+  String get creditsEmptyShort => 'ಎಚ್ಚರಿಕೆಗಳು ಮುಗಿದಿವೆ';
+
+  @override
+  String get creditsEmptyTitle => 'ನಿಮ್ಮ ಎಚ್ಚರಿಕೆ ಕ್ರೆಡಿಟ್‌ಗಳು ಮುಗಿದಿವೆ';
+
+  @override
+  String get creditsEmptyBody =>
+      'ಎಚ್ಚರಿಕೆಗಳು ಇನ್ನೂ ತಲುಪುತ್ತವೆ — ಅಲಾರಂ ಇಲ್ಲದೆ, ಮೌನವಾಗಿ.';
+
+  @override
+  String creditsBreakdown(int free, int earned, int days) {
+    return '$free ಉಚಿತ ($days ದಿನಗಳಲ್ಲಿ ಮರುಹೊಂದಿಕೆ) · $earned ಗಳಿಸಿದ್ದು';
+  }
+
+  @override
+  String get creditsEmergencyAlwaysFree =>
+      'ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು ಕ್ರೆಡಿಟ್ ಇರಲಿ ಇಲ್ಲದಿರಲಿ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತವೆ.';
+
+  @override
+  String creditsWatchAd(int count) {
+    return '$count ಜಾಹೀರಾತು ನೋಡಿ';
+  }
+
+  @override
+  String get creditsGoUnlimited => 'ಅನಿಯಮಿತ ಪಡೆಯಿರಿ';
+
+  @override
+  String get creditsEarnedOne => 'ಕ್ರೆಡಿಟ್ ಸೇರಿಸಲಾಗಿದೆ';
+
+  @override
+  String get creditsAdUnavailable =>
+      'ಈಗ ಯಾವುದೇ ಜಾಹೀರಾತು ಲಭ್ಯವಿಲ್ಲ. ಒಂದು ನಿಮಿಷದಲ್ಲಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get creditsAdDismissed => 'ಕ್ರೆಡಿಟ್ ಗಳಿಸಲು ಪೂರ್ಣ ಜಾಹೀರಾತು ನೋಡಿ.';
+
+  @override
+  String get plansTitle => 'ಮುಖ್ಯವಾದ ಎಚ್ಚರಿಕೆಯನ್ನು ಎಂದಿಗೂ ತಪ್ಪಿಸಬೇಡಿ';
+
+  @override
+  String plansSubtitle(int count) {
+    return 'ತಿಂಗಳಿಗೆ $count ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳು ಎಂದೆಂದಿಗೂ ಉಚಿತ. ಜಾಹೀರಾತುಗಳಿಂದ ತುಂಬಿಸಿ, ಅಥವಾ ಮಿತಿಯನ್ನೇ ತೆಗೆದುಹಾಕಿ.';
+  }
+
+  @override
+  String get plansPromiseEmergency =>
+      'ತುರ್ತು ಪರಿಸ್ಥಿತಿಗೆ ಎಂದಿಗೂ ಮಿತಿ ಇಲ್ಲ. ಬೆಂಕಿ, ಅಪಘಾತ ಅಥವಾ ಗಾಯ — ನಿಮ್ಮ ಬಾಕಿ ಏನೇ ಇರಲಿ, ಫೋನ್ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತದೆ.';
+
+  @override
+  String get plansPromiseNeverSilent =>
+      'ನೀವು ಎಂದಿಗೂ ಸಂಪರ್ಕಕ್ಕೆ ಸಿಗದವರಾಗುವುದಿಲ್ಲ. ಶೂನ್ಯ ಕ್ರೆಡಿಟ್‌ನಲ್ಲೂ ಎಚ್ಚರಿಕೆಗಳು ಬರುತ್ತವೆ — ಅಲಾರಂ ಮತ್ತು ಜ್ಞಾಪನೆಗಳಿಲ್ಲದೆ, ಮೌನವಾಗಿ.';
+
+  @override
+  String get plansPromisePrivate =>
+      'ನಿಮ್ಮ ಸ್ಟಿಕರ್ ಸ್ಕ್ಯಾನ್ ಮಾಡುವವರಿಗೆ ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಏನೂ ತಿಳಿಯುವುದಿಲ್ಲ, ಮತ್ತು ನೀವು ಯಾರೆಂದೂ ತಿಳಿಯುವುದಿಲ್ಲ.';
+
+  @override
+  String get plansFreeOverline => 'ಉಚಿತ';
+
+  @override
+  String get plansAdTitle => 'ಗಮನವನ್ನು ಎಚ್ಚರಿಕೆಗಳಾಗಿ ಬದಲಿಸಿ';
+
+  @override
+  String plansAdBody(int ads, int credits) {
+    return '$ads ಸಣ್ಣ ಜಾಹೀರಾತುಗಳನ್ನು ನೋಡಿ, ಇನ್ನೂ $credits ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಪಡೆಯಿರಿ. ಪ್ರತಿಯೊಂದೂ ಮುಗಿದ ಕ್ಷಣವೇ ಜಮೆಯಾಗುತ್ತದೆ — ಯಾವಾಗ ಬೇಕಾದರೂ ನಿಲ್ಲಿಸಿ.';
+  }
+
+  @override
+  String plansAdProgress(int watched, int total) {
+    return 'ಈ ಸಲ $total ರಲ್ಲಿ $watched ನೋಡಲಾಗಿದೆ';
+  }
+
+  @override
+  String plansAdCapped(int count) {
+    return 'ನೀವು ಗರಿಷ್ಠ $count ಗಳಿಸಿದ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಹೊಂದಿದ್ದೀರಿ.';
+  }
+
+  @override
+  String get plansAdCta => 'ಜಾಹೀರಾತು ನೋಡಿ';
+
+  @override
+  String get plansPaidOverline => 'ಅವಾಹನಾ ಪ್ಲಸ್';
+
+  @override
+  String get plansPaidTitle => 'ಮಿತಿಯನ್ನು ತೆಗೆದುಹಾಕಿ';
+
+  @override
+  String get plansChangeTitle => 'ನಿಮ್ಮ ಯೋಜನೆ ಬದಲಾಯಿಸಿ';
+
+  @override
+  String get plansRecommended => 'ಜನಪ್ರಿಯ';
+
+  @override
+  String get plansCurrent => 'ಪ್ರಸ್ತುತ';
+
+  @override
+  String plansSaving(int percent) {
+    return 'ವಾರದ ದರಕ್ಕಿಂತ $percent% ಉಳಿತಾಯ';
+  }
+
+  @override
+  String get planWeekly => 'ವಾರಕ್ಕೊಮ್ಮೆ';
+
+  @override
+  String get planMonthly => 'ತಿಂಗಳಿಗೊಮ್ಮೆ';
+
+  @override
+  String get planYearly => 'ವರ್ಷಕ್ಕೊಮ್ಮೆ';
+
+  @override
+  String get planFree => 'ಉಚಿತ';
+
+  @override
+  String get planPerWeek => 'ಪ್ರತಿ ವಾರ ಬಿಲ್ ಆಗುತ್ತದೆ';
+
+  @override
+  String get planPerMonth => 'ಪ್ರತಿ ತಿಂಗಳು ಬಿಲ್ ಆಗುತ್ತದೆ';
+
+  @override
+  String get planPerYear => 'ಪ್ರತಿ ವರ್ಷ ಬಿಲ್ ಆಗುತ್ತದೆ';
+
+  @override
+  String get planUnlimited => 'ಅನಿಯಮಿತ';
+
+  @override
+  String get planActiveTitle => 'ಅವಾಹನಾ ಪ್ಲಸ್ ಸಕ್ರಿಯವಾಗಿದೆ';
+
+  @override
+  String get planActiveBody =>
+      'ನಿಮ್ಮ ಎಲ್ಲಾ ವಾಹನಗಳಿಗೆ ಅನಿಯಮಿತ ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳು.';
+
+  @override
+  String planRenewsOn(String date) {
+    return '$date ರಂದು ನವೀಕರಣ';
+  }
+
+  @override
+  String get planActivated => 'ಅವಾಹನಾ ಪ್ಲಸ್ ಸಕ್ರಿಯವಾಗಿದೆ. ಎಚ್ಚರಿಕೆಗಳು ಅನಿಯಮಿತ.';
+
+  @override
+  String get planPurchaseFailed =>
+      'Google Play ಆ ಖರೀದಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಲಾಗಲಿಲ್ಲ.';
+
+  @override
+  String get planRestore => 'ಹಿಂದಿನ ಖರೀದಿಯನ್ನು ಮರುಸ್ಥಾಪಿಸಿ';
+
+  @override
+  String get planLegalNote =>
+      'ಚಂದಾದಾರಿಕೆಗಳು ರದ್ದುಗೊಳಿಸುವವರೆಗೆ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತವೆ. Google Play ನಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ನಿರ್ವಹಿಸಿ ಅಥವಾ ರದ್ದುಗೊಳಿಸಿ. ಬೆಲೆಗಳಲ್ಲಿ ತೆರಿಗೆ ಸೇರಿದೆ.';
+
+  @override
+  String get settingsPlan => 'ಎಚ್ಚರಿಕೆ ಕ್ರೆಡಿಟ್‌ಗಳು ಮತ್ತು ಯೋಜನೆ';
+
+  @override
+  String get reasonTest => 'ಪರೀಕ್ಷಾ ಎಚ್ಚರಿಕೆ';
+
+  @override
+  String get guidanceTest =>
+      'ಇದನ್ನು ನೀವೇ ಕೇಳಿದ್ದೀರಿ. ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಥೇಟ್ ಹೀಗೇ ಬರುತ್ತದೆ.';
+
+  @override
+  String get selfTestTitle => 'ಅಲಾರಂ ಪರೀಕ್ಷಿಸಿ';
+
+  @override
+  String get selfTestSubtitle => 'ನಿಮಗೇ ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸಿ';
+
+  @override
+  String get selfTestSending => 'ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…';
+
+  @override
+  String get selfTestSent =>
+      'ಕಳುಹಿಸಲಾಗಿದೆ. ಫೋನ್ ಲಾಕ್ ಮಾಡಿ — ಕೆಲವೇ ಕ್ಷಣಗಳಲ್ಲಿ ಮೊಳಗಬೇಕು.';
+
+  @override
+  String get selfTestSheetTitle => 'ನಿಮಗೇ ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸಿ';
+
+  @override
+  String get selfTestSheetBody =>
+      'ಅಪರಿಚಿತರ ಸ್ಕ್ಯಾನ್ ನಡೆಸುವ ಇಡೀ ಹಾದಿಯನ್ನೇ ಇದು ನಡೆಯುತ್ತದೆ: ಅದೇ ಅಲಾರಂ, ಅದೇ ಲಾಕ್ ಸ್ಕ್ರೀನ್, ಅದೇ ಜ್ಞಾಪನೆಗಳು. ಇದಕ್ಕೆ ಯಾವ ಕ್ರೆಡಿಟ್ ಖರ್ಚಾಗುವುದಿಲ್ಲ.\n\nಏನೂ ಬರದಿದ್ದರೆ, ನಿಮ್ಮ ಫೋನ್ ಹಿನ್ನೆಲೆಯಲ್ಲಿ ಅವಾಹನಾವನ್ನು ತಡೆಯುತ್ತಿದೆ — ಸರಿಪಡಿಸುವುದು ಹೇಗೆಂದು ಎಚ್ಚರಿಕೆಗಳ ಪರದೆ ತಿಳಿಸುತ್ತದೆ.';
+
+  @override
+  String get selfTestSheetCta => 'ಪರೀಕ್ಷಾ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸಿ';
+
+  @override
+  String get selfTestLockHint =>
+      'ಈಗ ಫೋನ್ ಲಾಕ್ ಮಾಡಿ, ಆಗ ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಹೇಗಿರುತ್ತದೆ ಎಂದು ಕಾಣುತ್ತದೆ.';
+
+  @override
+  String get alertsWhereTitle => 'ನಿಮ್ಮ ವಾಹನ ಎಲ್ಲಿದೆ';
+
+  @override
+  String get alertsWhereApprox => 'ಅಂದಾಜು — Maps ನಲ್ಲಿ ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ';
+
+  @override
+  String alertsWhereAccuracy(int metres) {
+    return 'ಸುಮಾರು $metres ಮೀ ನಿಖರ — Maps ನಲ್ಲಿ ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ';
+  }
+
+  @override
+  String get alertsOpenInMaps => 'Maps ನಲ್ಲಿ ತೆರೆಯಿರಿ';
+
+  @override
+  String get alertsNoMapApp => 'ಆ ಸ್ಥಳವನ್ನು ಯಾವ ನಕ್ಷೆ ಆ್ಯಪ್ ಕೂಡ ತೆರೆಯಲಾಗಲಿಲ್ಲ.';
+
+  @override
+  String get alertsWhereOverline => 'ಎಲ್ಲಿ';
+
+  @override
+  String get readinessPermissionTitle =>
+      'ಈ ಫೋನ್‌ಗೆ ಎಚ್ಚರಿಕೆಗಳು ತಲುಪಲಾಗುತ್ತಿಲ್ಲ';
+
+  @override
+  String get readinessPermissionBody =>
+      'ನಿಮ್ಮ ಫೋನ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅವಾಹನಾಗೆ ಅಧಿಸೂಚನೆಗಳು ಆಫ್ ಆಗಿವೆ. ಅವು ಮತ್ತೆ ಆನ್ ಆಗುವವರೆಗೆ ಏನೂ ಬರುವುದಿಲ್ಲ — ತುರ್ತು ಕೂಡ ಇಲ್ಲ.';
+
+  @override
+  String get readinessPreferenceTitle =>
+      'ನಿಮ್ಮ ಎಚ್ಚರಿಕೆಗಳನ್ನು ನೀವೇ ವಿರಾಮಗೊಳಿಸಿದ್ದೀರಿ';
+
+  @override
+  String get readinessPreferenceBody =>
+      'ಅವಾಹನಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಎಚ್ಚರಿಕೆಗಳು ಆಫ್ ಆಗಿವೆ. ನಿಮ್ಮ QR ಇನ್ನೂ ಕೆಲಸ ಮಾಡುತ್ತದೆ, ಆದರೆ ನಿಮಗೆ ಏನೂ ತಲುಪುವುದಿಲ್ಲ.';
+
+  @override
+  String get readinessTokenTitle => 'ಈ ಫೋನ್ ಇನ್ನೂ ನೋಂದಣಿಯಾಗಿಲ್ಲ';
+
+  @override
+  String get readinessTokenBody =>
+      'ಎಚ್ಚರಿಕೆಗಳಿಗಾಗಿ ಈ ಸಾಧನವನ್ನು ಅವಾಹನಾ ನೋಂದಾಯಿಸಲಾಗಿಲ್ಲ. ಆ್ಯಪ್ ಮತ್ತೆ ತೆರೆದರೆ ಸಾಮಾನ್ಯವಾಗಿ ಸರಿಯಾಗುತ್ತದೆ.';
+
+  @override
+  String get readinessFullScreenTitle =>
+      'ಎಚ್ಚರಿಕೆಗಳು ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಆವರಿಸುವುದಿಲ್ಲ';
+
+  @override
+  String get readinessFullScreenBody =>
+      'ಅವು ಇನ್ನೂ ಬರುತ್ತವೆ ಮತ್ತು ಶಬ್ದ ಮಾಡುತ್ತವೆ — ಫೋನ್ ಲಾಕ್ ಆಗಿದ್ದಾಗ ಪೂರ್ಣ ಪರದೆ ತುಂಬುವುದಿಲ್ಲ ಅಷ್ಟೇ.';
+
+  @override
+  String get readinessGrantCta => 'ಎಚ್ಚರಿಕೆಗಳನ್ನು ಆನ್ ಮಾಡಿ';
+
+  @override
+  String get readinessPreferenceCta => 'ಎಚ್ಚರಿಕೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ';
+
+  @override
+  String get readinessTokenCta => 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
 }

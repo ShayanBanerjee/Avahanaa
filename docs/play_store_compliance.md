@@ -44,6 +44,16 @@ registration/colour/model, and an FCM token. The form must match reality. When
 you add a field to `users`, `vehicles`, or `notifications`, check whether the
 Data Safety declaration still matches before the next upload.
 
+Added Sep 2026, and this batch **does** change the declaration:
+
+- **Purchase history** — new. Collected, not shared, for app functionality;
+  required once subscriptions ship.
+- **Approximate location** — new, from the person scanning rather than the
+  account holder. See the Location note below.
+- `users` gained the alert-budget fields and `notifications` gained
+  `deliveryTier` and `location`. Everything but `location` is app state rather
+  than a new kind of personal data.
+
 Added Aug 2026 and worth a look before submitting: `notifications` gained
 `acknowledgedAt`, `acknowledgementEta` and `statusToken`, and
 `qrCodes.metadata.vehicle` gained `licensePlateCanonical`. None of it is new
@@ -61,13 +71,74 @@ vehicles, linked `qrCodes`, and notifications. If you add a new user-owned
 collection, add it to that deletion path — an orphaned collection is a policy
 problem, not just a bug.
 
-**Ads.** AdMob banners appear on home, notifications, and profile. Ads must not
-overlap or be adjacent to interactive controls in a way that causes accidental
-clicks, and must not appear on the alert-acknowledgement path — an ad next to
-"I'm on my way" during an emergency is both a policy risk and a product failure.
-`AdMobBanner` correctly uses test ad units outside release mode; keep that.
+**Ads — CHANGED Sep 2026.** There is now exactly one banner, in the app shell
+above the nav bar, and it disappears for subscribers. The alerts screen has no
+banner at all: it is the alert-acknowledgement path, and an ad next to "I'm on
+my way" during an emergency is both a policy risk and a product failure.
 
-**Permissions.** Currently only `VIBRATE` and `POST_NOTIFICATIONS`. Every added
+Rewarded ads were added alongside it (`rewarded_ad_service.dart`). Two things
+Play and AdMob both care about:
+
+- **The reward must be disclosed before the ad plays.** The plan screen states
+  it — one ad, one alert — and the ad is only ever started by a button labelled
+  with what it buys. Never auto-play a rewarded ad, and never present one as
+  the price of something the user has already paid for.
+- **Test ad units outside release mode, always.** Both `AdMobBanner` and
+  `RewardedAdService` branch on `kReleaseMode`. Invalid traffic from a debug
+  build gets AdMob accounts suspended, and a suspension takes the banner and
+  the rewarded units down together.
+
+`RewardedAdService._liveUnitId` is currently a **placeholder** and must be
+replaced with a real unit id before a release build. See
+`docs/monetization.md`.
+
+**Subscriptions — NEW Sep 2026, review-visible.** Avahanaa Plus ships three
+Google Play subscriptions. Play's subscription policy has specific, enforced
+requirements, and the ones this app has to keep meeting:
+
+- **Price, period and renewal stated before purchase**, in the store's own
+  localised currency. The plan screen renders `ProductDetails.price` from Play
+  and never a hardcoded figure; the fallbacks in `billing_service.dart` are for
+  the frame before the store answers and for the store being unreachable.
+  Showing a rupee figure to somebody Play is charging in dollars is a violation.
+- **A restore path reachable from the UI.** "Restore a previous purchase" on the
+  plan screen.
+- **`completePurchase` on every purchase, without exception.** Play auto-refunds
+  any subscription left unacknowledged for three days, silently.
+- **No dark patterns.** The free tier and the ad path are presented as genuine
+  alternatives, because they are: three alerts a month covers most owners
+  outright. Do not reorder that screen to bury them.
+
+**Metering a safety alert.** The credit system puts a limit on alerts the owner
+*receives*, which is the part of this release most likely to draw a question —
+from review, from a user, or from a journalist. The answer has to be the same
+in all three cases and it has to be true:
+
+- `emergency` is never metered.
+- A spent budget produces a quieter alert, never a missing one. The record is
+  always written and the push is always sent.
+- The person scanning is told nothing about the owner's plan.
+
+`docs/monetization.md` carries the full argument. If any of those three stops
+being true, the feature is no longer defensible and should not ship.
+
+**Location — NEW Sep 2026, and it is not the app user's.** The scan page asks
+the *person scanning* for their browser location and attaches it to the alert
+so the owner knows which of their vehicles is involved and roughly where.
+
+No Android location permission is involved and none should be added — this is
+`navigator.geolocation` on the web page, subject to the browser's own prompt.
+But the data safety form still has to declare it, and it is worth wording
+carefully because the subject is a third party rather than the account holder:
+**approximate location, collected, optional, not shared, for app functionality.**
+
+The server rounds to three decimals (~110 m) before storing and never writes the
+raw fix. Keep it that way: precise coordinates of an anonymous passer-by,
+attached to a record the app then shows to a stranger, is a different product
+with a different risk profile.
+
+**Permissions.** Currently `VIBRATE`, `POST_NOTIFICATIONS` and
+`USE_FULL_SCREEN_INTENT`. Every added
 permission needs a justification in the listing. Location, camera, and contacts
 are all things this app can be tempted into — each one materially raises review
 risk. Prefer designs that do not need them.
@@ -93,3 +164,10 @@ details API key server-side and then dropped the API for a local regex
 7. Privacy policy and terms URLs return 200.
 8. If notification behaviour changed at all, write the release note explaining
    the user-facing effect, and be ready to justify it.
+9. Subscriptions: products active in Play Console, the service account granted
+   View financial data, RTDN topic wired, AdMob SSV callback URL set. A build
+   shipped without these presents as an empty paywall and ads that pay nothing.
+   `docs/monetization.md` → "What you have to do".
+10. Verify the meter's carve-outs on a real device before upload: a fourth alert
+   on a fresh account arrives quietly rather than not at all, and an
+   `emergency` at zero balance still alarms.

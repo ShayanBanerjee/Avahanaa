@@ -74,12 +74,74 @@ Indexes needed by existing queries (all three present in
 - `notifications(userId ASC, vehicleId ASC, sentAt DESC)` — used by
   `streamVehicleNotifications`
 
-## 5. Unbounded reads in notification counters
+## 5. Unbounded reads in notification counters — PARTLY CLOSED (Sep 2026)
 
-`getUnreadNotificationCount` and `getNotificationStats` fetch entire result sets
-and call `.length`. `streamUnreadNotificationCount` streams every unread doc just
-to count them, and it is attached at the top of `HomeScreen.build`, so it stays
-open the whole session. Use aggregate `count()` queries instead.
+`streamUnreadNotificationCount` no longer opens its own query. It is derived
+from `streamUserNotifications`, which is already live, already capped at 50 and
+already in memory — the separate `where('read', false)` listener was a second
+billed sync of substantially the same documents to answer a question the first
+one had already answered. The count is `.distinct()`, so the badge does not
+rebuild when an unrelated field changes.
+
+One behavioural difference: an owner with more than 50 unread alerts sees 50.
+The badge caps at 99+ anyway, and that situation means something has gone badly
+wrong regardless.
+
+Still open: `getUnreadNotificationCount` and `getNotificationStats` are one-shot
+`.get()`s that fetch whole result sets and call `.length`. They should be
+aggregate `count()` queries.
+
+## 5b. Screens shared four listeners on one document — CLOSED (Sep 2026)
+
+The shell keeps all three tabs alive in an `IndexedStack`, so every tab's
+`StreamBuilder` is mounted at once. That meant **four** live listeners on
+`users/{uid}` (the home tab's profile and wallet streams, and the profile tab's
+two), two on the vehicles subcollection, and three on `notifications` — each one
+its own socket target, its own billed sync and its own rebuild cascade.
+
+`FirestoreService` now memoises them in a `_SharedStream` that retains the last
+value and replays it to each new subscriber, because a late subscriber to a
+plain broadcast stream sees nothing until the next snapshot — which on a
+document that changes a few times a month is a profile tab that renders empty.
+
+The source subscriptions are deliberately never torn down; they are dropped
+wholesale by `FirestoreService.disposeSharedStreams()`, called from both
+`AuthService.signOut` and `deleteAccount`. **If a third sign-out path is ever
+added, it has to call it too** — a listener left open against rules that now
+deny it produces a stream of permission-denied errors attributed to a user who
+is no longer there.
+
+## 5c. One ad slot, not three — CLOSED (Sep 2026)
+
+`AdMobBanner` was mounted in all three tabs. Because the tabs stay alive, that
+was three simultaneous ad loads and three WebViews for one visible strip. The
+shell now owns the single instance, above the nav bar.
+
+The alerts screen lost its banner entirely and is not getting it back: it is a
+panic surface, and the design system's brief for those is one unmistakable
+action with nothing competing.
+
+## 5d. The meter is a paywall in front of a safety alert — BY DESIGN, watch it
+
+`docs/monetization.md` is the argument. In short: `emergency` is never metered,
+and a spent budget produces a *quiet* alert rather than a missing one — the
+document is always written and the push is always sent.
+
+Both carve-outs are single constants (`AlertBudget.emergencyIsAlwaysFree` in the
+app, `ALWAYS_FREE_REASONS` and the `TIER_QUIET` branch in the backend). They are
+the whole reason this feature is defensible, and `test/alert_wallet_test.dart`
+and `test/alert_tier_test.dart` exist to make removing one noisy.
+
+Two things to watch:
+
+- **The app and the backend each hold a copy of the budget numbers.** The
+  server's is authoritative; the app's exists so the UI can render a balance
+  without a round trip. If they drift, the app shows a wrong number and the
+  server still does the right thing — the correct direction to drift in, but
+  worth catching.
+- **`RewardedAdService._liveUnitId` is a placeholder**, not a real AdMob unit.
+  Release builds will fail to fill until it is replaced. See
+  `docs/monetization.md`, "What you have to do".
 
 ## 6. Thin test coverage — PARTLY CLOSED (Aug 2026)
 

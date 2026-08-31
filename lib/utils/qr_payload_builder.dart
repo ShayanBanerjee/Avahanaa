@@ -26,6 +26,15 @@ class QrPayloadBuilder {
     defaultValue: true,
   );
 
+  /// The host the stickers point at, for anything else that has to talk to the
+  /// same deployment.
+  ///
+  /// Exposed because the app's own API client ([AvahanaaApi]) must reach the
+  /// backend that serves these QR URLs, and a second `--dart-define` for the
+  /// same value is a staging build waiting to point half of itself at
+  /// production.
+  static String get redirectHost => _qrHost;
+
   static Map<String, dynamic> buildMetadata({
     required UserModel user,
     required VehicleModel vehicle,
