@@ -106,10 +106,10 @@ final class AvahanaaPalette {
   /// beside it.
   static const AvahanaaPalette light = AvahanaaPalette(
     brightness: Brightness.light,
-    primary: Color(0xFF2563EB),
-    primaryDark: Color(0xFF1D4ED8),
-    primaryDeep: Color(0xFF1E40AF),
-    primaryTint: Color(0xFFEFF6FF),
+    primary: Color(0xFF1F4FB8),
+    primaryDark: Color(0xFF193F96),
+    primaryDeep: Color(0xFF122A66),
+    primaryTint: Color(0xFFEDF2FB),
     success: Color(0xFF10B981),
     successDark: Color(0xFF047857),
     successTint: Color(0xFFECFDF5),
@@ -153,10 +153,10 @@ final class AvahanaaPalette {
   /// this separation instead.
   static const AvahanaaPalette dark = AvahanaaPalette(
     brightness: Brightness.dark,
-    primary: Color(0xFF63A4FF),
-    primaryDark: Color(0xFF8FC0FF),
-    primaryDeep: Color(0xFFB9D7FF),
-    primaryTint: Color(0xFF15263F),
+    primary: Color(0xFF6FA6F5),
+    primaryDark: Color(0xFF95BFF8),
+    primaryDeep: Color(0xFFBFD7FB),
+    primaryTint: Color(0xFF16233A),
     success: Color(0xFF34D399),
     successDark: Color(0xFF6EE7B7),
     successTint: Color(0xFF10281F),
@@ -186,17 +186,22 @@ final class AvahanaaPalette {
 /// The printable sticker and the QR code are physical objects. Dark mode is a
 /// property of a screen at night; a sheet of A4 does not have one.
 abstract final class AppPrint {
-  static const Color brandDeep = Color(0xFF1E40AF);
+  static const Color brandDeep = Color(0xFF122A66);
 
   /// The flat brand gradient for the **printed** sticker.
   ///
   /// On screen the same ramp is rendered as metal (`MetalPalette.brand`), but
   /// print is unforgiving: a five-stop metallic ramp bands and muddies on a
   /// consumer printer, so the sheet keeps the flat three-stop version.
+  /// The flat three-stop version of `MetalPalette.brand`.
+  ///
+  /// Kept in step with it deliberately: the sticker on the windscreen and the
+  /// hero in the app are the same object, and a brand that is bright blue on
+  /// paper and anodised steel on screen is two brands.
   static const List<Color> heroGradient = <Color>[
-    Color(0xFF2563EB),
-    Color(0xFF1D4ED8),
-    Color(0xFF10B981),
+    Color(0xFF1F4FB8),
+    Color(0xFF193F96),
+    Color(0xFF0E5E52),
   ];
 }
 
@@ -219,6 +224,11 @@ abstract final class AppColors {
   static bool get isDark => _active.isDark;
 
   // Brand ---------------------------------------------------------------
+  //
+  // The blue here is the same blue as `MetalPalette.brand.base`, deliberately.
+  // Before this the hero was one blue and every button, link and active nav
+  // item was a brighter one — which is the sort of mismatch nobody can name
+  // but everybody notices.
   static Color get primary => _active.primary;
   static Color get primaryDark => _active.primaryDark;
   static Color get primaryDeep => _active.primaryDeep;
@@ -300,14 +310,21 @@ abstract final class AppSpacing {
 }
 
 abstract final class AppRadius {
+  /// Tightened one step (Aug 2026), alongside the metal treatment.
+  ///
+  /// 16 and 24 read friendly — consumer, soft, a little generic. A machined
+  /// edge is precise, and the corner radius is most of what says which of
+  /// those a surface is. The step is small on purpose: the shapes should feel
+  /// more deliberate, not different.
+
   /// Inputs and buttons.
   static const double control = 12;
 
   /// Cards.
-  static const double card = 16;
+  static const double card = 14;
 
   /// Hero surfaces and the QR container.
-  static const double hero = 24;
+  static const double hero = 20;
 
   static const BorderRadius controlAll = BorderRadius.all(
     Radius.circular(control),
@@ -364,13 +381,66 @@ abstract final class AppShadows {
 }
 
 abstract final class AppMotion {
+  // -- Durations ---------------------------------------------------------
+  //
+  // Four steps, and everything in the app is one of them. Before this there
+  // were twenty-two hand-picked millisecond values scattered across the
+  // widgets, which is why nothing quite agreed with anything else: two things
+  // animating side by side at 300ms and 320ms do not read as deliberate, they
+  // read as sloppy.
+
+  /// A state flip the eye should barely register — a chip filling, a switch.
   static const Duration fast = Duration(milliseconds: 180);
+
+  /// The default. Anything entering, leaving, or resizing.
   static const Duration normal = Duration(milliseconds: 320);
+
+  /// A surface arriving, or a sheet settling.
   static const Duration slow = Duration(milliseconds: 520);
 
-  /// Entrance curve — decelerating, never bouncy. This is a utility app.
+  /// Long, ambient movement — the specular sweep, a skeleton shimmer. Not a
+  /// response to anything the user did, which is why it may take its time.
+  static const Duration ambient = Duration(milliseconds: 1250);
+
+  /// The pause between ambient passes.
+  ///
+  /// A highlight that never stops stops reading as metal and starts reading as
+  /// a loading state. The gap is the part that sells it.
+  static const Duration ambientRest = Duration(seconds: 9);
+
+  /// Between consecutive items in a list entrance.
+  ///
+  /// Small on purpose. A stagger you can count is a stagger that is showing
+  /// off; this one only has to stop eight cards arriving as one slab.
+  static const Duration stagger = Duration(milliseconds: 40);
+
+  /// How long a staggered run may take in total, however many items there are.
+  /// Past this the last card is arriving after the user has started reading.
+  static const Duration staggerCap = Duration(milliseconds: 320);
+
+  // -- Curves ------------------------------------------------------------
+
+  /// Entrance — decelerating, never bouncy. This is a utility app.
   static const Curve entrance = Curves.easeOutCubic;
+
+  /// For the one thing on screen that matters more than the rest.
   static const Curve emphasis = Curves.easeOutQuart;
+
+  /// Leaving. Slightly faster out than in, so dismissal feels obedient.
+  static const Curve exit = Curves.easeInCubic;
+
+  /// Ambient travel — symmetric, with no visible start or stop.
+  static const Curve ambientCurve = Curves.easeInOutSine;
+
+  /// The delay for item [index] in a staggered list, capped by [staggerCap].
+  static Duration staggerFor(int index) {
+    final ms = stagger.inMilliseconds * index;
+    return Duration(
+      milliseconds: ms > staggerCap.inMilliseconds
+          ? staggerCap.inMilliseconds
+          : ms,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

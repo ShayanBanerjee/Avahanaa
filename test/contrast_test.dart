@@ -40,26 +40,57 @@ const double kAaLarge = 3.0;
 
 void main() {
   group('white text on metal ramps', () {
-    const ramps = <String, MetalPalette>{
-      'brand': MetalPalette.brand,
-      'alert': MetalPalette.alert,
-      'success': MetalPalette.success,
-      'graphite': MetalPalette.graphite,
-    };
+    // `graphite` follows the theme, so it is audited in both palettes rather
+    // than whichever one happened to be active when the test ran.
+    void auditRamps(String label) {
+      final ramps = <String, MetalPalette>{
+        'brand': MetalPalette.brand,
+        'alert': MetalPalette.alert,
+        'success': MetalPalette.success,
+        'graphite': MetalPalette.graphite,
+      };
 
-    ramps.forEach((name, palette) {
-      test('$name clears AA body contrast at every stop', () {
-        for (final stop in palette.colors) {
-          final ratio = contrastRatio(AppColors.onDark, stop);
-          expect(
-            ratio,
-            greaterThanOrEqualTo(kAaBody),
-            reason:
-                '$name stop ${stop.toARGB32().toRadixString(16)} gives '
-                '${ratio.toStringAsFixed(2)}:1 against white, under $kAaBody',
-          );
-        }
+      ramps.forEach((name, palette) {
+        test('$label $name clears AA body contrast at every stop', () {
+          for (final stop in palette.colors) {
+            final ratio = contrastRatio(AppColors.onDark, stop);
+            expect(
+              ratio,
+              greaterThanOrEqualTo(kAaBody),
+              reason:
+                  '$label $name stop ${stop.toARGB32().toRadixString(16)} gives '
+                  '${ratio.toStringAsFixed(2)}:1 against white, under $kAaBody',
+            );
+          }
+        });
       });
+    }
+
+    group('light', () {
+      setUp(() => AppColors.usePalette(AvahanaaPalette.light));
+      auditRamps('light');
+    });
+
+    group('dark', () {
+      setUp(() => AppColors.usePalette(AvahanaaPalette.dark));
+      tearDown(() => AppColors.usePalette(AvahanaaPalette.light));
+      auditRamps('dark');
+    });
+
+    test('the card ramp stays near-flat', () {
+      // `slate` sits under body copy. If it ever develops a real gradient,
+      // text starts sitting on a moving highlight, which the design system
+      // forbids outright.
+      for (final palette in <MetalPalette>[
+        MetalPalette.slate,
+      ]) {
+        final spread = contrastRatio(palette.lift, palette.depth);
+        expect(
+          spread,
+          lessThan(1.25),
+          reason: 'the card ramp has become a visible gradient',
+        );
+      }
     });
   });
 
@@ -175,8 +206,8 @@ void main() {
     test('the print palette never follows the theme', () {
       // The sticker ends up as ink on paper. Dark mode is a property of a
       // screen at night; a sheet of A4 does not have one.
-      expect(AppPrint.heroGradient.first, const Color(0xFF2563EB));
-      expect(AppPrint.brandDeep, const Color(0xFF1E40AF));
+      expect(AppPrint.heroGradient.first, const Color(0xFF1F4FB8));
+      expect(AppPrint.brandDeep, const Color(0xFF122A66));
     });
   });
 }

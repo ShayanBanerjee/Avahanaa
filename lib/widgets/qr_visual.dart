@@ -550,7 +550,7 @@ class _BreathingRingState extends State<BreathingRing>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
-          final t = Curves.easeOut.transform(_controller.value);
+          final t = AppMotion.entrance.transform(_controller.value);
           return Container(
             width: widget.size * (0.82 + 0.18 * t),
             height: widget.size * (0.82 + 0.18 * t),

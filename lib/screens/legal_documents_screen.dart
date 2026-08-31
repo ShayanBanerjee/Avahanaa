@@ -66,7 +66,7 @@ class LegalDocumentsScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           EntranceFade(
-            delay: const Duration(milliseconds: 60),
+            delay: AppMotion.staggerFor(0),
             child: AppCard(
               padding: EdgeInsets.zero,
               child: Column(

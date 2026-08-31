@@ -25,7 +25,7 @@ Screens that serve both moments must be designed for panic first.
 
 | Token | Hex | Use |
 |---|---|---|
-| Primary | `#2563EB` | Buttons, links, active nav, focus rings |
+| Primary | `#1F4FB8` | Buttons, links, active nav, focus rings |
 | Success | `#10B981` | Confirmations, active QR state, "on my way" |
 | Alert | `#C81B30` | Alert notifications, unread badges, destructive actions |
 | Alert deep | `#A01625` | Escalated reminder alerts |
@@ -37,8 +37,14 @@ Screens that serve both moments must be designed for panic first.
 | Text tertiary | `#64748B` | Overlines, captions — still has to clear AA |
 | Border | `#E2E8F0` | Input borders, dividers |
 
-The splash and hero gradient runs `#2563EB` → `#10B981`, top-left to
-bottom-right.
+The splash and hero gradient runs `#1F4FB8` → `#0E5E52`, top-left to
+bottom-right — anodised steel-blue into deep teal.
+
+Deepened in Aug 2026. The previous `#2563EB` → `#10B981` is the most generic
+gradient on the internet; every generated landing page has it, and it made a
+shipped product look like a template. Same hue journey, half the shouting, and
+the worst ramp stop improved from 4.62:1 to 5.78:1 against white as a side
+effect.
 
 **The neutrals are slate, not grey.** They carry a few degrees of the brand's
 blue. Pure grey beside a saturated blue reads as two palettes that happened to
@@ -68,8 +74,21 @@ Surfaces are machined, not flat. Three things do the work, in
    entrance, then every ~9s. Continuous shimmer stops reading as premium and
    starts reading as a loading state, so the pause is the point.
 
-Palettes: `brand` (hero surfaces, primary buttons), `alert` (panic banner),
+Palettes: `brand` (hero surfaces, primary buttons), `slate` (every ordinary
+card — near-flat on purpose, so light falls the same way across the whole app
+rather than on five special cases), `alert` (panic banner),
 `success` (verify email), `graphite` (the QR bezel), `silver` (the plate).
+
+`graphite` is the only ramp that follows the theme, because it is *chrome*
+rather than identity — a dark housing on a dark ground disappears. The others
+represent something fixed (a brand, an emergency, a physical number plate) and
+look the same at midnight as at noon.
+
+**Motion is four durations and four curves, all in `AppMotion`.** Before Aug
+2026 there were twenty-two hand-picked millisecond values across the widgets;
+two things animating side by side at 300ms and 320ms do not read as
+deliberate, they read as sloppy. List entrances use `AppMotion.staggerFor(i)`,
+which caps the total run so the last card never arrives after the reader.
 
 **Never metallic**, and these are hard limits:
 
@@ -95,8 +114,9 @@ obviously fine measured at 3.8–4.1:1.
 
 ## Shape and spacing
 
-- Radius: **12** inputs and buttons, **16** cards, **24** hero surfaces and the
-  QR container.
+- Radius: **12** inputs and buttons, **14** cards, **20** hero surfaces and the
+  QR container. Tightened one step alongside the metal work — a machined edge
+  is precise, and the corner radius is most of what says so.
 - Card elevation is **0**. Depth comes from a soft shadow
   (`black.withOpacity(0.1)`, blur 20, offset `(0, 10)`) on hero surfaces only.
 - Padding: 16 standard, 24 section, 32 hero.

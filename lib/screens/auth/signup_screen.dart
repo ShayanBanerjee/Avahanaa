@@ -259,7 +259,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: AppSpacing.xxl),
 
                     EntranceFade(
-                      delay: const Duration(milliseconds: 80),
+                      delay: AppMotion.staggerFor(0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [

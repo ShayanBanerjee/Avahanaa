@@ -97,7 +97,7 @@ class BreathingPulse extends StatefulWidget {
     required this.child,
     this.minScale = 1.0,
     this.maxScale = 1.06,
-    this.duration = const Duration(milliseconds: 2600),
+    this.duration = const Duration(milliseconds: 2600), // shimmer cycle
   });
 
   final Widget child;
@@ -132,7 +132,7 @@ class _BreathingPulseState extends State<BreathingPulse>
       animation: _controller,
       child: widget.child,
       builder: (context, child) {
-        final t = Curves.easeInOut.transform(_controller.value);
+        final t = AppMotion.ambientCurve.transform(_controller.value);
         final scale = widget.minScale + (widget.maxScale - widget.minScale) * t;
         return Transform.scale(scale: scale, child: child);
       },
@@ -169,9 +169,25 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A card whose colour was not overridden gets the near-flat `slate` ramp
+    // rather than a single fill. It is almost imperceptible on its own — what
+    // it buys is that light falls the same way here as it does on the hero,
+    // the QR bezel and the plate, so the metallic treatment reads as one
+    // system instead of four special cases.
+    //
+    // An explicit colour still wins outright: tinted cards (info, alert,
+    // success) mean something, and a ramp across them would only muddy it.
+    final usesDefaultSurface = color == AppColors.surface;
+
     final decorated = DecoratedBox(
       decoration: BoxDecoration(
-        color: color,
+        color: usesDefaultSurface ? null : color,
+        gradient: usesDefaultSurface
+            ? MetalPalette.slate.gradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+            : null,
         borderRadius: AppRadius.cardAll,
         border: borderColor == null
             ? null
@@ -180,14 +196,32 @@ class AppCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: AppRadius.cardAll,
-        child: Material(
-          color: Colors.transparent,
-          child: onTap == null
-              ? Padding(padding: padding, child: child)
-              : InkWell(
-                  onTap: onTap,
-                  child: Padding(padding: padding, child: child),
+        child: Stack(
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: onTap == null
+                  ? Padding(padding: padding, child: child)
+                  : InkWell(
+                      onTap: onTap,
+                      child: Padding(padding: padding, child: child),
+                    ),
+            ),
+            // One hairline of light along the top edge. This is the whole
+            // difference between a filled rectangle and a milled one.
+            if (usesDefaultSurface)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: BevelHighlight(
+                    radius: AppRadius.card,
+                    // Much quieter than on a saturated metal surface. A card
+                    // is a place to read, not a thing to admire.
+                    opacity: AppColors.isDark ? 0.06 : 0.55,
+                    shade: AppColors.isDark ? 0.10 : 0.04,
+                  ),
                 ),
+              ),
+          ],
         ),
       ),
     );
