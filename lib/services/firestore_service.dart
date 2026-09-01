@@ -1,5 +1,4 @@
 import '../l10n/l10n_global.dart';
-import 'dart:async';
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,93 +10,26 @@ import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../utils/qr_payload_builder.dart';
+import 'shared_stream.dart';
 
-
-/// One Firestore listener, shared by everyone who wants it.
-///
-/// The app's shell keeps all three tabs alive in an `IndexedStack`, so their
-/// `StreamBuilder`s are all mounted at once. Before this, that meant **four**
-/// live listeners on `users/{uid}` — the home tab's profile stream and wallet
-/// stream, and the profile tab's two — plus two on the vehicles subcollection
-/// and three on `notifications`. Every one is its own socket target, its own
-/// billed document sync on every change, and its own rebuild cascade.
-///
-/// The awkward part is that a late subscriber to a plain broadcast stream sees
-/// nothing until the *next* snapshot. On a document that changes a handful of
-/// times a month, that is a profile tab which renders empty until something
-/// happens. So the latest value is retained and replayed to each new listener,
-/// which is what a `StreamBuilder` needs to paint its first frame.
-///
-/// The source subscription is deliberately never torn down. There is exactly
-/// one signed-in user, these live for as long as the app does, and a stream
-/// that closed when the last tab was disposed would fail to re-listen. They
-/// are dropped wholesale on sign-out by [FirestoreService.disposeSharedStreams].
-class _SharedStream<T> {
-  _SharedStream(Stream<T> source) {
-    _subscription = source.listen(
-      (event) {
-        _latest = event;
-        _hasLatest = true;
-        if (!_controller.isClosed) _controller.add(event);
-      },
-      onError: (Object error, StackTrace stack) {
-        if (!_controller.isClosed) _controller.addError(error, stack);
-      },
-    );
-  }
-
-  final StreamController<T> _controller = StreamController<T>.broadcast();
-  late final StreamSubscription<T> _subscription;
-
-  T? _latest;
-  bool _hasLatest = false;
-
-  Stream<T> get stream {
-    if (!_hasLatest) return _controller.stream;
-
-    // Subscribe first, then replay. Doing it the other way round drops any
-    // event that lands in the gap, which on a wallet is a credit that
-    // silently does not appear.
-    late final StreamController<T> out;
-    StreamSubscription<T>? forward;
-
-    out = StreamController<T>(
-      onListen: () {
-        forward = _controller.stream.listen(
-          out.add,
-          onError: out.addError,
-          onDone: out.close,
-        );
-        out.add(_latest as T);
-      },
-      onCancel: () => forward?.cancel(),
-    );
-
-    return out.stream;
-  }
-
-  Future<void> dispose() async {
-    await _subscription.cancel();
-    await _controller.close();
-  }
-}
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Live listeners, keyed by what they are watching.
+  /// Live listeners, keyed by what they are watching. See [SharedStream] for
+  /// why they replay their last value rather than being plain broadcasts.
   ///
   /// Static because every screen builds its own `FirestoreService()` — that is
   /// the existing convention and worth keeping, since the class is stateless
   /// apart from this. The cache has to outlive the instances for the sharing
   /// to mean anything.
-  static final Map<String, _SharedStream<Object?>> _sharedStreams = {};
+  static final Map<String, SharedStream<Object?>> _sharedStreams = {};
 
   Stream<T> _shared<T>(String key, Stream<T> Function() open) {
     final existing = _sharedStreams[key];
     if (existing != null) return existing.stream.cast<T>();
 
-    final shared = _SharedStream<Object?>(open().cast<Object?>());
+    final shared = SharedStream<Object?>(open().cast<Object?>());
     _sharedStreams[key] = shared;
     return shared.stream.cast<T>();
   }

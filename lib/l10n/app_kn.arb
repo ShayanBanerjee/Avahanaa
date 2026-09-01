@@ -458,5 +458,6 @@
   "readinessGrantCta": "ಎಚ್ಚರಿಕೆಗಳನ್ನು ಆನ್ ಮಾಡಿ",
   "readinessPreferenceCta": "ಎಚ್ಚರಿಕೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ",
   "readinessTokenCta": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-  "creditsEarnedPending": "ಜಾಹೀರಾತು ಪೂರ್ಣಗೊಂಡಿದೆ. ನಿಮ್ಮ ಕ್ರೆಡಿಟ್ ಶೀಘ್ರದಲ್ಲೇ ಕಾಣಿಸುತ್ತದೆ."
+  "creditsEarnedPending": "ಜಾಹೀರಾತು ಪೂರ್ಣಗೊಂಡಿದೆ. ನಿಮ್ಮ ಕ್ರೆಡಿಟ್ ಶೀಘ್ರದಲ್ಲೇ ಕಾಣಿಸುತ್ತದೆ.",
+  "readinessFullScreenCta": "ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಎಚ್ಚರಿಕೆಗಳಿಗೆ ಅನುಮತಿಸಿ"
 }

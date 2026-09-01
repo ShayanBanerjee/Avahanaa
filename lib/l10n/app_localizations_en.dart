@@ -1221,4 +1221,7 @@ class AppL10nEn extends AppL10n {
   @override
   String get creditsEarnedPending =>
       'Ad complete. Your credit will appear shortly.';
+
+  @override
+  String get readinessFullScreenCta => 'Allow lock screen alerts';
 }

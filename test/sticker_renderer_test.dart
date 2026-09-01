@@ -48,6 +48,10 @@ void main() {
       expect(bytes.sublist(0, 4), <int>[0x89, 0x50, 0x4E, 0x47]);
 
       if (outDir != null) {
+        // Create the directory rather than assuming it. STICKER_OUT is set by
+        // hand from the docs, and a missing directory failed the render tests
+        // with a PathNotFoundException that reads like the renderer broke.
+        await Directory(outDir).create(recursive: true);
         final file = File('$outDir/sticker-${style.name}.png');
         await file.writeAsBytes(bytes, flush: true);
       }

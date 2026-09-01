@@ -206,8 +206,34 @@ void main() {
     test('the print palette never follows the theme', () {
       // The sticker ends up as ink on paper. Dark mode is a property of a
       // screen at night; a sheet of A4 does not have one.
-      expect(AppPrint.heroGradient.first, const Color(0xFF1F4FB8));
-      expect(AppPrint.brandDeep, const Color(0xFF122A66));
+      //
+      // Asserts the *property* rather than specific hex values. The previous
+      // version pinned the literal blues, so a deliberate rebrand failed this
+      // test for the one reason it was never meant to catch — while a genuine
+      // regression, `AppPrint` quietly reading from the active palette, would
+      // have slipped straight through it.
+      AppColors.usePalette(AvahanaaPalette.light);
+      final lightGradient = List<Color>.from(AppPrint.heroGradient);
+      final lightDeep = AppPrint.brandDeep;
+
+      AppColors.usePalette(AvahanaaPalette.dark);
+      addTearDown(() => AppColors.usePalette(AvahanaaPalette.light));
+
+      expect(AppPrint.heroGradient, lightGradient);
+      expect(AppPrint.brandDeep, lightDeep);
+    });
+
+    test('the printed band still holds the white text on it', () {
+      // The sticker's header band carries white instruction text, and it is
+      // read through glass at arm's length. Whatever the brand becomes, every
+      // stop of the printed ramp has to keep that legible.
+      for (final stop in AppPrint.heroGradient) {
+        expect(
+          contrastRatio(const Color(0xFFFFFFFF), stop),
+          greaterThanOrEqualTo(kAaBody),
+          reason: 'printed band stop ${stop.toARGB32().toRadixString(16)}',
+        );
+      }
     });
   });
 }

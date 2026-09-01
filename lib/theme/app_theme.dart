@@ -106,10 +106,10 @@ final class AvahanaaPalette {
   /// beside it.
   static const AvahanaaPalette light = AvahanaaPalette(
     brightness: Brightness.light,
-    primary: Color(0xFF1F4FB8),
-    primaryDark: Color(0xFF193F96),
-    primaryDeep: Color(0xFF122A66),
-    primaryTint: Color(0xFFEDF2FB),
+    primary: Color(0xFF8A5A18),
+    primaryDark: Color(0xFF6E4712),
+    primaryDeep: Color(0xFF4A2F0B),
+    primaryTint: Color(0xFFFDF6EA),
     success: Color(0xFF10B981),
     successDark: Color(0xFF047857),
     successTint: Color(0xFFECFDF5),
@@ -119,18 +119,18 @@ final class AvahanaaPalette {
     alertTint: Color(0xFFFDE7EA),
     alertBorder: Color(0xFFF5A3AD),
     alertSurface: Color(0xFFFEF2F2),
-    warning: Color(0xFFB45309),
-    warningTint: Color(0xFFFFFBEB),
-    background: Color(0xFFF8FAFC),
+    warning: Color(0xFFC2410C),
+    warningTint: Color(0xFFFFF7ED),
+    background: Color(0xFFFAF9F7),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFF1F5F9),
-    infoSurface: Color(0xFFF0F9FF),
-    infoBorder: Color(0xFFD6ECFB),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF475569),
-    textTertiary: Color(0xFF64748B),
-    border: Color(0xFFE2E8F0),
-    borderStrong: Color(0xFFCBD5E1),
+    surfaceMuted: Color(0xFFF4F2EF),
+    infoSurface: Color(0xFFFAF6EF),
+    infoBorder: Color(0xFFEADFCB),
+    textPrimary: Color(0xFF1A1814),
+    textSecondary: Color(0xFF55504A),
+    textTertiary: Color(0xFF736C63),
+    border: Color(0xFFE6E1DA),
+    borderStrong: Color(0xFFCFC8BE),
   );
 
   /// The night palette.
@@ -153,10 +153,10 @@ final class AvahanaaPalette {
   /// this separation instead.
   static const AvahanaaPalette dark = AvahanaaPalette(
     brightness: Brightness.dark,
-    primary: Color(0xFF6FA6F5),
-    primaryDark: Color(0xFF95BFF8),
-    primaryDeep: Color(0xFFBFD7FB),
-    primaryTint: Color(0xFF16233A),
+    primary: Color(0xFFE8A33D),
+    primaryDark: Color(0xFFF0B95F),
+    primaryDeep: Color(0xFFF7D49A),
+    primaryTint: Color(0xFF2A2118),
     success: Color(0xFF34D399),
     successDark: Color(0xFF6EE7B7),
     successTint: Color(0xFF10281F),
@@ -166,18 +166,18 @@ final class AvahanaaPalette {
     alertTint: Color(0xFF3A1119),
     alertBorder: Color(0xFF7A2733),
     alertSurface: Color(0xFF2A0F14),
-    warning: Color(0xFFFBBF24),
-    warningTint: Color(0xFF2E2310),
-    background: Color(0xFF0B1220),
-    surface: Color(0xFF151E2E),
-    surfaceMuted: Color(0xFF1E2A3D),
-    infoSurface: Color(0xFF122436),
-    infoBorder: Color(0xFF24405C),
-    textPrimary: Color(0xFFF1F5F9),
-    textSecondary: Color(0xFFA9B8CD),
-    textTertiary: Color(0xFF8CA0B8),
-    border: Color(0xFF263449),
-    borderStrong: Color(0xFF3A4C66),
+    warning: Color(0xFFFB923C),
+    warningTint: Color(0xFF2E1D10),
+    background: Color(0xFF121110),
+    surface: Color(0xFF1C1A17),
+    surfaceMuted: Color(0xFF262320),
+    infoSurface: Color(0xFF241F17),
+    infoBorder: Color(0xFF3D352A),
+    textPrimary: Color(0xFFF5F2EE),
+    textSecondary: Color(0xFFB8B0A6),
+    textTertiary: Color(0xFF9A9289),
+    border: Color(0xFF322E29),
+    borderStrong: Color(0xFF4A443D),
   );
 }
 
@@ -186,7 +186,7 @@ final class AvahanaaPalette {
 /// The printable sticker and the QR code are physical objects. Dark mode is a
 /// property of a screen at night; a sheet of A4 does not have one.
 abstract final class AppPrint {
-  static const Color brandDeep = Color(0xFF122A66);
+  static const Color brandDeep = Color(0xFF1A1E24);
 
   /// The flat brand gradient for the **printed** sticker.
   ///
@@ -199,9 +199,9 @@ abstract final class AppPrint {
   /// hero in the app are the same object, and a brand that is bright blue on
   /// paper and anodised steel on screen is two brands.
   static const List<Color> heroGradient = <Color>[
-    Color(0xFF1F4FB8),
-    Color(0xFF193F96),
-    Color(0xFF0E5E52),
+    Color(0xFF23282F),
+    Color(0xFF1A1E24),
+    Color(0xFF3A2E1E),
   ];
 }
 

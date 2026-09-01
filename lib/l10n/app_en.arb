@@ -541,5 +541,6 @@
   "readinessGrantCta": "Turn alerts on",
   "readinessPreferenceCta": "Open alert settings",
   "readinessTokenCta": "Try again",
-  "creditsEarnedPending": "Ad complete. Your credit will appear shortly."
+  "creditsEarnedPending": "Ad complete. Your credit will appear shortly.",
+  "readinessFullScreenCta": "Allow lock screen alerts"
 }

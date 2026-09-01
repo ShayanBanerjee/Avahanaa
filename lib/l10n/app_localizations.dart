@@ -2316,6 +2316,12 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Ad complete. Your credit will appear shortly.'**
   String get creditsEarnedPending;
+
+  /// No description provided for @readinessFullScreenCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow lock screen alerts'**
+  String get readinessFullScreenCta;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

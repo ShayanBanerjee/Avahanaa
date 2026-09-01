@@ -81,11 +81,15 @@ class MetalPalette {
   /// copy across both. Measured, not eyeballed — see the ramp audit in
   /// `test/contrast_test.dart`.
   static const MetalPalette brand = MetalPalette(
-    lift: Color(0xFF1B5FD4),
-    base: Color(0xFF1F4FB8),
-    core: Color(0xFF193F96),
-    depth: Color(0xFF122A66),
-    catchLight: Color(0xFF0E5E52),
+    lift: Color(0xFF333A44),
+    base: Color(0xFF23282F),
+    core: Color(0xFF1A1E24),
+    depth: Color(0xFF101317),
+    // The warm corner. Everything else on this ramp is a cool graphite, and
+    // this one stop is the bronze the light is coming *from* — it is what
+    // stops the hero reading as a grey rectangle and makes the surface look
+    // lit rather than filled.
+    catchLight: Color(0xFF3A2E1E),
   );
 
   /// Brushed silver, for the registration plate.

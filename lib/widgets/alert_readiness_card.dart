@@ -139,6 +139,10 @@ class _AlertReadinessCardState extends State<AlertReadinessCard> {
   static String _cta(AppL10n l10n, ReadinessCheck check) => switch (check) {
     ReadinessCheck.appPreference => l10n.readinessPreferenceCta,
     ReadinessCheck.pushToken => l10n.readinessTokenCta,
-    _ => l10n.readinessGrantCta,
+    // Not "turn alerts on" — alerts *are* on in this case, and offering to
+    // turn on something already on reads as the app not knowing its own
+    // state. What is missing here is only the lock-screen takeover.
+    ReadinessCheck.fullScreenIntent => l10n.readinessFullScreenCta,
+    ReadinessCheck.notificationPermission => l10n.readinessGrantCta,
   };
 }

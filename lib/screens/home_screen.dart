@@ -9,6 +9,7 @@ import '../models/vehicle_model.dart';
 import '../services/ad_gate.dart';
 import '../services/alert_credits.dart';
 import '../services/firestore_service.dart';
+import '../services/shared_stream.dart';
 import '../services/rewarded_ad_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
@@ -90,16 +91,26 @@ class _HomeScreenState extends State<HomeScreen> {
   /// listeners on one collection, three sets of socket traffic, three rebuild
   /// cascades per alert. Held here and passed down instead.
   late final Stream<List<NotificationModel>> _notifications = _firestoreService
-      .streamUserNotifications(_currentUser!.uid)
-      .asBroadcastStream();
+      .streamUserNotifications(_currentUser!.uid);
 
   /// The alert budget, on the same one-listener-shared-by-everyone footing as
   /// [_notifications]. The hero line, the low-balance card and the ad gate all
   /// read it, and three listeners on one document is three sets of socket
   /// traffic for a value that changes a handful of times a month.
-  late final Stream<AlertWallet> _wallet = _firestoreService
-      .streamAlertWallet(_currentUser!.uid)
-      .asBroadcastStream();
+  ///
+  /// **Deliberately not wrapped in `asBroadcastStream()`.** It used to be, and
+  /// that was a bug: `asBroadcastStream` cancels its source the moment its last
+  /// listener leaves, and the wallet's `StreamBuilder` unmounts during the
+  /// skeleton-to-loaded transition. After that the stream was permanently done,
+  /// so the hero sat on "3 alerts left" while the profile tab — which rebuilds
+  /// its stream every frame and so keeps re-subscribing — correctly showed 0.
+  ///
+  /// [FirestoreService] already multiplexes the underlying listener and replays
+  /// the last value to each new subscriber, so the wrapper bought nothing and
+  /// cost delivery. See [SharedStream] and `test/shared_stream_test.dart`.
+  late final Stream<AlertWallet> _wallet = _firestoreService.streamAlertWallet(
+    _currentUser!.uid,
+  );
 
   /// Opens the plan picker.
   ///
