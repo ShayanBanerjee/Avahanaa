@@ -1,17 +1,25 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/alert_wallet.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
+import '../services/ad_gate.dart';
+import '../services/alert_credits.dart';
 import '../services/firestore_service.dart';
+import '../services/shared_stream.dart';
+import '../services/rewarded_ad_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../utils/qr_payload_builder.dart';
 import '../utils/sticker_renderer.dart';
 import '../utils/sticker_sheet.dart';
 import '../widgets/admob_banner.dart';
+import '../widgets/alert_credit_meter.dart';
 import '../widgets/alert_reply_panel.dart';
 import '../widgets/hero_header.dart';
 import '../widgets/metal.dart';
@@ -19,6 +27,7 @@ import '../widgets/qr_visual.dart';
 import '../widgets/ui_kit.dart';
 import '../widgets/vehicle_panel.dart';
 import 'notifications_screen.dart';
+import 'plans_screen.dart';
 import 'profile_screen.dart';
 import 'qr_code_screen.dart';
 
@@ -27,6 +36,35 @@ class HomeScreen extends StatefulWidget {
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+}
+
+/// Lets a tab ask the shell to switch to a different tab.
+///
+/// The alerts screen has one control it cannot operate: the owner's own
+/// "alerts on" switch, which lives on the profile tab. A sibling tab is not
+/// something it can push — pushing a second [ProfileScreen] on top would give
+/// the owner two of them and a back button that lands somewhere confusing.
+///
+/// Deliberately narrow. This is not a general-purpose app-wide store; it
+/// exposes exactly the one verb that has a caller, and adding a second should
+/// require the same justification this one had.
+class HomeScreenScope extends InheritedWidget {
+  const HomeScreenScope({
+    super.key,
+    required this.openProfileTab,
+    required super.child,
+  });
+
+  final VoidCallback openProfileTab;
+
+  /// Null when the screen was opened outside the shell — which happens for
+  /// real: a notification tap can push the alerts screen standalone.
+  static HomeScreenScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<HomeScreenScope>();
+
+  @override
+  bool updateShouldNotify(HomeScreenScope oldWidget) =>
+      openProfileTab != oldWidget.openProfileTab;
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -42,6 +80,18 @@ class _HomeScreenState extends State<HomeScreen> {
   /// view must not rewrite the account's primary vehicle.
   String? _viewedVehicleId;
 
+  @override
+  void initState() {
+    super.initState();
+    // The backend has no idea what "22:00" means without this, and somebody
+    // who has flown somewhere should not have their quiet hours shifted by
+    // five hours until they next happen to edit the setting.
+    final user = _currentUser;
+    if (user != null) {
+      unawaited(_firestoreService.syncTimezoneOffset(user.uid));
+    }
+  }
+
   void _openTab(int index) => setState(() => _selectedIndex = index);
 
   void _viewVehicle(VehicleModel vehicle) {
@@ -55,8 +105,42 @@ class _HomeScreenState extends State<HomeScreen> {
   /// listeners on one collection, three sets of socket traffic, three rebuild
   /// cascades per alert. Held here and passed down instead.
   late final Stream<List<NotificationModel>> _notifications = _firestoreService
-      .streamUserNotifications(_currentUser!.uid)
-      .asBroadcastStream();
+      .streamUserNotifications(_currentUser!.uid);
+
+  /// The alert budget, on the same one-listener-shared-by-everyone footing as
+  /// [_notifications]. The hero line, the low-balance card and the ad gate all
+  /// read it, and three listeners on one document is three sets of socket
+  /// traffic for a value that changes a handful of times a month.
+  ///
+  /// **Deliberately not wrapped in `asBroadcastStream()`.** It used to be, and
+  /// that was a bug: `asBroadcastStream` cancels its source the moment its last
+  /// listener leaves, and the wallet's `StreamBuilder` unmounts during the
+  /// skeleton-to-loaded transition. After that the stream was permanently done,
+  /// so the hero sat on "3 alerts left" while the profile tab — which rebuilds
+  /// its stream every frame and so keeps re-subscribing — correctly showed 0.
+  ///
+  /// [FirestoreService] already multiplexes the underlying listener and replays
+  /// the last value to each new subscriber, so the wrapper bought nothing and
+  /// cost delivery. See [SharedStream] and `test/shared_stream_test.dart`.
+  late final Stream<AlertWallet> _wallet = _firestoreService.streamAlertWallet(
+    _currentUser!.uid,
+  );
+
+  /// Opens the plan picker.
+  ///
+  /// Takes the wallet by value rather than letting the screen open its own
+  /// stream: the picker is pushed on top of a screen that is already listening,
+  /// and it only needs the balance as it was when the user tapped.
+  void _openPlans(AlertWallet wallet) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PlansScreen(
+          wallet: wallet,
+          onWatchAd: () => AlertCredits.topUp(context),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,17 +165,29 @@ class _HomeScreenState extends State<HomeScreen> {
           // IndexedStack keeps all three tabs alive (so scroll position and
           // Firestore listeners survive a tab switch); the fade just stops the
           // swap being a hard cut.
-          body: AnimatedSwitcher(
-            duration: AppMotion.fast,
-            child: KeyedSubtree(
-              key: ValueKey<int>(_selectedIndex),
-              child: IndexedStack(index: _selectedIndex, children: screens),
+          body: HomeScreenScope(
+            openProfileTab: () => _openTab(2),
+            child: AnimatedSwitcher(
+              duration: AppMotion.fast,
+              child: KeyedSubtree(
+                key: ValueKey<int>(_selectedIndex),
+                child: IndexedStack(index: _selectedIndex, children: screens),
+              ),
             ),
           ),
-          bottomNavigationBar: _AppNavBar(
-            currentIndex: _selectedIndex,
-            unreadCount: unreadCount,
-            onTap: _openTab,
+          // The app's only ad slot. Sits above the nav bar so it never covers
+          // a destination, and it removes itself for subscribers — see
+          // `ad_gate.dart`.
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AdMobBanner(),
+              _AppNavBar(
+                currentIndex: _selectedIndex,
+                unreadCount: unreadCount,
+                onTap: _openTab,
+              ),
+            ],
           ),
         );
       },
@@ -288,14 +384,26 @@ class _HomeTab extends StatelessWidget {
             }
 
             return _HomeScaffold(
-              child: _HomeBody(
-                state: state,
-                user: user,
-                vehicles: vehicles,
-                vehicle: vehicle,
-                unreadCount: unreadCount,
-                unread: unread,
-                onOpenInbox: onOpenInbox,
+              child: StreamBuilder<AlertWallet>(
+                stream: state._wallet,
+                builder: (context, walletSnapshot) {
+                  // `AlertWallet.empty` while the first snapshot is in flight,
+                  // which reads as a fresh cycle with the full free allowance.
+                  // The alternative — assuming zero — would flash "you're out
+                  // of alerts" on every cold start.
+                  final wallet = walletSnapshot.data ?? AlertWallet.empty;
+                  syncAdGateWithWallet(wallet);
+                  return _HomeBody(
+                    state: state,
+                    user: user,
+                    vehicles: vehicles,
+                    vehicle: vehicle,
+                    wallet: wallet,
+                    unreadCount: unreadCount,
+                    unread: unread,
+                    onOpenInbox: onOpenInbox,
+                  );
+                },
               ),
             );
           },
@@ -305,22 +413,20 @@ class _HomeTab extends StatelessWidget {
   }
 }
 
-/// Every home state shares the same shell: content above, ad strip pinned
-/// below. Keeping it in one place stops the ad from jumping between states.
+/// Every home state shares the same shell, so the layout does not jump between
+/// the skeleton, the empty state and the loaded screen.
+///
+/// The ad strip used to live here. It moved up to the app shell when it turned
+/// out that all three tabs stay mounted in an `IndexedStack` — so one banner
+/// per tab was three simultaneous ad loads, three WebViews and three sets of
+/// network traffic for a single visible slot.
 class _HomeScaffold extends StatelessWidget {
   const _HomeScaffold({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(child: child),
-        AdMobBanner(),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => child;
 }
 
 class _HomeBody extends StatelessWidget {
@@ -329,6 +435,7 @@ class _HomeBody extends StatelessWidget {
     required this.user,
     required this.vehicles,
     required this.vehicle,
+    required this.wallet,
     required this.unreadCount,
     required this.unread,
     required this.onOpenInbox,
@@ -338,6 +445,7 @@ class _HomeBody extends StatelessWidget {
   final UserModel user;
   final List<VehicleModel> vehicles;
   final VehicleModel vehicle;
+  final AlertWallet wallet;
   final int unreadCount;
   final List<NotificationModel> unread;
   final VoidCallback onOpenInbox;
@@ -366,9 +474,11 @@ class _HomeBody extends StatelessWidget {
             user: user,
             vehicle: vehicle,
             vehicles: vehicles,
+            wallet: wallet,
             isLive: isLive,
             unreadCount: unreadCount,
             onSelectVehicle: state._viewVehicle,
+            onOpenPlans: () => state._openPlans(wallet),
           ),
 
           // Panic mode: an unread alert outranks everything below it.
@@ -385,7 +495,7 @@ class _HomeBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 EntranceFade(
-                  delay: const Duration(milliseconds: 60),
+                  delay: AppMotion.staggerFor(0),
                   // Swiping the vehicle rail changes the code underneath it.
                   // Swapping it instantly reads as a glitch — the panel is the
                   // largest thing on the screen — so it cross-fades, keyed by
@@ -393,7 +503,7 @@ class _HomeBody extends StatelessWidget {
                   child: AnimatedSwitcher(
                     duration: AppMotion.normal,
                     switchInCurve: AppMotion.entrance,
-                    switchOutCurve: Curves.easeIn,
+                    switchOutCurve: AppMotion.exit,
                     layoutBuilder: (current, previous) => Stack(
                       alignment: Alignment.topCenter,
                       children: <Widget>[
@@ -410,9 +520,25 @@ class _HomeBody extends StatelessWidget {
                     ),
                   ),
                 ),
+                // The meter only shows itself when it is about to matter.
+                // A balance card sitting permanently under the QR would turn
+                // the home screen into a billing screen, and the whole design
+                // brief here is that nobody discovers the meter at the moment
+                // somebody is standing next to their car.
+                if (wallet.needsTopUp()) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  EntranceFade(
+                    delay: AppMotion.staggerFor(1),
+                    child: AlertCreditMeter(
+                      wallet: wallet,
+                      onManage: () => state._openPlans(wallet),
+                      onWatchAd: () => AlertCredits.topUp(context),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 EntranceFade(
-                  delay: const Duration(milliseconds: 120),
+                  delay: AppMotion.staggerFor(1),
                   child: _StatsRow(
                     unreadCount: unreadCount,
                     vehicleCount: vehicles.length,
@@ -421,12 +547,12 @@ class _HomeBody extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 EntranceFade(
-                  delay: const Duration(milliseconds: 180),
+                  delay: AppMotion.staggerFor(2),
                   child: _HowItWorksCard(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 EntranceFade(
-                  delay: const Duration(milliseconds: 240),
+                  delay: AppMotion.staggerFor(3),
                   child: _PrivacyPromiseCard(),
                 ),
               ],
@@ -447,17 +573,21 @@ class _HomeHero extends StatelessWidget {
     required this.user,
     required this.vehicle,
     required this.vehicles,
+    required this.wallet,
     required this.isLive,
     required this.unreadCount,
     required this.onSelectVehicle,
+    required this.onOpenPlans,
   });
 
   final UserModel user;
   final VehicleModel vehicle;
   final List<VehicleModel> vehicles;
+  final AlertWallet wallet;
   final bool isLive;
   final int unreadCount;
   final ValueChanged<VehicleModel> onSelectVehicle;
+  final VoidCallback onOpenPlans;
 
   /// Takes the localizations rather than reaching for a context — it is static,
   /// and the greeting is the first thing on the screen.
@@ -471,6 +601,17 @@ class _HomeHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppL10n.of(context);
+
+    // A rewarded ad takes a second or two to fetch, and the moment somebody
+    // taps "watch an ad" is the worst time to start. Warmed as soon as the
+    // balance is low enough that the button might get pressed. Cheap and
+    // idempotent — a fresh ad already in hand makes this a no-op.
+    if (wallet.needsTopUp()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        RewardedAdService.instance.preload();
+      });
+    }
+
     return HeroSurface(
       borderRadius: const BorderRadius.vertical(
         bottom: Radius.circular(AppRadius.hero),
@@ -501,12 +642,20 @@ class _HomeHero extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isLive
-                            ? l10n.homeVehicleReachable
-                            : l10n.homeQrPaused,
+                        isLive ? l10n.homeVehicleReachable : l10n.homeQrPaused,
                         style: AppText.headlineLarge.copyWith(
                           color: AppColors.onDark,
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      // The balance, one line, under the greeting. Small on
+                      // purpose: it is a thing to have glanced at, not a thing
+                      // to read. It grows into a card lower down the screen
+                      // only once it is nearly spent.
+                      AlertCreditMeter(
+                        wallet: wallet,
+                        size: CreditMeterSize.inline,
+                        onManage: onOpenPlans,
                       ),
                     ],
                   ),
@@ -679,7 +828,9 @@ class _StatsRow extends StatelessWidget {
             child: AppStatTile(
               icon: Icons.mark_email_unread_rounded,
               value: unreadCount.toString(),
-              label: unreadCount == 1 ? l10n.homeUnreadAlert : l10n.homeUnreadAlerts,
+              label: unreadCount == 1
+                  ? l10n.homeUnreadAlert
+                  : l10n.homeUnreadAlerts,
               color: unreadCount > 0 ? AppColors.alert : AppColors.primary,
             ),
           ),

@@ -61,8 +61,19 @@ class MetalPalette {
     return LinearGradient(begin: begin, end: end, colors: colors, stops: stops);
   }
 
-  /// Brand blue as anodised steel, running to a green catch-light — the
-  /// documented primary-to-success hero gradient, machined.
+  /// Brand blue as anodised steel, running to a deep teal catch-light.
+  ///
+  /// Deepened and desaturated (Aug 2026). The previous ramp ran a bright
+  /// `#2563EB` to a bright `#10B981`, which is the most generic gradient on
+  /// the internet — every generated landing page has it, and it made a product
+  /// that has survived Play review look like a weekend template. The hue
+  /// journey is the same, so the brand is still recognisably itself; it just
+  /// stops shouting. Contrast improved as a side effect: worst stop went from
+  /// 4.62:1 to 5.78:1 against white.
+  ///
+  /// `AppPrint.heroGradient` carries the flat three-stop version of this same
+  /// ramp, so the sticker on the windscreen and the hero in the app are the
+  /// same object.
   ///
   /// Every stop is clamped so white body text on it clears WCAG AA (4.5:1).
   /// The literal token values would not: `#5B95F7` gives 2.96:1 and the raw
@@ -70,11 +81,15 @@ class MetalPalette {
   /// copy across both. Measured, not eyeballed — see the ramp audit in
   /// `test/contrast_test.dart`.
   static const MetalPalette brand = MetalPalette(
-    lift: Color(0xFF1D6DF4),
-    base: Color(0xFF2563EB),
-    core: Color(0xFF1D4ED8),
-    depth: Color(0xFF17369E),
-    catchLight: Color(0xFF0B845C),
+    lift: Color(0xFF333A44),
+    base: Color(0xFF23282F),
+    core: Color(0xFF1A1E24),
+    depth: Color(0xFF101317),
+    // The warm corner. Everything else on this ramp is a cool graphite, and
+    // this one stop is the bronze the light is coming *from* — it is what
+    // stops the hero reading as a grey rectangle and makes the surface look
+    // lit rather than filled.
+    catchLight: Color(0xFF3A2E1E),
   );
 
   /// Brushed silver, for the registration plate.
@@ -86,13 +101,58 @@ class MetalPalette {
     catchLight: Color(0xFFF7F9FC),
   );
 
-  /// Graphite, for dark chrome.
-  static const MetalPalette graphite = MetalPalette(
+  /// Graphite, for dark chrome — the QR bezel.
+  ///
+  /// The only palette here that follows the theme, and for a reason the others
+  /// do not share: it is *chrome*, not identity. The brand ramp, the alert
+  /// banner, the plate and the success surface all represent something fixed —
+  /// a brand, an emergency, a physical number plate — so they look the same at
+  /// midnight as at noon. A bezel is just a housing, and a dark housing on a
+  /// dark ground disappears.
+  static MetalPalette get graphite =>
+      AppColors.isDark ? _graphiteDark : _graphiteLight;
+
+  static const MetalPalette _graphiteLight = MetalPalette(
     lift: Color(0xFF4A5464),
     base: Color(0xFF2E3644),
     core: Color(0xFF212836),
     depth: Color(0xFF161C27),
     catchLight: Color(0xFF39424F),
+  );
+
+  /// Lifted, so the bezel still reads as a raised housing rather than a hole.
+  static const MetalPalette _graphiteDark = MetalPalette(
+    lift: Color(0xFF39434F),
+    base: Color(0xFF242C38),
+    core: Color(0xFF1A202B),
+    depth: Color(0xFF11161F),
+    catchLight: Color(0xFF2B3440),
+  );
+
+  /// A near-flat ramp for ordinary card surfaces.
+  ///
+  /// This exists so the metallic treatment stops being five special cases. It
+  /// is deliberately almost imperceptible — a card is a place to read body
+  /// copy, and copy sits on solid ground. What it buys is that light falls the
+  /// same way across every surface in the app, which is the difference between
+  /// a design system and a set of screens that were styled separately.
+  static MetalPalette get slate =>
+      AppColors.isDark ? _slateDark : _slateLight;
+
+  static const MetalPalette _slateLight = MetalPalette(
+    lift: Color(0xFFFFFFFF),
+    base: Color(0xFFFDFDFE),
+    core: Color(0xFFF9FAFC),
+    depth: Color(0xFFF4F7FA),
+    catchLight: Color(0xFFFBFCFE),
+  );
+
+  static const MetalPalette _slateDark = MetalPalette(
+    lift: Color(0xFF1B2536),
+    base: Color(0xFF17202F),
+    core: Color(0xFF141C2A),
+    depth: Color(0xFF111826),
+    catchLight: Color(0xFF19222F),
   );
 
   /// Escalation red, machined. Used only by panic-mode surfaces, where the
@@ -244,7 +304,7 @@ class SheenSweep extends StatefulWidget {
   const SheenSweep({
     super.key,
     required this.child,
-    this.interval = const Duration(seconds: 9),
+    this.interval = AppMotion.ambientRest,
     this.intensity = 0.22,
     this.angle = 0.36,
   });
@@ -264,13 +324,13 @@ class _SheenSweepState extends State<SheenSweep>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1250),
+    duration: AppMotion.ambient,
   );
 
   @override
   void initState() {
     super.initState();
-    _schedule(const Duration(milliseconds: 420));
+    _schedule(AppMotion.slow);
   }
 
   void _schedule(Duration delay) {
@@ -307,7 +367,7 @@ class _SheenSweepState extends State<SheenSweep>
                 if (_controller.value == 0) {
                   return const SizedBox.shrink();
                 }
-                final t = Curves.easeInOutSine.transform(_controller.value);
+                final t = AppMotion.ambientCurve.transform(_controller.value);
                 // Travel from well before the surface to well past it, so the
                 // band enters and leaves rather than fading in place.
                 final x = -1.6 + 3.2 * t;
@@ -371,7 +431,7 @@ class _PressableScaleState extends State<PressableScale> {
       child: AnimatedScale(
         scale: _down ? widget.scale : 1.0,
         duration: AppMotion.fast,
-        curve: Curves.easeOut,
+        curve: AppMotion.entrance,
         child: widget.child,
       ),
     );
@@ -387,7 +447,7 @@ class AnimatedCounter extends StatelessWidget {
     super.key,
     required this.value,
     required this.style,
-    this.duration = const Duration(milliseconds: 720),
+    this.duration = AppMotion.slow,
   });
 
   final int value;

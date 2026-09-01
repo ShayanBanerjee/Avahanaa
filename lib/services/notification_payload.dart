@@ -2,6 +2,32 @@ import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+/// How loudly an alert is allowed to arrive.
+///
+/// The sender decides this — see `spendAlertBudget` in the backend — and the
+/// app obeys it. It is the only place the alert budget touches the alert path,
+/// and it touches it as one enum rather than as a balance, deliberately: the
+/// notification code has no business knowing what a credit is.
+enum AlertTier {
+  /// The alarm. Max-importance channel, alarm-stream audio, full-screen intent,
+  /// and the +3/+15 minute escalating reminders.
+  full,
+
+  /// A notice. Default importance, the phone's ordinary tone, no reminders and
+  /// no screen takeover. The alert still arrives and the record still exists —
+  /// what is withheld is the urgency, never the message.
+  quiet;
+
+  /// Parses the `tier` data key.
+  ///
+  /// Anything unrecognised — including the key being absent, which is every
+  /// push from a sender older than this feature — resolves to [full]. An old
+  /// backend must never be able to accidentally downgrade an alert, and a typo
+  /// in a future one must fail towards the alarm rather than away from it.
+  static AlertTier parse(String? value) =>
+      value == 'quiet' ? AlertTier.quiet : AlertTier.full;
+}
+
 class NotificationPayload {
   static const String vehicleAlertType = 'vehicle_alert';
   static const String defaultTitle = 'Vehicle alert';
@@ -15,6 +41,7 @@ class NotificationPayload {
   final String body;
   final String reason;
   final DateTime sentAtUtc;
+  final AlertTier tier;
 
   const NotificationPayload({
     required this.type,
@@ -23,6 +50,7 @@ class NotificationPayload {
     required this.body,
     required this.reason,
     required this.sentAtUtc,
+    this.tier = AlertTier.full,
   });
 
   bool get isVehicleAlert => type == vehicleAlertType;
@@ -69,6 +97,7 @@ class NotificationPayload {
         _firstNonEmpty([data['title'], fallbackTitle]) ?? defaultTitle;
     final body = _firstNonEmpty([data['body'], fallbackBody]) ?? defaultBody;
     final reason = _firstNonEmpty([data['reason']]) ?? defaultReason;
+    final tier = AlertTier.parse(_firstNonEmpty([data['tier']]));
 
     return NotificationPayload(
       type: type,
@@ -77,6 +106,7 @@ class NotificationPayload {
       body: body,
       reason: reason,
       sentAtUtc: sentAtUtc,
+      tier: tier,
     );
   }
 
@@ -88,6 +118,7 @@ class NotificationPayload {
       'body': body,
       'reason': reason,
       'sentAt': sentAtUtc.toIso8601String(),
+      'tier': tier.name,
     };
   }
 

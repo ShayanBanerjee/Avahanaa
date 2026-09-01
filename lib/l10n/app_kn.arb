@@ -295,5 +295,308 @@
   "paperA5Desc": "A4 ನ ಅರ್ಧ — ಒಂದು ಸ್ಟಿಕರ್ ತುಂಬುತ್ತದೆ",
   "paperA6Desc": "ಪೋಸ್ಟ್‌ಕಾರ್ಡ್ ಗಾತ್ರ — ಸಣ್ಣ ವಿಂಡ್‌ಸ್ಕ್ರೀನ್ ತುಣುಕು",
   "paperLetterDesc": "US ಕಚೇರಿ ಕಾಗದ",
-  "profileVehicleCountOne": "1 ವಾಹನ"
+  "profileVehicleCountOne": "1 ವಾಹನ",
+  "creditsTitle": "ಎಚ್ಚರಿಕೆ ಕ್ರೆಡಿಟ್‌ಗಳು",
+  "creditsRemaining": "{count} ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳು ಬಾಕಿ",
+  "@creditsRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsRemainingShort": "{count} ಎಚ್ಚರಿಕೆಗಳು ಬಾಕಿ",
+  "@creditsRemainingShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsEmptyShort": "ಎಚ್ಚರಿಕೆಗಳು ಮುಗಿದಿವೆ",
+  "creditsEmptyTitle": "ನಿಮ್ಮ ಎಚ್ಚರಿಕೆ ಕ್ರೆಡಿಟ್‌ಗಳು ಮುಗಿದಿವೆ",
+  "creditsEmptyBody": "ಎಚ್ಚರಿಕೆಗಳು ಇನ್ನೂ ತಲುಪುತ್ತವೆ — ಅಲಾರಂ ಇಲ್ಲದೆ, ಮೌನವಾಗಿ.",
+  "creditsBreakdown": "{free} ಉಚಿತ ({days} ದಿನಗಳಲ್ಲಿ ಮರುಹೊಂದಿಕೆ) · {earned} ಗಳಿಸಿದ್ದು",
+  "@creditsBreakdown": {
+    "placeholders": {
+      "free": {
+        "type": "int"
+      },
+      "earned": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsEmergencyAlwaysFree": "ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು ಕ್ರೆಡಿಟ್ ಇರಲಿ ಇಲ್ಲದಿರಲಿ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತವೆ.",
+  "creditsWatchAd": "{count} ಜಾಹೀರಾತು ನೋಡಿ",
+  "@creditsWatchAd": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditsGoUnlimited": "ಅನಿಯಮಿತ ಪಡೆಯಿರಿ",
+  "creditsEarnedOne": "ಕ್ರೆಡಿಟ್ ಸೇರಿಸಲಾಗಿದೆ",
+  "creditsAdUnavailable": "ಈಗ ಯಾವುದೇ ಜಾಹೀರಾತು ಲಭ್ಯವಿಲ್ಲ. ಒಂದು ನಿಮಿಷದಲ್ಲಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "creditsAdDismissed": "ಕ್ರೆಡಿಟ್ ಗಳಿಸಲು ಪೂರ್ಣ ಜಾಹೀರಾತು ನೋಡಿ.",
+  "plansTitle": "ಮುಖ್ಯವಾದ ಎಚ್ಚರಿಕೆಯನ್ನು ಎಂದಿಗೂ ತಪ್ಪಿಸಬೇಡಿ",
+  "plansSubtitle": "ತಿಂಗಳಿಗೆ {count} ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳು ಎಂದೆಂದಿಗೂ ಉಚಿತ. ಜಾಹೀರಾತುಗಳಿಂದ ತುಂಬಿಸಿ, ಅಥವಾ ಮಿತಿಯನ್ನೇ ತೆಗೆದುಹಾಕಿ.",
+  "@plansSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plansPromiseEmergency": "ತುರ್ತು ಪರಿಸ್ಥಿತಿಗೆ ಎಂದಿಗೂ ಮಿತಿ ಇಲ್ಲ. ಬೆಂಕಿ, ಅಪಘಾತ ಅಥವಾ ಗಾಯ — ನಿಮ್ಮ ಬಾಕಿ ಏನೇ ಇರಲಿ, ಫೋನ್ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತದೆ.",
+  "plansPromiseNeverSilent": "ನೀವು ಎಂದಿಗೂ ಸಂಪರ್ಕಕ್ಕೆ ಸಿಗದವರಾಗುವುದಿಲ್ಲ. ಶೂನ್ಯ ಕ್ರೆಡಿಟ್‌ನಲ್ಲೂ ಎಚ್ಚರಿಕೆಗಳು ಬರುತ್ತವೆ — ಅಲಾರಂ ಮತ್ತು ಜ್ಞಾಪನೆಗಳಿಲ್ಲದೆ, ಮೌನವಾಗಿ.",
+  "plansPromisePrivate": "ನಿಮ್ಮ ಸ್ಟಿಕರ್ ಸ್ಕ್ಯಾನ್ ಮಾಡುವವರಿಗೆ ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಏನೂ ತಿಳಿಯುವುದಿಲ್ಲ, ಮತ್ತು ನೀವು ಯಾರೆಂದೂ ತಿಳಿಯುವುದಿಲ್ಲ.",
+  "plansFreeOverline": "ಉಚಿತ",
+  "plansAdTitle": "ಗಮನವನ್ನು ಎಚ್ಚರಿಕೆಗಳಾಗಿ ಬದಲಿಸಿ",
+  "plansAdBody": "{ads} ಸಣ್ಣ ಜಾಹೀರಾತುಗಳನ್ನು ನೋಡಿ, ಇನ್ನೂ {credits} ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಪಡೆಯಿರಿ. ಪ್ರತಿಯೊಂದೂ ಮುಗಿದ ಕ್ಷಣವೇ ಜಮೆಯಾಗುತ್ತದೆ — ಯಾವಾಗ ಬೇಕಾದರೂ ನಿಲ್ಲಿಸಿ.",
+  "@plansAdBody": {
+    "placeholders": {
+      "ads": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
+  "plansAdProgress": "ಈ ಸಲ {total} ರಲ್ಲಿ {watched} ನೋಡಲಾಗಿದೆ",
+  "@plansAdProgress": {
+    "placeholders": {
+      "watched": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "plansAdCapped": "ನೀವು ಗರಿಷ್ಠ {count} ಗಳಿಸಿದ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಹೊಂದಿದ್ದೀರಿ.",
+  "@plansAdCapped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plansAdCta": "ಜಾಹೀರಾತು ನೋಡಿ",
+  "plansPaidOverline": "ಅವಾಹನಾ ಪ್ಲಸ್",
+  "plansPaidTitle": "ಮಿತಿಯನ್ನು ತೆಗೆದುಹಾಕಿ",
+  "plansChangeTitle": "ನಿಮ್ಮ ಯೋಜನೆ ಬದಲಾಯಿಸಿ",
+  "plansRecommended": "ಜನಪ್ರಿಯ",
+  "plansCurrent": "ಪ್ರಸ್ತುತ",
+  "plansSaving": "ವಾರದ ದರಕ್ಕಿಂತ {percent}% ಉಳಿತಾಯ",
+  "@plansSaving": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "planWeekly": "ವಾರಕ್ಕೊಮ್ಮೆ",
+  "planMonthly": "ತಿಂಗಳಿಗೊಮ್ಮೆ",
+  "planYearly": "ವರ್ಷಕ್ಕೊಮ್ಮೆ",
+  "planFree": "ಉಚಿತ",
+  "planPerWeek": "ಪ್ರತಿ ವಾರ ಬಿಲ್ ಆಗುತ್ತದೆ",
+  "planPerMonth": "ಪ್ರತಿ ತಿಂಗಳು ಬಿಲ್ ಆಗುತ್ತದೆ",
+  "planPerYear": "ಪ್ರತಿ ವರ್ಷ ಬಿಲ್ ಆಗುತ್ತದೆ",
+  "planUnlimited": "ಅನಿಯಮಿತ",
+  "planActiveTitle": "ಅವಾಹನಾ ಪ್ಲಸ್ ಸಕ್ರಿಯವಾಗಿದೆ",
+  "planActiveBody": "ನಿಮ್ಮ ಎಲ್ಲಾ ವಾಹನಗಳಿಗೆ ಅನಿಯಮಿತ ಪೂರ್ಣ-ಬಲದ ಎಚ್ಚರಿಕೆಗಳು.",
+  "planRenewsOn": "{date} ರಂದು ನವೀಕರಣ",
+  "@planRenewsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "planActivated": "ಅವಾಹನಾ ಪ್ಲಸ್ ಸಕ್ರಿಯವಾಗಿದೆ. ಎಚ್ಚರಿಕೆಗಳು ಅನಿಯಮಿತ.",
+  "planPurchaseFailed": "Google Play ಆ ಖರೀದಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಲಾಗಲಿಲ್ಲ.",
+  "planRestore": "ಹಿಂದಿನ ಖರೀದಿಯನ್ನು ಮರುಸ್ಥಾಪಿಸಿ",
+  "planLegalNote": "ಚಂದಾದಾರಿಕೆಗಳು ರದ್ದುಗೊಳಿಸುವವರೆಗೆ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತವೆ. Google Play ನಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ನಿರ್ವಹಿಸಿ ಅಥವಾ ರದ್ದುಗೊಳಿಸಿ. ಬೆಲೆಗಳಲ್ಲಿ ತೆರಿಗೆ ಸೇರಿದೆ.",
+  "settingsPlan": "ಎಚ್ಚರಿಕೆ ಕ್ರೆಡಿಟ್‌ಗಳು ಮತ್ತು ಯೋಜನೆ",
+  "reasonTest": "ಪರೀಕ್ಷಾ ಎಚ್ಚರಿಕೆ",
+  "guidanceTest": "ಇದನ್ನು ನೀವೇ ಕೇಳಿದ್ದೀರಿ. ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಥೇಟ್ ಹೀಗೇ ಬರುತ್ತದೆ.",
+  "selfTestTitle": "ಅಲಾರಂ ಪರೀಕ್ಷಿಸಿ",
+  "selfTestSubtitle": "ನಿಮಗೇ ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸಿ",
+  "selfTestSending": "ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…",
+  "selfTestSent": "ಕಳುಹಿಸಲಾಗಿದೆ. ಫೋನ್ ಲಾಕ್ ಮಾಡಿ — ಕೆಲವೇ ಕ್ಷಣಗಳಲ್ಲಿ ಮೊಳಗಬೇಕು.",
+  "selfTestSheetTitle": "ನಿಮಗೇ ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸಿ",
+  "selfTestSheetBody": "ಅಪರಿಚಿತರ ಸ್ಕ್ಯಾನ್ ನಡೆಸುವ ಇಡೀ ಹಾದಿಯನ್ನೇ ಇದು ನಡೆಯುತ್ತದೆ: ಅದೇ ಅಲಾರಂ, ಅದೇ ಲಾಕ್ ಸ್ಕ್ರೀನ್, ಅದೇ ಜ್ಞಾಪನೆಗಳು. ಇದಕ್ಕೆ ಯಾವ ಕ್ರೆಡಿಟ್ ಖರ್ಚಾಗುವುದಿಲ್ಲ.\n\nಏನೂ ಬರದಿದ್ದರೆ, ನಿಮ್ಮ ಫೋನ್ ಹಿನ್ನೆಲೆಯಲ್ಲಿ ಅವಾಹನಾವನ್ನು ತಡೆಯುತ್ತಿದೆ — ಸರಿಪಡಿಸುವುದು ಹೇಗೆಂದು ಎಚ್ಚರಿಕೆಗಳ ಪರದೆ ತಿಳಿಸುತ್ತದೆ.",
+  "selfTestSheetCta": "ಪರೀಕ್ಷಾ ಎಚ್ಚರಿಕೆ ಕಳುಹಿಸಿ",
+  "selfTestLockHint": "ಈಗ ಫೋನ್ ಲಾಕ್ ಮಾಡಿ, ಆಗ ನಿಜವಾದ ಎಚ್ಚರಿಕೆ ಹೇಗಿರುತ್ತದೆ ಎಂದು ಕಾಣುತ್ತದೆ.",
+  "alertsWhereTitle": "ನಿಮ್ಮ ವಾಹನ ಎಲ್ಲಿದೆ",
+  "alertsWhereApprox": "ಅಂದಾಜು — Maps ನಲ್ಲಿ ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+  "alertsWhereAccuracy": "ಸುಮಾರು {metres} ಮೀ ನಿಖರ — Maps ನಲ್ಲಿ ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+  "@alertsWhereAccuracy": {
+    "placeholders": {
+      "metres": {
+        "type": "int"
+      }
+    }
+  },
+  "alertsOpenInMaps": "Maps ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+  "alertsNoMapApp": "ಆ ಸ್ಥಳವನ್ನು ಯಾವ ನಕ್ಷೆ ಆ್ಯಪ್ ಕೂಡ ತೆರೆಯಲಾಗಲಿಲ್ಲ.",
+  "alertsWhereOverline": "ಎಲ್ಲಿ",
+  "readinessPermissionTitle": "ಈ ಫೋನ್‌ಗೆ ಎಚ್ಚರಿಕೆಗಳು ತಲುಪಲಾಗುತ್ತಿಲ್ಲ",
+  "readinessPermissionBody": "ನಿಮ್ಮ ಫೋನ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅವಾಹನಾಗೆ ಅಧಿಸೂಚನೆಗಳು ಆಫ್ ಆಗಿವೆ. ಅವು ಮತ್ತೆ ಆನ್ ಆಗುವವರೆಗೆ ಏನೂ ಬರುವುದಿಲ್ಲ — ತುರ್ತು ಕೂಡ ಇಲ್ಲ.",
+  "readinessPreferenceTitle": "ನಿಮ್ಮ ಎಚ್ಚರಿಕೆಗಳನ್ನು ನೀವೇ ವಿರಾಮಗೊಳಿಸಿದ್ದೀರಿ",
+  "readinessPreferenceBody": "ಅವಾಹನಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಎಚ್ಚರಿಕೆಗಳು ಆಫ್ ಆಗಿವೆ. ನಿಮ್ಮ QR ಇನ್ನೂ ಕೆಲಸ ಮಾಡುತ್ತದೆ, ಆದರೆ ನಿಮಗೆ ಏನೂ ತಲುಪುವುದಿಲ್ಲ.",
+  "readinessTokenTitle": "ಈ ಫೋನ್ ಇನ್ನೂ ನೋಂದಣಿಯಾಗಿಲ್ಲ",
+  "readinessTokenBody": "ಎಚ್ಚರಿಕೆಗಳಿಗಾಗಿ ಈ ಸಾಧನವನ್ನು ಅವಾಹನಾ ನೋಂದಾಯಿಸಲಾಗಿಲ್ಲ. ಆ್ಯಪ್ ಮತ್ತೆ ತೆರೆದರೆ ಸಾಮಾನ್ಯವಾಗಿ ಸರಿಯಾಗುತ್ತದೆ.",
+  "readinessFullScreenTitle": "ಎಚ್ಚರಿಕೆಗಳು ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಆವರಿಸುವುದಿಲ್ಲ",
+  "readinessFullScreenBody": "ಅವು ಇನ್ನೂ ಬರುತ್ತವೆ ಮತ್ತು ಶಬ್ದ ಮಾಡುತ್ತವೆ — ಫೋನ್ ಲಾಕ್ ಆಗಿದ್ದಾಗ ಪೂರ್ಣ ಪರದೆ ತುಂಬುವುದಿಲ್ಲ ಅಷ್ಟೇ.",
+  "readinessGrantCta": "ಎಚ್ಚರಿಕೆಗಳನ್ನು ಆನ್ ಮಾಡಿ",
+  "readinessPreferenceCta": "ಎಚ್ಚರಿಕೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ",
+  "readinessTokenCta": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  "creditsEarnedPending": "ಜಾಹೀರಾತು ಪೂರ್ಣಗೊಂಡಿದೆ. ನಿಮ್ಮ ಕ್ರೆಡಿಟ್ ಶೀಘ್ರದಲ್ಲೇ ಕಾಣಿಸುತ್ತದೆ.",
+  "readinessFullScreenCta": "ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಎಚ್ಚರಿಕೆಗಳಿಗೆ ಅನುಮತಿಸಿ",
+  "errQuietHours": "ನಿಮ್ಮ ಶಾಂತ ಸಮಯವನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "quietHoursTitle": "ಶಾಂತ ಸಮಯ",
+  "quietHoursOff": "ಆಫ್ — ಎಚ್ಚರಿಕೆಗಳು ಯಾವಾಗಲೂ ಮೊಳಗುತ್ತವೆ",
+  "quietHoursRange": "{start} ರಿಂದ {end}",
+  "@quietHoursRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "quietHoursSheetTitle": "ಶಾಂತ ಸಮಯ",
+  "quietHoursSheetBody": "ಈ ಸಮಯದ ನಡುವೆ ಸಾಮಾನ್ಯ ಎಚ್ಚರಿಕೆಗಳು ಅಲಾರಂ ಇಲ್ಲದೆ ಬರುತ್ತವೆ — ನಿಮ್ಮ ಫೋನಿನ ಸಾಮಾನ್ಯ ಶಬ್ದ, ಒಮ್ಮೆ ಮಾತ್ರ, ಜ್ಞಾಪನೆಗಳಿಲ್ಲದೆ.\n\nಅವು ಬರುತ್ತವೆ. ನೀವು ಉತ್ತರಿಸಬಹುದು. ನಿಮ್ಮಿಂದ ಏನನ್ನೂ ಮರೆಮಾಡುವುದಿಲ್ಲ.",
+  "quietHoursEmergencyNote": "ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು ಶಾಂತ ಸಮಯವನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ನಿರ್ಲಕ್ಷಿಸಿ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತವೆ.",
+  "quietHoursEnable": "ರಾತ್ರಿ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಶಾಂತಗೊಳಿಸಿ",
+  "quietHoursFrom": "ಇಂದ",
+  "quietHoursTo": "ವರೆಗೆ",
+  "quietHoursAllDayWarning": "ಅದು ಇಡೀ ದಿನವನ್ನು ಆವರಿಸುತ್ತದೆ — ಎಚ್ಚರಿಕೆಗಳು ಎಂದಿಗೂ ಮೊಳಗುವುದಿಲ್ಲ. ಚಿಕ್ಕ ಅವಧಿಯನ್ನು ಆರಿಸಿ.",
+  "quietHoursSaved": "ಶಾಂತ ಸಮಯ ಉಳಿಸಲಾಗಿದೆ.",
+  "commonSave": "ಉಳಿಸಿ",
+  "insightsOverline": "ನಿಮ್ಮ ಎಚ್ಚರಿಕೆಗಳು",
+  "insightsResponseTitle": "ನೀವು ಸಾಮಾನ್ಯವಾಗಿ {duration} ನಲ್ಲಿ ಉತ್ತರಿಸುತ್ತೀರಿ",
+  "@insightsResponseTitle": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsNoResponsesTitle": "ನೀವು ಇನ್ನೂ ಯಾವ ಎಚ್ಚರಿಕೆಗೂ ಉತ್ತರಿಸಿಲ್ಲ",
+  "insightsWindow": "ನಿಮ್ಮ ಕೊನೆಯ {count} ಎಚ್ಚರಿಕೆಗಳಿಂದ",
+  "@insightsWindow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsThisMonth": "ಈ ತಿಂಗಳು",
+  "insightsAnswered": "ಉತ್ತರಿಸಿದ್ದು",
+  "insightsEmergencies": "ತುರ್ತುಗಳು",
+  "insightsTopReason": "ಹೆಚ್ಚಾಗಿ: {reason} ({count})",
+  "@insightsTopReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsTopVehicle": "ಹೆಚ್ಚು ಎಚ್ಚರಿಕೆ ಬಂದ ವಾಹನ: {plate}",
+  "@insightsTopVehicle": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsBusiestHour": "{hour} ಸುಮಾರಿಗೆ ಹೆಚ್ಚು",
+  "@insightsBusiestHour": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsSeconds": "{count} ಸೆಕೆಂಡ್",
+  "@insightsSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsMinutes": "{count} ನಿಮಿಷ",
+  "@insightsMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsHours": "{count} ಗಂಟೆ",
+  "@insightsHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsEmergencyCount": "{count, plural, one{1 ತುರ್ತು ಪರಿಸ್ಥಿತಿ} other{{count} ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು}}",
+  "@insightsEmergencyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareHeadline": "ನನ್ನ ವಾಹನಕ್ಕೆ ಯಾರಿಗೋ ಸಹಾಯ ಬೇಕು: {reason}",
+  "@shareHeadline": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "shareVehicle": "ವಾಹನ: {vehicle}",
+  "@shareVehicle": {
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhen": "ವರದಿಯಾದದ್ದು: {time}",
+  "@shareWhen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "shareTheySaid": "ಅವರು ಹೇಳಿದ್ದು: \"{message}\"",
+  "@shareTheySaid": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhere": "ಅದು ಸುಮಾರಾಗಿ ಎಲ್ಲಿದೆ:",
+  "shareFooter": "ಅವಾಹನಾದಿಂದ ಕಳುಹಿಸಲಾಗಿದೆ. ನನಗಿಂತ ಮೊದಲು ನೀವು ಅಲ್ಲಿಗೆ ಹೋಗಬಹುದೇ?",
+  "alertsForward": "ಯಾರನ್ನಾದರೂ ಕಳುಹಿಸಿ",
+  "alertsForwardHint": "ನಿಮ್ಮ ವಾಹನಕ್ಕೆ ಹತ್ತಿರವಿರುವವರಿಗೆ ವಿವರಗಳನ್ನು ಕಳುಹಿಸಿ."
 }

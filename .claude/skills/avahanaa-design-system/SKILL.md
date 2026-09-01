@@ -25,7 +25,7 @@ Screens that serve both moments must be designed for panic first.
 
 | Token | Hex | Use |
 |---|---|---|
-| Primary | `#2563EB` | Buttons, links, active nav, focus rings |
+| Primary | `#1F4FB8` | Buttons, links, active nav, focus rings |
 | Success | `#10B981` | Confirmations, active QR state, "on my way" |
 | Alert | `#C81B30` | Alert notifications, unread badges, destructive actions |
 | Alert deep | `#A01625` | Escalated reminder alerts |
@@ -37,8 +37,14 @@ Screens that serve both moments must be designed for panic first.
 | Text tertiary | `#64748B` | Overlines, captions — still has to clear AA |
 | Border | `#E2E8F0` | Input borders, dividers |
 
-The splash and hero gradient runs `#2563EB` → `#10B981`, top-left to
-bottom-right.
+The splash and hero gradient runs `#1F4FB8` → `#0E5E52`, top-left to
+bottom-right — anodised steel-blue into deep teal.
+
+Deepened in Aug 2026. The previous `#2563EB` → `#10B981` is the most generic
+gradient on the internet; every generated landing page has it, and it made a
+shipped product look like a template. Same hue journey, half the shouting, and
+the worst ramp stop improved from 4.62:1 to 5.78:1 against white as a side
+effect.
 
 **The neutrals are slate, not grey.** They carry a few degrees of the brand's
 blue. Pure grey beside a saturated blue reads as two palettes that happened to
@@ -54,6 +60,14 @@ in value, it stays just as alarming and every ramp stop gained contrast.
 Red is reserved. It means "an alert" or "this destroys data" and nothing else —
 do not use it for emphasis.
 
+**Green is reserved too**, and it is the one that keeps slipping. It means a
+*status*: the QR is live, protection is on, the owner replied. It is not
+decoration. The QR reticle used to be drawn in it — the brackets are a scanner
+affordance ("point a camera here"), not a readout, and spending the confirmation
+colour on them put a third saturated hue on a screen that is otherwise graphite
+and bronze. They are bronze now. Before reaching for green, check whether the
+thing is reporting a state or just wants to look lively.
+
 ## The metallic layer
 
 Surfaces are machined, not flat. Three things do the work, in
@@ -68,8 +82,21 @@ Surfaces are machined, not flat. Three things do the work, in
    entrance, then every ~9s. Continuous shimmer stops reading as premium and
    starts reading as a loading state, so the pause is the point.
 
-Palettes: `brand` (hero surfaces, primary buttons), `alert` (panic banner),
+Palettes: `brand` (hero surfaces, primary buttons), `slate` (every ordinary
+card — near-flat on purpose, so light falls the same way across the whole app
+rather than on five special cases), `alert` (panic banner),
 `success` (verify email), `graphite` (the QR bezel), `silver` (the plate).
+
+`graphite` is the only ramp that follows the theme, because it is *chrome*
+rather than identity — a dark housing on a dark ground disappears. The others
+represent something fixed (a brand, an emergency, a physical number plate) and
+look the same at midnight as at noon.
+
+**Motion is four durations and four curves, all in `AppMotion`.** Before Aug
+2026 there were twenty-two hand-picked millisecond values across the widgets;
+two things animating side by side at 300ms and 320ms do not read as
+deliberate, they read as sloppy. List entrances use `AppMotion.staggerFor(i)`,
+which caps the total run so the last card never arrives after the reader.
 
 **Never metallic**, and these are hard limits:
 
@@ -95,11 +122,13 @@ obviously fine measured at 3.8–4.1:1.
 
 ## Shape and spacing
 
-- Radius: **12** inputs and buttons, **16** cards, **24** hero surfaces and the
-  QR container.
+- Radius: **12** inputs and buttons, **14** cards, **20** hero surfaces and the
+  QR container. Tightened one step alongside the metal work — a machined edge
+  is precise, and the corner radius is most of what says so.
 - Card elevation is **0**. Depth comes from a soft shadow
   (`black.withOpacity(0.1)`, blur 20, offset `(0, 10)`) on hero surfaces only.
-- Padding: 16 standard, 24 section, 32 hero.
+- Padding: 24 cards, 24 section, 32 hero. 16 only where space is genuinely
+  tight.
 - Spacing steps: 8 / 12 / 16 / 24 / 32.
 - Button padding: horizontal 24, vertical 16.
 
@@ -126,11 +155,25 @@ Panic-mode text starts at 24 and goes up. There is no upper bound.
 
 ## Component recipes
 
-**Card** — white, radius 16, elevation 0, padding 16. Icon in a tinted circle on
+**Card** — white, radius 14, elevation 0, **padding 24**. The same 1.5rem the
+web's `.card-body` uses: the app and the scan page are one product seen from
+two ends, and side by side the app read cramped. Eight pixels of breathing room
+on every card is most of what "considered" looks like at a glance. Icon in a tinted circle on
 the left, title/subtitle stacked, chevron or action on the right.
 
-**Primary button** — filled `#2563EB`, white text, radius 12, elevation 0,
-16/w600. One per screen.
+**Primary button** — filled **graphite** (`#1A1E24`, the brand ramp's core),
+white text, radius 12, elevation 0, 16/w600. One per screen.
+
+Not bronze. Bronze is the *accent* — links, selected states, the icon on a
+tinted badge, the QR reticle. It is what `primary` means when it is **ink**. As
+a full-width fill it produces a slab of brown, and it disagreed with
+`MetalButton`, which has always used the graphite ramp: the app had two
+different primary buttons. `ElevatedButton`, `MetalButton` and the web's
+`.btn-primary` are now the same colour.
+
+The one exception is a primary button **on the hero**, where graphite on
+graphite is nearly invisible. There it inverts to amber on near-black — the
+only place amber runs at full strength.
 
 **Input** — filled white, radius 12, 2px `#E5E7EB` border, `#2563EB` when
 focused, `#DC2626` on error, content padding 16.

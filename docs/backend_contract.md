@@ -1,6 +1,6 @@
 # Contract with the out-of-repo backend
 
-> **Status (Aug 2026): production does not honour this contract.** The deployed
+> **Status (Sep 2026): production still does not honour this contract.** The deployed
 > sender is `notifyOwner` from `Avahanaa-Web`, which sends a `notification`
 > block instead of data-only, omits `notificationId` and `sentAt`, and does not
 > set the alert channel — so dedupe and the +3/+15 min escalating reminders
@@ -75,7 +75,8 @@ degrades gracefully. Removing or renaming one is not.
 ## Delivery requirements
 
 - `android.priority: HIGH`
-- `android.notification.channel_id: avahanaa_critical_alerts_v2`
+- `android.notification.channel_id: avahanaa_critical_alerts_v3` (`_v2` is the
+  pre-alarm channel and is kept only so old notifications can be cancelled)
 - No shared `collapse_key` — distinct alerts must not collapse into one.
 - Prefer **data-only** payloads. When a push carries a `notification` block, the
   system displays it directly in background/terminated state and the app's
@@ -116,9 +117,63 @@ and gives up after ten minutes.
 backend must match `AlertReply`. `test/alert_reply_test.dart` reads the backend
 source and fails if they drift, when both repos are checked out side by side.
 
+## The alert budget (built Sep 2026)
+
+`/api/notify` now spends one alert against the owner's budget before writing,
+and records the outcome on the notification document as
+`deliveryTier: "full" | "quiet"` plus a `deliveryTierReason` for support. The
+push carries the same value in its `tier` data key.
+
+Three invariants, all enforced server-side:
+
+- `emergency` is never metered.
+- A spent budget produces a **quiet** alert, never a missing one. The document
+  is always written and the push is always sent.
+- The scanner is told nothing — identical status, body and timing either way.
+
+Full detail, including the Play Console and AdMob setup that has to happen
+before any of it works, is `docs/monetization.md`.
+
+### Endpoints added alongside it
+
+All four are on the same host and take a Firebase ID token in
+`Authorization: Bearer`, except the SSV callback which Google signs instead.
+
+| Endpoint | Who calls it | What it does |
+|---|---|---|
+| `GET /api/wallet/ssv` | Google (AdMob) | ECDSA-verified reward callback; the only thing that grants a credit |
+| `POST /api/wallet/claim` | the app | "has my reward settled?" — a read, answering `{settled, credits}` |
+| `POST /api/billing/verify` | the app | hands a Play purchase token over for server-side verification |
+| `POST /api/alerts/test` | the app | fires a real alert at the caller's own phone; never metered |
+
+`playNotifications` consumes Play's RTDN Pub/Sub topic for renewals and
+cancellations. It is not an HTTP endpoint.
+
+## Scan location (built Sep 2026)
+
+`/api/notify` accepts an optional `location: {lat, lng, accuracyM}`. The scan
+page asks the browser for it *after* the reason has been chosen, so nobody is
+prompted before they know what they are sending, and gives up after six seconds
+so an ignored prompt never delays the alert.
+
+**The server rounds to three decimal places — about 110 m — before storing, and
+the raw fix is never written down.** That is enough for an owner to work out
+which of their parked cars this is, and not enough to follow the person who
+scanned it. The asymmetry is the point: this product's whole premise is that
+the scanner gives up nothing, and attaching their exact coordinates to the
+alert would quietly reverse that.
+
+Stored on the notification document as `location: {lat, lng, accuracyM,
+capturedAt}`, or `null` when it was declined or unavailable — which is most of
+the time. The app renders it as an optional card
+(`lib/widgets/scan_location_card.dart`) and every surface works without it.
+
+The app floors the *displayed* accuracy at 110 m. A browser claiming 8 m is
+describing a precision that was thrown away before storage, and repeating it
+would be a lie told by rounding.
+
 ## Fields the app would like next
 
 Not yet implemented on either side; listed so both sides build the same thing:
 - `photoUrl` — scanner-supplied photo of the situation. Needs Storage rules and
   an abuse story before it ships.
-- `location` — coarse geohash of the scan, to confirm which parked vehicle.

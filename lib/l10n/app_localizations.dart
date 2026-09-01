@@ -1872,6 +1872,666 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'1 VEHICLE'**
   String get profileVehicleCountOne;
+
+  /// No description provided for @creditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert credits'**
+  String get creditsTitle;
+
+  /// No description provided for @creditsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} full-strength alerts left'**
+  String creditsRemaining(int count);
+
+  /// No description provided for @creditsRemainingShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} alerts left'**
+  String creditsRemainingShort(int count);
+
+  /// No description provided for @creditsEmptyShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Out of alerts'**
+  String get creditsEmptyShort;
+
+  /// No description provided for @creditsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re out of alert credits'**
+  String get creditsEmptyTitle;
+
+  /// No description provided for @creditsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts still reach you — quietly, without the alarm.'**
+  String get creditsEmptyBody;
+
+  /// No description provided for @creditsBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'{free} free (resets in {days} days) · {earned} earned'**
+  String creditsBreakdown(int free, int earned, int days);
+
+  /// No description provided for @creditsEmergencyAlwaysFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergencies always ring at full volume, credits or not.'**
+  String get creditsEmergencyAlwaysFree;
+
+  /// No description provided for @creditsWatchAd.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch {count} ads'**
+  String creditsWatchAd(int count);
+
+  /// No description provided for @creditsGoUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Go unlimited'**
+  String get creditsGoUnlimited;
+
+  /// No description provided for @creditsEarnedOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit added'**
+  String get creditsEarnedOne;
+
+  /// No description provided for @creditsAdUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No ad is available right now. Try again in a minute.'**
+  String get creditsAdUnavailable;
+
+  /// No description provided for @creditsAdDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the whole ad to earn a credit.'**
+  String get creditsAdDismissed;
+
+  /// No description provided for @plansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Never miss the one that matters'**
+  String get plansTitle;
+
+  /// No description provided for @plansSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} full-strength alerts a month are free, forever. Top up with ads, or take the meter off entirely.'**
+  String plansSubtitle(int count);
+
+  /// No description provided for @plansPromiseEmergency.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergencies are never metered. A fire, a crash or an injury rings your phone at full volume whatever your balance says.'**
+  String get plansPromiseEmergency;
+
+  /// No description provided for @plansPromiseNeverSilent.
+  ///
+  /// In en, this message translates to:
+  /// **'You are never uncontactable. At zero credits alerts still arrive — quietly, without the alarm or the reminders.'**
+  String get plansPromiseNeverSilent;
+
+  /// No description provided for @plansPromisePrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Whoever scans your sticker is told nothing about your plan, and still never learns who you are.'**
+  String get plansPromisePrivate;
+
+  /// No description provided for @plansFreeOverline.
+  ///
+  /// In en, this message translates to:
+  /// **'FREE'**
+  String get plansFreeOverline;
+
+  /// No description provided for @plansAdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trade attention for alerts'**
+  String get plansAdTitle;
+
+  /// No description provided for @plansAdBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch {ads} short ads, get {credits} more full-strength alerts. Each one is banked the moment it finishes — stop whenever you like.'**
+  String plansAdBody(int ads, int credits);
+
+  /// No description provided for @plansAdProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{watched} of {total} watched this sitting'**
+  String plansAdProgress(int watched, int total);
+
+  /// No description provided for @plansAdCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re holding the maximum of {count} earned credits.'**
+  String plansAdCapped(int count);
+
+  /// No description provided for @plansAdCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch an ad'**
+  String get plansAdCta;
+
+  /// No description provided for @plansPaidOverline.
+  ///
+  /// In en, this message translates to:
+  /// **'AVAHANAA PLUS'**
+  String get plansPaidOverline;
+
+  /// No description provided for @plansPaidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Take the meter off'**
+  String get plansPaidTitle;
+
+  /// No description provided for @plansChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change your plan'**
+  String get plansChangeTitle;
+
+  /// No description provided for @plansRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'POPULAR'**
+  String get plansRecommended;
+
+  /// No description provided for @plansCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRENT'**
+  String get plansCurrent;
+
+  /// No description provided for @plansSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {percent}% against weekly'**
+  String plansSaving(int percent);
+
+  /// No description provided for @planWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get planWeekly;
+
+  /// No description provided for @planMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get planMonthly;
+
+  /// No description provided for @planYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get planYearly;
+
+  /// No description provided for @planFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get planFree;
+
+  /// No description provided for @planPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Billed every week'**
+  String get planPerWeek;
+
+  /// No description provided for @planPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Billed every month'**
+  String get planPerMonth;
+
+  /// No description provided for @planPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Billed every year'**
+  String get planPerYear;
+
+  /// No description provided for @planUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get planUnlimited;
+
+  /// No description provided for @planActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Avahanaa Plus is active'**
+  String get planActiveTitle;
+
+  /// No description provided for @planActiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited full-strength alerts on every vehicle you own.'**
+  String get planActiveBody;
+
+  /// No description provided for @planRenewsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews on {date}'**
+  String planRenewsOn(String date);
+
+  /// No description provided for @planActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Avahanaa Plus is active. Alerts are unlimited.'**
+  String get planActivated;
+
+  /// No description provided for @planPurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play could not complete that purchase.'**
+  String get planPurchaseFailed;
+
+  /// No description provided for @planRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore a previous purchase'**
+  String get planRestore;
+
+  /// No description provided for @planLegalNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions renew automatically until cancelled. Manage or cancel any time in Google Play. Prices include taxes.'**
+  String get planLegalNote;
+
+  /// No description provided for @settingsPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert credits & plan'**
+  String get settingsPlan;
+
+  /// No description provided for @reasonTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Test alert'**
+  String get reasonTest;
+
+  /// No description provided for @guidanceTest.
+  ///
+  /// In en, this message translates to:
+  /// **'You asked for this one. A real alert arrives exactly like it.'**
+  String get guidanceTest;
+
+  /// No description provided for @selfTestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test the alarm'**
+  String get selfTestTitle;
+
+  /// No description provided for @selfTestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send yourself a real alert'**
+  String get selfTestSubtitle;
+
+  /// No description provided for @selfTestSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get selfTestSending;
+
+  /// No description provided for @selfTestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent. Lock your phone — it should go off within seconds.'**
+  String get selfTestSent;
+
+  /// No description provided for @selfTestSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send yourself a real alert'**
+  String get selfTestSheetTitle;
+
+  /// No description provided for @selfTestSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This walks the whole path a stranger\'s scan would: the same alarm, the same lock screen takeover, the same reminders. It costs no credits.\n\nIf nothing arrives, your phone is blocking Avahanaa in the background — the alerts screen will tell you how to fix it.'**
+  String get selfTestSheetBody;
+
+  /// No description provided for @selfTestSheetCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the test alert'**
+  String get selfTestSheetCta;
+
+  /// No description provided for @selfTestLockHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock your phone now, so you see what an alert really looks like.'**
+  String get selfTestLockHint;
+
+  /// No description provided for @alertsWhereTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Where your vehicle is'**
+  String get alertsWhereTitle;
+
+  /// No description provided for @alertsWhereApprox.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate — tap to open in Maps'**
+  String get alertsWhereApprox;
+
+  /// No description provided for @alertsWhereAccuracy.
+  ///
+  /// In en, this message translates to:
+  /// **'Accurate to about {metres} m — tap to open in Maps'**
+  String alertsWhereAccuracy(int metres);
+
+  /// No description provided for @alertsOpenInMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Maps'**
+  String get alertsOpenInMaps;
+
+  /// No description provided for @alertsNoMapApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No map app could open that location.'**
+  String get alertsNoMapApp;
+
+  /// No description provided for @alertsWhereOverline.
+  ///
+  /// In en, this message translates to:
+  /// **'WHERE'**
+  String get alertsWhereOverline;
+
+  /// No description provided for @readinessPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts can\'t reach this phone'**
+  String get readinessPermissionTitle;
+
+  /// No description provided for @readinessPermissionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are switched off for Avahanaa in your phone\'s settings. Nothing will arrive until they\'re back on — not even an emergency.'**
+  String get readinessPermissionBody;
+
+  /// No description provided for @readinessPreferenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve paused your own alerts'**
+  String get readinessPreferenceTitle;
+
+  /// No description provided for @readinessPreferenceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts are turned off in Avahanaa\'s settings. Your QR code still works, but nothing will reach you.'**
+  String get readinessPreferenceBody;
+
+  /// No description provided for @readinessTokenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone isn\'t registered yet'**
+  String get readinessTokenTitle;
+
+  /// No description provided for @readinessTokenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Avahanaa hasn\'t been able to register this device for alerts. Reopening the app usually fixes it.'**
+  String get readinessTokenBody;
+
+  /// No description provided for @readinessFullScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts won\'t take over the lock screen'**
+  String get readinessFullScreenTitle;
+
+  /// No description provided for @readinessFullScreenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'They\'ll still arrive and still make a noise — they just won\'t fill the screen when your phone is locked.'**
+  String get readinessFullScreenBody;
+
+  /// No description provided for @readinessGrantCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn alerts on'**
+  String get readinessGrantCta;
+
+  /// No description provided for @readinessPreferenceCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Open alert settings'**
+  String get readinessPreferenceCta;
+
+  /// No description provided for @readinessTokenCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get readinessTokenCta;
+
+  /// No description provided for @creditsEarnedPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad complete. Your credit will appear shortly.'**
+  String get creditsEarnedPending;
+
+  /// No description provided for @readinessFullScreenCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow lock screen alerts'**
+  String get readinessFullScreenCta;
+
+  /// No description provided for @errQuietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your quiet hours. Please try again.'**
+  String get errQuietHours;
+
+  /// No description provided for @quietHoursTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHoursTitle;
+
+  /// No description provided for @quietHoursOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — alerts always ring'**
+  String get quietHoursOff;
+
+  /// No description provided for @quietHoursRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} to {end}'**
+  String quietHoursRange(String start, String end);
+
+  /// No description provided for @quietHoursSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHoursSheetTitle;
+
+  /// No description provided for @quietHoursSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Between these times, ordinary alerts arrive without the alarm — your phone\'s normal notification sound, once, and no reminders.\n\nThey still arrive. You can still reply. Nothing is ever hidden from you.'**
+  String get quietHoursSheetBody;
+
+  /// No description provided for @quietHoursEmergencyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergencies ignore quiet hours completely and ring at full volume.'**
+  String get quietHoursEmergencyNote;
+
+  /// No description provided for @quietHoursEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Quieten alerts overnight'**
+  String get quietHoursEnable;
+
+  /// No description provided for @quietHoursFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get quietHoursFrom;
+
+  /// No description provided for @quietHoursTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get quietHoursTo;
+
+  /// No description provided for @quietHoursAllDayWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'That covers the whole day — alerts would never ring. Choose a shorter window.'**
+  String get quietHoursAllDayWarning;
+
+  /// No description provided for @quietHoursSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours saved.'**
+  String get quietHoursSaved;
+
+  /// No description provided for @commonSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get commonSave;
+
+  /// No description provided for @insightsOverline.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR ALERTS'**
+  String get insightsOverline;
+
+  /// No description provided for @insightsResponseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You usually answer in {duration}'**
+  String insightsResponseTitle(String duration);
+
+  /// No description provided for @insightsNoResponsesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t answered an alert yet'**
+  String get insightsNoResponsesTitle;
+
+  /// No description provided for @insightsWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'From your last {count} alerts'**
+  String insightsWindow(int count);
+
+  /// No description provided for @insightsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get insightsThisMonth;
+
+  /// No description provided for @insightsAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get insightsAnswered;
+
+  /// No description provided for @insightsEmergencies.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergencies'**
+  String get insightsEmergencies;
+
+  /// No description provided for @insightsTopReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Most often: {reason} ({count})'**
+  String insightsTopReason(String reason, int count);
+
+  /// No description provided for @insightsTopVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Most alerted vehicle: {plate}'**
+  String insightsTopVehicle(String plate);
+
+  /// No description provided for @insightsBusiestHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Busiest around {hour}'**
+  String insightsBusiestHour(String hour);
+
+  /// No description provided for @insightsSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} seconds'**
+  String insightsSeconds(int count);
+
+  /// No description provided for @insightsMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} minutes'**
+  String insightsMinutes(int count);
+
+  /// No description provided for @insightsHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hours'**
+  String insightsHours(int count);
+
+  /// No description provided for @insightsEmergencyCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 was an emergency} other{{count} were emergencies}}'**
+  String insightsEmergencyCount(int count);
+
+  /// No description provided for @shareHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone needs help with my vehicle: {reason}'**
+  String shareHeadline(String reason);
+
+  /// No description provided for @shareVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle: {vehicle}'**
+  String shareVehicle(String vehicle);
+
+  /// No description provided for @shareWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported: {time}'**
+  String shareWhen(String time);
+
+  /// No description provided for @shareTheySaid.
+  ///
+  /// In en, this message translates to:
+  /// **'They said: \"{message}\"'**
+  String shareTheySaid(String message);
+
+  /// No description provided for @shareWhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Roughly where it is:'**
+  String get shareWhere;
+
+  /// No description provided for @shareFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent from Avahanaa. Can you get there before me?'**
+  String get shareFooter;
+
+  /// No description provided for @alertsForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask someone to go'**
+  String get alertsForward;
+
+  /// No description provided for @alertsForwardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the details to whoever is closest to your vehicle.'**
+  String get alertsForwardHint;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

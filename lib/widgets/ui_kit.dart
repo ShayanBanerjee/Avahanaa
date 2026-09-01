@@ -97,7 +97,7 @@ class BreathingPulse extends StatefulWidget {
     required this.child,
     this.minScale = 1.0,
     this.maxScale = 1.06,
-    this.duration = const Duration(milliseconds: 2600),
+    this.duration = const Duration(milliseconds: 2600), // shimmer cycle
   });
 
   final Widget child;
@@ -132,7 +132,7 @@ class _BreathingPulseState extends State<BreathingPulse>
       animation: _controller,
       child: widget.child,
       builder: (context, child) {
-        final t = Curves.easeInOut.transform(_controller.value);
+        final t = AppMotion.ambientCurve.transform(_controller.value);
         final scale = widget.minScale + (widget.maxScale - widget.minScale) * t;
         return Transform.scale(scale: scale, child: child);
       },
@@ -149,7 +149,13 @@ class AppCard extends StatelessWidget {
   AppCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.lg),
+    // 24, not 16. The same 1.5rem the web's `.card-body` uses.
+    //
+    // The two surfaces are the same product seen from two ends, and side by
+    // side the app read cramped against the page — not because anything was
+    // wrong with it, but because eight pixels of breathing room on every card
+    // is most of what "considered" looks like at a glance.
+    this.padding = const EdgeInsets.all(AppSpacing.xl),
     Color? color,
     Color? borderColor,
     this.onTap,
@@ -169,9 +175,25 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A card whose colour was not overridden gets the near-flat `slate` ramp
+    // rather than a single fill. It is almost imperceptible on its own — what
+    // it buys is that light falls the same way here as it does on the hero,
+    // the QR bezel and the plate, so the metallic treatment reads as one
+    // system instead of four special cases.
+    //
+    // An explicit colour still wins outright: tinted cards (info, alert,
+    // success) mean something, and a ramp across them would only muddy it.
+    final usesDefaultSurface = color == AppColors.surface;
+
     final decorated = DecoratedBox(
       decoration: BoxDecoration(
-        color: color,
+        color: usesDefaultSurface ? null : color,
+        gradient: usesDefaultSurface
+            ? MetalPalette.slate.gradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+            : null,
         borderRadius: AppRadius.cardAll,
         border: borderColor == null
             ? null
@@ -180,14 +202,32 @@ class AppCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: AppRadius.cardAll,
-        child: Material(
-          color: Colors.transparent,
-          child: onTap == null
-              ? Padding(padding: padding, child: child)
-              : InkWell(
-                  onTap: onTap,
-                  child: Padding(padding: padding, child: child),
+        child: Stack(
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: onTap == null
+                  ? Padding(padding: padding, child: child)
+                  : InkWell(
+                      onTap: onTap,
+                      child: Padding(padding: padding, child: child),
+                    ),
+            ),
+            // One hairline of light along the top edge. This is the whole
+            // difference between a filled rectangle and a milled one.
+            if (usesDefaultSurface)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: BevelHighlight(
+                    radius: AppRadius.card,
+                    // Much quieter than on a saturated metal surface. A card
+                    // is a place to read, not a thing to admire.
+                    opacity: AppColors.isDark ? 0.06 : 0.55,
+                    shade: AppColors.isDark ? 0.10 : 0.04,
+                  ),
                 ),
+              ),
+          ],
         ),
       ),
     );
@@ -388,9 +428,23 @@ class StatusPill extends StatelessWidget {
             Icon(icon, size: 14, color: foreground),
             const SizedBox(width: 6),
           ],
-          Text(
-            label,
-            style: AppText.labelSmall.copyWith(color: foreground),
+          // Flexible, so the pill gives way rather than overflowing.
+          //
+          // A `Wrap` cannot shrink an item that is individually too wide, and
+          // at 2.0x text scale on a 320dp screen a single pill is: "QR ACTIVE"
+          // with an icon does not fit inside a card's padding. It used to
+          // overflow with a yellow-and-black stripe across the card.
+          //
+          // Ellipsising a status label is a real loss, so it is the last
+          // resort rather than the design — the pills are short precisely so
+          // that it almost never happens.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.labelSmall.copyWith(color: foreground),
+            ),
           ),
         ],
       ),

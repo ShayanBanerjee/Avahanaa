@@ -958,4 +958,414 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get profileVehicleCountOne => '1 VEHICLE';
+
+  @override
+  String get creditsTitle => 'Alert credits';
+
+  @override
+  String creditsRemaining(int count) {
+    return '$count full-strength alerts left';
+  }
+
+  @override
+  String creditsRemainingShort(int count) {
+    return '$count alerts left';
+  }
+
+  @override
+  String get creditsEmptyShort => 'Out of alerts';
+
+  @override
+  String get creditsEmptyTitle => 'You\'re out of alert credits';
+
+  @override
+  String get creditsEmptyBody =>
+      'Alerts still reach you — quietly, without the alarm.';
+
+  @override
+  String creditsBreakdown(int free, int earned, int days) {
+    return '$free free (resets in $days days) · $earned earned';
+  }
+
+  @override
+  String get creditsEmergencyAlwaysFree =>
+      'Emergencies always ring at full volume, credits or not.';
+
+  @override
+  String creditsWatchAd(int count) {
+    return 'Watch $count ads';
+  }
+
+  @override
+  String get creditsGoUnlimited => 'Go unlimited';
+
+  @override
+  String get creditsEarnedOne => 'Credit added';
+
+  @override
+  String get creditsAdUnavailable =>
+      'No ad is available right now. Try again in a minute.';
+
+  @override
+  String get creditsAdDismissed => 'Watch the whole ad to earn a credit.';
+
+  @override
+  String get plansTitle => 'Never miss the one that matters';
+
+  @override
+  String plansSubtitle(int count) {
+    return '$count full-strength alerts a month are free, forever. Top up with ads, or take the meter off entirely.';
+  }
+
+  @override
+  String get plansPromiseEmergency =>
+      'Emergencies are never metered. A fire, a crash or an injury rings your phone at full volume whatever your balance says.';
+
+  @override
+  String get plansPromiseNeverSilent =>
+      'You are never uncontactable. At zero credits alerts still arrive — quietly, without the alarm or the reminders.';
+
+  @override
+  String get plansPromisePrivate =>
+      'Whoever scans your sticker is told nothing about your plan, and still never learns who you are.';
+
+  @override
+  String get plansFreeOverline => 'FREE';
+
+  @override
+  String get plansAdTitle => 'Trade attention for alerts';
+
+  @override
+  String plansAdBody(int ads, int credits) {
+    return 'Watch $ads short ads, get $credits more full-strength alerts. Each one is banked the moment it finishes — stop whenever you like.';
+  }
+
+  @override
+  String plansAdProgress(int watched, int total) {
+    return '$watched of $total watched this sitting';
+  }
+
+  @override
+  String plansAdCapped(int count) {
+    return 'You\'re holding the maximum of $count earned credits.';
+  }
+
+  @override
+  String get plansAdCta => 'Watch an ad';
+
+  @override
+  String get plansPaidOverline => 'AVAHANAA PLUS';
+
+  @override
+  String get plansPaidTitle => 'Take the meter off';
+
+  @override
+  String get plansChangeTitle => 'Change your plan';
+
+  @override
+  String get plansRecommended => 'POPULAR';
+
+  @override
+  String get plansCurrent => 'CURRENT';
+
+  @override
+  String plansSaving(int percent) {
+    return 'Save $percent% against weekly';
+  }
+
+  @override
+  String get planWeekly => 'Weekly';
+
+  @override
+  String get planMonthly => 'Monthly';
+
+  @override
+  String get planYearly => 'Yearly';
+
+  @override
+  String get planFree => 'Free';
+
+  @override
+  String get planPerWeek => 'Billed every week';
+
+  @override
+  String get planPerMonth => 'Billed every month';
+
+  @override
+  String get planPerYear => 'Billed every year';
+
+  @override
+  String get planUnlimited => 'Unlimited';
+
+  @override
+  String get planActiveTitle => 'Avahanaa Plus is active';
+
+  @override
+  String get planActiveBody =>
+      'Unlimited full-strength alerts on every vehicle you own.';
+
+  @override
+  String planRenewsOn(String date) {
+    return 'Renews on $date';
+  }
+
+  @override
+  String get planActivated => 'Avahanaa Plus is active. Alerts are unlimited.';
+
+  @override
+  String get planPurchaseFailed =>
+      'Google Play could not complete that purchase.';
+
+  @override
+  String get planRestore => 'Restore a previous purchase';
+
+  @override
+  String get planLegalNote =>
+      'Subscriptions renew automatically until cancelled. Manage or cancel any time in Google Play. Prices include taxes.';
+
+  @override
+  String get settingsPlan => 'Alert credits & plan';
+
+  @override
+  String get reasonTest => 'Test alert';
+
+  @override
+  String get guidanceTest =>
+      'You asked for this one. A real alert arrives exactly like it.';
+
+  @override
+  String get selfTestTitle => 'Test the alarm';
+
+  @override
+  String get selfTestSubtitle => 'Send yourself a real alert';
+
+  @override
+  String get selfTestSending => 'Sending…';
+
+  @override
+  String get selfTestSent =>
+      'Sent. Lock your phone — it should go off within seconds.';
+
+  @override
+  String get selfTestSheetTitle => 'Send yourself a real alert';
+
+  @override
+  String get selfTestSheetBody =>
+      'This walks the whole path a stranger\'s scan would: the same alarm, the same lock screen takeover, the same reminders. It costs no credits.\n\nIf nothing arrives, your phone is blocking Avahanaa in the background — the alerts screen will tell you how to fix it.';
+
+  @override
+  String get selfTestSheetCta => 'Send the test alert';
+
+  @override
+  String get selfTestLockHint =>
+      'Lock your phone now, so you see what an alert really looks like.';
+
+  @override
+  String get alertsWhereTitle => 'Where your vehicle is';
+
+  @override
+  String get alertsWhereApprox => 'Approximate — tap to open in Maps';
+
+  @override
+  String alertsWhereAccuracy(int metres) {
+    return 'Accurate to about $metres m — tap to open in Maps';
+  }
+
+  @override
+  String get alertsOpenInMaps => 'Open in Maps';
+
+  @override
+  String get alertsNoMapApp => 'No map app could open that location.';
+
+  @override
+  String get alertsWhereOverline => 'WHERE';
+
+  @override
+  String get readinessPermissionTitle => 'Alerts can\'t reach this phone';
+
+  @override
+  String get readinessPermissionBody =>
+      'Notifications are switched off for Avahanaa in your phone\'s settings. Nothing will arrive until they\'re back on — not even an emergency.';
+
+  @override
+  String get readinessPreferenceTitle => 'You\'ve paused your own alerts';
+
+  @override
+  String get readinessPreferenceBody =>
+      'Alerts are turned off in Avahanaa\'s settings. Your QR code still works, but nothing will reach you.';
+
+  @override
+  String get readinessTokenTitle => 'This phone isn\'t registered yet';
+
+  @override
+  String get readinessTokenBody =>
+      'Avahanaa hasn\'t been able to register this device for alerts. Reopening the app usually fixes it.';
+
+  @override
+  String get readinessFullScreenTitle =>
+      'Alerts won\'t take over the lock screen';
+
+  @override
+  String get readinessFullScreenBody =>
+      'They\'ll still arrive and still make a noise — they just won\'t fill the screen when your phone is locked.';
+
+  @override
+  String get readinessGrantCta => 'Turn alerts on';
+
+  @override
+  String get readinessPreferenceCta => 'Open alert settings';
+
+  @override
+  String get readinessTokenCta => 'Try again';
+
+  @override
+  String get creditsEarnedPending =>
+      'Ad complete. Your credit will appear shortly.';
+
+  @override
+  String get readinessFullScreenCta => 'Allow lock screen alerts';
+
+  @override
+  String get errQuietHours =>
+      'Could not save your quiet hours. Please try again.';
+
+  @override
+  String get quietHoursTitle => 'Quiet hours';
+
+  @override
+  String get quietHoursOff => 'Off — alerts always ring';
+
+  @override
+  String quietHoursRange(String start, String end) {
+    return '$start to $end';
+  }
+
+  @override
+  String get quietHoursSheetTitle => 'Quiet hours';
+
+  @override
+  String get quietHoursSheetBody =>
+      'Between these times, ordinary alerts arrive without the alarm — your phone\'s normal notification sound, once, and no reminders.\n\nThey still arrive. You can still reply. Nothing is ever hidden from you.';
+
+  @override
+  String get quietHoursEmergencyNote =>
+      'Emergencies ignore quiet hours completely and ring at full volume.';
+
+  @override
+  String get quietHoursEnable => 'Quieten alerts overnight';
+
+  @override
+  String get quietHoursFrom => 'From';
+
+  @override
+  String get quietHoursTo => 'To';
+
+  @override
+  String get quietHoursAllDayWarning =>
+      'That covers the whole day — alerts would never ring. Choose a shorter window.';
+
+  @override
+  String get quietHoursSaved => 'Quiet hours saved.';
+
+  @override
+  String get commonSave => 'Save';
+
+  @override
+  String get insightsOverline => 'YOUR ALERTS';
+
+  @override
+  String insightsResponseTitle(String duration) {
+    return 'You usually answer in $duration';
+  }
+
+  @override
+  String get insightsNoResponsesTitle => 'You haven\'t answered an alert yet';
+
+  @override
+  String insightsWindow(int count) {
+    return 'From your last $count alerts';
+  }
+
+  @override
+  String get insightsThisMonth => 'This month';
+
+  @override
+  String get insightsAnswered => 'Answered';
+
+  @override
+  String get insightsEmergencies => 'Emergencies';
+
+  @override
+  String insightsTopReason(String reason, int count) {
+    return 'Most often: $reason ($count)';
+  }
+
+  @override
+  String insightsTopVehicle(String plate) {
+    return 'Most alerted vehicle: $plate';
+  }
+
+  @override
+  String insightsBusiestHour(String hour) {
+    return 'Busiest around $hour';
+  }
+
+  @override
+  String insightsSeconds(int count) {
+    return '$count seconds';
+  }
+
+  @override
+  String insightsMinutes(int count) {
+    return '$count minutes';
+  }
+
+  @override
+  String insightsHours(int count) {
+    return '$count hours';
+  }
+
+  @override
+  String insightsEmergencyCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count were emergencies',
+      one: '1 was an emergency',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareHeadline(String reason) {
+    return 'Someone needs help with my vehicle: $reason';
+  }
+
+  @override
+  String shareVehicle(String vehicle) {
+    return 'Vehicle: $vehicle';
+  }
+
+  @override
+  String shareWhen(String time) {
+    return 'Reported: $time';
+  }
+
+  @override
+  String shareTheySaid(String message) {
+    return 'They said: \"$message\"';
+  }
+
+  @override
+  String get shareWhere => 'Roughly where it is:';
+
+  @override
+  String get shareFooter => 'Sent from Avahanaa. Can you get there before me?';
+
+  @override
+  String get alertsForward => 'Ask someone to go';
+
+  @override
+  String get alertsForwardHint =>
+      'Send the details to whoever is closest to your vehicle.';
 }

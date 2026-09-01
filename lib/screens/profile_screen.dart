@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../models/alert_wallet.dart';
+import '../models/quiet_hours.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
+import '../services/alert_credits.dart';
+import '../services/avahanaa_api.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
@@ -14,11 +18,12 @@ import '../l10n/locale_controller.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../utils/vehicle_registration_validator.dart';
-import '../widgets/admob_banner.dart';
 import '../widgets/hero_header.dart';
+import '../widgets/metal.dart';
 import '../widgets/ui_kit.dart';
 import 'auth/login_screen.dart';
 import 'legal_documents_screen.dart';
+import 'plans_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -33,6 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _currentUser = FirebaseAuth.instance.currentUser;
   final _fcmService = FCMService();
   bool _isUpdatingNotificationPreference = false;
+  bool _sendingTestAlert = false;
 
   @override
   Widget build(BuildContext context) {
@@ -95,22 +101,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 60),
+                                  delay: AppMotion.staggerFor(0),
                                   child: _buildVehiclesSection(user, vehicles),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 120),
+                                  delay: AppMotion.staggerFor(1),
                                   child: _buildStatsCard(),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 180),
+                                  delay: AppMotion.staggerFor(2),
                                   child: _buildAccountSection(user),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 EntranceFade(
-                                  delay: const Duration(milliseconds: 240),
+                                  delay: AppMotion.staggerFor(3),
                                   child: _buildDangerZone(),
                                 ),
                               ],
@@ -124,7 +130,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
           ),
-          AdMobBanner(),
+          // The shell owns the single ad strip. All three tabs stay mounted in
+          // its IndexedStack, so a banner per tab meant three simultaneous ad
+          // loads and three WebViews for one visible slot.
         ],
       ),
     );
@@ -338,6 +346,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? l10n.profilePhoneNotSet
                     : user.phoneNumber,
                 onTap: () => _showEditPhoneSheet(user),
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              // Directly above the plan row on purpose. "Does this actually
+              // work on my phone?" and "what does it cost me?" are the two
+              // questions an owner has about a product they are trusting with
+              // something they cannot see, and they belong together.
+              AppListRow(
+                icon: Icons.notifications_active_rounded,
+                iconColor: AppColors.success,
+                title: l10n.selfTestTitle,
+                subtitle: _sendingTestAlert
+                    ? l10n.selfTestSending
+                    : l10n.selfTestSubtitle,
+                onTap: _sendingTestAlert ? null : _showSelfTestSheet,
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              // The plan row carries the live balance as its subtitle, so the
+              // number is findable somewhere permanent. The home screen only
+              // surfaces it when it is running out.
+              StreamBuilder<AlertWallet>(
+                stream: _firestoreService.streamAlertWallet(user.id),
+                builder: (context, snapshot) {
+                  final wallet = snapshot.data ?? AlertWallet.empty;
+                  final subscribed = wallet.isSubscribed();
+                  return AppListRow(
+                    icon: subscribed
+                        ? Icons.all_inclusive_rounded
+                        : Icons.bolt_rounded,
+                    iconColor: subscribed
+                        ? AppColors.success
+                        : AppColors.primary,
+                    title: l10n.settingsPlan,
+                    subtitle: subscribed
+                        ? l10n.planUnlimited
+                        : l10n.creditsRemainingShort(wallet.totalRemaining()),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PlansScreen(
+                          wallet: wallet,
+                          onWatchAd: () => AlertCredits.topUp(context),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+              StreamBuilder<QuietHours>(
+                stream: _firestoreService.streamQuietHours(user.id),
+                builder: (context, snapshot) {
+                  final quiet = snapshot.data ?? QuietHours.off;
+                  return AppListRow(
+                    icon: quiet.enabled
+                        ? Icons.bedtime_rounded
+                        : Icons.bedtime_off_rounded,
+                    iconColor: AppColors.textSecondary,
+                    title: l10n.quietHoursTitle,
+                    subtitle: quiet.enabled
+                        ? l10n.quietHoursRange(
+                            _formatMinute(context, quiet.startMinute),
+                            _formatMinute(context, quiet.endMinute),
+                          )
+                        : l10n.quietHoursOff,
+                    onTap: () => _showQuietHoursSheet(user.id, quiet),
+                  );
+                },
               ),
               const Divider(indent: AppSpacing.lg, endIndent: AppSpacing.lg),
               AppListRow(
@@ -719,6 +793,288 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// pick a meaning for "off", and neither answer is right — a person who has
   /// their phone on a sunset schedule wants the app to follow it, and a person
   /// who wants dark at noon wants it pinned. A switch cannot say both.
+  /// Sends a real alert to this phone, and explains why that is worth doing.
+  ///
+  /// The sheet exists rather than a bare button because the test only helps if
+  /// the owner locks their phone to watch it land. Firing an alarm at somebody
+  /// who is staring at a settings screen proves that FCM works and nothing
+  /// about the thing they actually care about.
+  Future<void> _showSelfTestSheet() async {
+    final l10n = AppL10n.of(context);
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.hero),
+        ),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.md,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SheetGrabber(),
+              const SizedBox(height: AppSpacing.lg),
+              // Aligned, not stretched. The column stretches so the button
+              // fills the sheet, and a 56x56 badge inside a stretching column
+              // is a 56-tall band the full width of the screen.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AppIconBadge(
+                  icon: Icons.notifications_active_rounded,
+                  color: AppColors.success,
+                  size: 56,
+                  iconSize: 28,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(l10n.selfTestSheetTitle, style: AppText.headlineMedium),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                l10n.selfTestSheetBody,
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              MetalButton(
+                label: l10n.selfTestSheetCta,
+                icon: Icons.send_rounded,
+                onPressed: () => Navigator.of(sheetContext).pop(true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    await _sendTestAlert();
+  }
+
+  Future<void> _sendTestAlert() async {
+    setState(() => _sendingTestAlert = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppL10n.of(context);
+
+    final result = await AvahanaaApi.instance.sendTestAlert();
+
+    if (!mounted) return;
+    setState(() => _sendingTestAlert = false);
+
+    showAppSnackBar(
+      messenger,
+      result.isOk ? l10n.selfTestSent : (result.error ?? l10n.selfTestSent),
+      kind: result.isOk ? AppSnackKind.success : AppSnackKind.error,
+    );
+  }
+
+  /// Renders minutes-since-midnight in the reader's own clock convention.
+  ///
+  /// Deliberately goes through `MaterialLocalizations` rather than formatting
+  /// by hand: whether 22:00 shows as "10:00 PM" or "22:00" is a property of
+  /// the phone's locale and its 24-hour setting, and a hand-rolled format gets
+  /// it wrong for half the world.
+  static String _formatMinute(BuildContext context, int minute) {
+    final time = TimeOfDay(hour: minute ~/ 60, minute: minute % 60);
+    return MaterialLocalizations.of(context).formatTimeOfDay(
+      time,
+      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    );
+  }
+
+  /// The quiet-hours editor.
+  ///
+  /// Stateful inside the sheet so the two pickers and the warning update as
+  /// the window is edited, and only written to Firestore on save — a live
+  /// write per picker tap would produce a burst of documents and a backend
+  /// that briefly believes in half-edited windows.
+  Future<void> _showQuietHoursSheet(String userId, QuietHours initial) async {
+    var draft = initial;
+
+    final saved = await showModalBottomSheet<QuietHours>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.hero),
+        ),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final l10n = AppL10n.of(sheetContext);
+
+          Future<void> pick(bool isStart) async {
+            final current = isStart ? draft.startMinute : draft.endMinute;
+            final picked = await showTimePicker(
+              context: sheetContext,
+              initialTime: TimeOfDay(
+                hour: current ~/ 60,
+                minute: current % 60,
+              ),
+            );
+            if (picked == null) return;
+            final minute = picked.hour * 60 + picked.minute;
+            setSheetState(() {
+              draft = isStart
+                  ? draft.copyWith(startMinute: minute)
+                  : draft.copyWith(endMinute: minute);
+            });
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.md,
+                AppSpacing.xl,
+                AppSpacing.xl,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SheetGrabber(),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    l10n.quietHoursSheetTitle,
+                    style: AppText.headlineMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    l10n.quietHoursSheetBody,
+                    style: AppText.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: draft.enabled,
+                    onChanged: (value) => setSheetState(
+                      () => draft = draft.copyWith(enabled: value),
+                    ),
+                    title: Text(
+                      l10n.quietHoursEnable,
+                      style: AppText.titleSmall,
+                    ),
+                  ),
+                  if (draft.enabled) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _TimeField(
+                            label: l10n.quietHoursFrom,
+                            value: _formatMinute(
+                              sheetContext,
+                              draft.startMinute,
+                            ),
+                            onTap: () => pick(true),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _TimeField(
+                            label: l10n.quietHoursTo,
+                            value: _formatMinute(
+                              sheetContext,
+                              draft.endMinute,
+                            ),
+                            onTap: () => pick(false),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (draft.isEffectivelyAllDay) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 18,
+                            color: AppColors.warning,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              l10n.quietHoursAllDayWarning,
+                              style: AppText.bodySmall.copyWith(
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                  const SizedBox(height: AppSpacing.lg),
+                  // The carve-out, stated on the screen that would otherwise
+                  // make somebody wonder about it.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.verified_user_rounded,
+                        size: 16,
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          l10n.quietHoursEmergencyNote,
+                          style: AppText.caption.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  MetalButton(
+                    label: l10n.commonSave,
+                    icon: Icons.check_rounded,
+                    onPressed: draft.isEffectivelyAllDay
+                        ? null
+                        : () => Navigator.of(sheetContext).pop(draft),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    if (saved == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppL10n.of(context);
+    try {
+      await _firestoreService.setQuietHours(userId: userId, quietHours: saved);
+      if (!mounted) return;
+      showAppSnackBar(
+        messenger,
+        l10n.quietHoursSaved,
+        kind: AppSnackKind.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(messenger, '$e', kind: AppSnackKind.error);
+    }
+  }
+
   Future<void> _showAppearanceSheet() async {
     final l10n = AppL10n.of(context);
     await showModalBottomSheet<void>(
@@ -1748,6 +2104,58 @@ class _LanguageOption extends StatelessWidget {
             ),
             if (selected)
               Icon(Icons.check_rounded, size: 22, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A tappable time, styled as an input rather than a button.
+///
+/// Reads as a field because it holds a value that can be changed, which is
+/// what a time picker trigger is — a button implies an action with a result
+/// somewhere else.
+class _TimeField extends StatelessWidget {
+  const _TimeField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.controlAll,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: AppRadius.controlAll,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppText.caption.copyWith(color: AppColors.textTertiary),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: AppText.titleSmall.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
           ],
         ),
       ),

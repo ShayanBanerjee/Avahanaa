@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../l10n/app_localizations.dart';
 import 'alert_reply.dart';
+import 'scan_location.dart';
 
 class NotificationModel {
   final String id;
@@ -23,6 +24,12 @@ class NotificationModel {
   /// instead of being flattened on read.
   final String acknowledgementEta;
 
+  /// Roughly where the vehicle was when it was scanned, or null.
+  ///
+  /// Null far more often than not: the browser has to ask, and plenty of people
+  /// say no. Every surface that shows it has to work without it.
+  final ScanLocation? location;
+
   NotificationModel({
     required this.id,
     required this.qrCodeId,
@@ -36,6 +43,7 @@ class NotificationModel {
     this.readAt,
     this.acknowledgedAt,
     this.acknowledgementEta = '',
+    this.location,
   });
 
   /// The owner's reply, or null if they have not answered yet.
@@ -62,6 +70,7 @@ class NotificationModel {
       readAt: (data['readAt'] as Timestamp?)?.toDate(),
       acknowledgedAt: (data['acknowledgedAt'] as Timestamp?)?.toDate(),
       acknowledgementEta: data['acknowledgementEta'] ?? '',
+      location: ScanLocation.fromMap(data['location']),
     );
   }
 
@@ -96,6 +105,7 @@ class NotificationModel {
     DateTime? readAt,
     DateTime? acknowledgedAt,
     String? acknowledgementEta,
+    ScanLocation? location,
   }) {
     return NotificationModel(
       id: id,
@@ -110,6 +120,7 @@ class NotificationModel {
       readAt: readAt ?? this.readAt,
       acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
       acknowledgementEta: acknowledgementEta ?? this.acknowledgementEta,
+      location: location ?? this.location,
     );
   }
 
@@ -135,6 +146,8 @@ class NotificationModel {
         return l10n.reasonPrivateProperty;
       case 'other':
         return l10n.reasonOther;
+      case 'test':
+        return l10n.reasonTest;
       default:
         return l10n.reasonUnknown;
     }
@@ -158,6 +171,8 @@ class NotificationModel {
         return 'Private Property';
       case 'other':
         return 'Other';
+      case 'test':
+        return 'Test alert';
       default:
         return 'Vehicle Notification';
     }
@@ -180,6 +195,8 @@ class NotificationModel {
         return '🏠';
       case 'other':
         return '📝';
+      case 'test':
+        return '🔔';
       default:
         return '🚗';
     }

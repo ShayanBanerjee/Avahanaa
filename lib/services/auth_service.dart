@@ -6,6 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'firestore_service.dart';
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -104,6 +106,12 @@ class AuthService {
     } catch (e) {
       log('Failed to delete local FCM token during sign out: $e');
     }
+
+    // Close the shared document listeners before the credential goes away.
+    // They are long-lived by design, and one left open against rules that now
+    // deny it produces a stream of permission-denied errors attributed to a
+    // user who is no longer signed in.
+    await FirestoreService.disposeSharedStreams();
 
     try {
       await _auth.signOut();
@@ -214,6 +222,10 @@ class AuthService {
 
       // Delete user document
       await userRef.delete();
+
+      // Same reasoning as in signOut, and more pressing here: the documents
+      // these listeners are watching have just been deleted.
+      await FirestoreService.disposeSharedStreams();
 
       // Delete auth account
       await user.delete();

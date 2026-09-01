@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import '../services/ad_gate.dart';
+
 class AdMobBanner extends StatefulWidget {
   final EdgeInsetsGeometry padding;
 
@@ -78,6 +80,19 @@ class _AdMobBannerState extends State<AdMobBanner> {
       return const SizedBox.shrink();
     }
 
+    // Subscribers do not see this. Gated at paint rather than at load, so a
+    // subscription that lapses mid-session restores the banner without a
+    // restart, and one that activates removes it in the same frame the wallet
+    // stream reports it.
+    return ValueListenableBuilder<bool>(
+      valueListenable: adsAllowed,
+      builder: (context, allowed, child) =>
+          allowed ? child! : const SizedBox.shrink(),
+      child: _banner(),
+    );
+  }
+
+  Widget _banner() {
     return Padding(
       padding: widget.padding,
       child: Center(

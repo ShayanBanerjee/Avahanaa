@@ -106,10 +106,10 @@ final class AvahanaaPalette {
   /// beside it.
   static const AvahanaaPalette light = AvahanaaPalette(
     brightness: Brightness.light,
-    primary: Color(0xFF2563EB),
-    primaryDark: Color(0xFF1D4ED8),
-    primaryDeep: Color(0xFF1E40AF),
-    primaryTint: Color(0xFFEFF6FF),
+    primary: Color(0xFF8A5A18),
+    primaryDark: Color(0xFF6E4712),
+    primaryDeep: Color(0xFF4A2F0B),
+    primaryTint: Color(0xFFFDF6EA),
     success: Color(0xFF10B981),
     successDark: Color(0xFF047857),
     successTint: Color(0xFFECFDF5),
@@ -119,18 +119,18 @@ final class AvahanaaPalette {
     alertTint: Color(0xFFFDE7EA),
     alertBorder: Color(0xFFF5A3AD),
     alertSurface: Color(0xFFFEF2F2),
-    warning: Color(0xFFB45309),
-    warningTint: Color(0xFFFFFBEB),
-    background: Color(0xFFF8FAFC),
+    warning: Color(0xFFC2410C),
+    warningTint: Color(0xFFFFF7ED),
+    background: Color(0xFFFAF9F7),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFF1F5F9),
-    infoSurface: Color(0xFFF0F9FF),
-    infoBorder: Color(0xFFD6ECFB),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF475569),
-    textTertiary: Color(0xFF64748B),
-    border: Color(0xFFE2E8F0),
-    borderStrong: Color(0xFFCBD5E1),
+    surfaceMuted: Color(0xFFF4F2EF),
+    infoSurface: Color(0xFFFAF6EF),
+    infoBorder: Color(0xFFEADFCB),
+    textPrimary: Color(0xFF1A1814),
+    textSecondary: Color(0xFF55504A),
+    textTertiary: Color(0xFF736C63),
+    border: Color(0xFFE6E1DA),
+    borderStrong: Color(0xFFCFC8BE),
   );
 
   /// The night palette.
@@ -153,10 +153,10 @@ final class AvahanaaPalette {
   /// this separation instead.
   static const AvahanaaPalette dark = AvahanaaPalette(
     brightness: Brightness.dark,
-    primary: Color(0xFF63A4FF),
-    primaryDark: Color(0xFF8FC0FF),
-    primaryDeep: Color(0xFFB9D7FF),
-    primaryTint: Color(0xFF15263F),
+    primary: Color(0xFFE8A33D),
+    primaryDark: Color(0xFFF0B95F),
+    primaryDeep: Color(0xFFF7D49A),
+    primaryTint: Color(0xFF2A2118),
     success: Color(0xFF34D399),
     successDark: Color(0xFF6EE7B7),
     successTint: Color(0xFF10281F),
@@ -166,18 +166,18 @@ final class AvahanaaPalette {
     alertTint: Color(0xFF3A1119),
     alertBorder: Color(0xFF7A2733),
     alertSurface: Color(0xFF2A0F14),
-    warning: Color(0xFFFBBF24),
-    warningTint: Color(0xFF2E2310),
-    background: Color(0xFF0B1220),
-    surface: Color(0xFF151E2E),
-    surfaceMuted: Color(0xFF1E2A3D),
-    infoSurface: Color(0xFF122436),
-    infoBorder: Color(0xFF24405C),
-    textPrimary: Color(0xFFF1F5F9),
-    textSecondary: Color(0xFFA9B8CD),
-    textTertiary: Color(0xFF8CA0B8),
-    border: Color(0xFF263449),
-    borderStrong: Color(0xFF3A4C66),
+    warning: Color(0xFFFB923C),
+    warningTint: Color(0xFF2E1D10),
+    background: Color(0xFF121110),
+    surface: Color(0xFF1C1A17),
+    surfaceMuted: Color(0xFF262320),
+    infoSurface: Color(0xFF241F17),
+    infoBorder: Color(0xFF3D352A),
+    textPrimary: Color(0xFFF5F2EE),
+    textSecondary: Color(0xFFB8B0A6),
+    textTertiary: Color(0xFF9A9289),
+    border: Color(0xFF322E29),
+    borderStrong: Color(0xFF4A443D),
   );
 }
 
@@ -186,17 +186,22 @@ final class AvahanaaPalette {
 /// The printable sticker and the QR code are physical objects. Dark mode is a
 /// property of a screen at night; a sheet of A4 does not have one.
 abstract final class AppPrint {
-  static const Color brandDeep = Color(0xFF1E40AF);
+  static const Color brandDeep = Color(0xFF1A1E24);
 
   /// The flat brand gradient for the **printed** sticker.
   ///
   /// On screen the same ramp is rendered as metal (`MetalPalette.brand`), but
   /// print is unforgiving: a five-stop metallic ramp bands and muddies on a
   /// consumer printer, so the sheet keeps the flat three-stop version.
+  /// The flat three-stop version of `MetalPalette.brand`.
+  ///
+  /// Kept in step with it deliberately: the sticker on the windscreen and the
+  /// hero in the app are the same object, and a brand that is bright blue on
+  /// paper and anodised steel on screen is two brands.
   static const List<Color> heroGradient = <Color>[
-    Color(0xFF2563EB),
-    Color(0xFF1D4ED8),
-    Color(0xFF10B981),
+    Color(0xFF23282F),
+    Color(0xFF1A1E24),
+    Color(0xFF3A2E1E),
   ];
 }
 
@@ -219,6 +224,11 @@ abstract final class AppColors {
   static bool get isDark => _active.isDark;
 
   // Brand ---------------------------------------------------------------
+  //
+  // The blue here is the same blue as `MetalPalette.brand.base`, deliberately.
+  // Before this the hero was one blue and every button, link and active nav
+  // item was a brighter one — which is the sort of mismatch nobody can name
+  // but everybody notices.
   static Color get primary => _active.primary;
   static Color get primaryDark => _active.primaryDark;
   static Color get primaryDeep => _active.primaryDeep;
@@ -300,14 +310,21 @@ abstract final class AppSpacing {
 }
 
 abstract final class AppRadius {
+  /// Tightened one step (Aug 2026), alongside the metal treatment.
+  ///
+  /// 16 and 24 read friendly — consumer, soft, a little generic. A machined
+  /// edge is precise, and the corner radius is most of what says which of
+  /// those a surface is. The step is small on purpose: the shapes should feel
+  /// more deliberate, not different.
+
   /// Inputs and buttons.
   static const double control = 12;
 
   /// Cards.
-  static const double card = 16;
+  static const double card = 14;
 
   /// Hero surfaces and the QR container.
-  static const double hero = 24;
+  static const double hero = 20;
 
   static const BorderRadius controlAll = BorderRadius.all(
     Radius.circular(control),
@@ -364,13 +381,66 @@ abstract final class AppShadows {
 }
 
 abstract final class AppMotion {
+  // -- Durations ---------------------------------------------------------
+  //
+  // Four steps, and everything in the app is one of them. Before this there
+  // were twenty-two hand-picked millisecond values scattered across the
+  // widgets, which is why nothing quite agreed with anything else: two things
+  // animating side by side at 300ms and 320ms do not read as deliberate, they
+  // read as sloppy.
+
+  /// A state flip the eye should barely register — a chip filling, a switch.
   static const Duration fast = Duration(milliseconds: 180);
+
+  /// The default. Anything entering, leaving, or resizing.
   static const Duration normal = Duration(milliseconds: 320);
+
+  /// A surface arriving, or a sheet settling.
   static const Duration slow = Duration(milliseconds: 520);
 
-  /// Entrance curve — decelerating, never bouncy. This is a utility app.
+  /// Long, ambient movement — the specular sweep, a skeleton shimmer. Not a
+  /// response to anything the user did, which is why it may take its time.
+  static const Duration ambient = Duration(milliseconds: 1250);
+
+  /// The pause between ambient passes.
+  ///
+  /// A highlight that never stops stops reading as metal and starts reading as
+  /// a loading state. The gap is the part that sells it.
+  static const Duration ambientRest = Duration(seconds: 9);
+
+  /// Between consecutive items in a list entrance.
+  ///
+  /// Small on purpose. A stagger you can count is a stagger that is showing
+  /// off; this one only has to stop eight cards arriving as one slab.
+  static const Duration stagger = Duration(milliseconds: 40);
+
+  /// How long a staggered run may take in total, however many items there are.
+  /// Past this the last card is arriving after the user has started reading.
+  static const Duration staggerCap = Duration(milliseconds: 320);
+
+  // -- Curves ------------------------------------------------------------
+
+  /// Entrance — decelerating, never bouncy. This is a utility app.
   static const Curve entrance = Curves.easeOutCubic;
+
+  /// For the one thing on screen that matters more than the rest.
   static const Curve emphasis = Curves.easeOutQuart;
+
+  /// Leaving. Slightly faster out than in, so dismissal feels obedient.
+  static const Curve exit = Curves.easeInCubic;
+
+  /// Ambient travel — symmetric, with no visible start or stop.
+  static const Curve ambientCurve = Curves.easeInOutSine;
+
+  /// The delay for item [index] in a staggered list, capped by [staggerCap].
+  static Duration staggerFor(int index) {
+    final ms = stagger.inMilliseconds * index;
+    return Duration(
+      milliseconds: ms > staggerCap.inMilliseconds
+          ? staggerCap.inMilliseconds
+          : ms,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -598,7 +668,17 @@ abstract final class AvahanaaTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: p.primary,
+          // Graphite, not bronze.
+          //
+          // Bronze is the *accent* — links, selected states, the icon on a
+          // tinted badge. It is what `primary` means when it is ink. As a
+          // full-width fill it produced a slab of brown, and it disagreed
+          // with `MetalButton`, which has always used the graphite brand
+          // ramp. The app had two different primary buttons.
+          //
+          // Same value as `MetalPalette.brand.core` and as the web's
+          // `.btn-primary`, so the three agree.
+          backgroundColor: const Color(0xFF1A1E24),
           foregroundColor: AppColors.onDark,
           disabledBackgroundColor: p.borderStrong,
           disabledForegroundColor: p.surface,

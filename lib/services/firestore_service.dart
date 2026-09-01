@@ -5,13 +5,48 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/alert_reply.dart';
+import '../models/alert_wallet.dart';
+import '../models/quiet_hours.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../utils/qr_payload_builder.dart';
+import 'shared_stream.dart';
+
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// Live listeners, keyed by what they are watching. See [SharedStream] for
+  /// why they replay their last value rather than being plain broadcasts.
+  ///
+  /// Static because every screen builds its own `FirestoreService()` — that is
+  /// the existing convention and worth keeping, since the class is stateless
+  /// apart from this. The cache has to outlive the instances for the sharing
+  /// to mean anything.
+  static final Map<String, SharedStream<Object?>> _sharedStreams = {};
+
+  Stream<T> _shared<T>(String key, Stream<T> Function() open) {
+    final existing = _sharedStreams[key];
+    if (existing != null) return existing.stream.cast<T>();
+
+    final shared = SharedStream<Object?>(open().cast<Object?>());
+    _sharedStreams[key] = shared;
+    return shared.stream.cast<T>();
+  }
+
+  /// Drops every shared listener.
+  ///
+  /// Called on sign-out. Without it the previous account's document listeners
+  /// stay open against rules that now deny them, which surfaces as a stream of
+  /// permission-denied errors from a user who is no longer there.
+  static Future<void> disposeSharedStreams() async {
+    final streams = _sharedStreams.values.toList(growable: false);
+    _sharedStreams.clear();
+    for (final stream in streams) {
+      await stream.dispose();
+    }
+  }
 
   CollectionReference<Map<String, dynamic>> _vehiclesRef(String userId) {
     return _firestore.collection('users').doc(userId).collection('vehicles');
@@ -33,23 +68,128 @@ class FirestoreService {
 
   // Stream user data
   Stream<UserModel?> streamUserData(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .snapshots()
-        .map((doc) => doc.exists ? UserModel.fromFirestore(doc) : null);
+    return _shared(
+      'user:$userId',
+      () => _firestore
+          .collection('users')
+          .doc(userId)
+          .snapshots()
+          .map((doc) => doc.exists ? UserModel.fromFirestore(doc) : null),
+    );
+  }
+
+  /// The owner's alert budget, live.
+  ///
+  /// Lives on `users/{uid}` rather than in its own document so that the alert
+  /// path — which already reads the user doc for `fcmToken` — spends no extra
+  /// read deciding whether the alert is metered. The fields are server-written
+  /// and the rules forbid the client from touching them; this stream is a
+  /// read-only view for the UI.
+  ///
+  /// Errors are folded into an empty wallet rather than surfaced. A wallet that
+  /// fails to load must not be allowed to read as "you have no alerts left" —
+  /// [AlertWallet.empty] is a fresh cycle with the free allowance intact, which
+  /// is the safe direction to be wrong in. The server holds the real number.
+  Stream<AlertWallet> streamAlertWallet(String userId) {
+    // Shares the *same* underlying listener as [streamUserData] would like to,
+    // but cannot: they map the same document to different types. One extra
+    // listener rather than one per screen is the win that matters.
+    return _shared(
+      'wallet:$userId',
+      () => _firestore
+          .collection('users')
+          .doc(userId)
+          .snapshots()
+          .map((doc) => AlertWallet.fromMap(doc.data()))
+          .handleError((Object e) {
+            log('Error streaming alert wallet: $e');
+          }),
+    );
+  }
+
+  /// The owner's quiet-hours window, live.
+  ///
+  /// A preference rather than a balance, so unlike the wallet fields the client
+  /// does write this one — the rules allow it and the backend only reads it.
+  Stream<QuietHours> streamQuietHours(String userId) {
+    return _shared(
+      'quietHours:$userId',
+      () => _firestore
+          .collection('users')
+          .doc(userId)
+          .snapshots()
+          .map(
+            (doc) => QuietHours.fromMap(
+              doc.data()?['quietHours'] as Map<String, dynamic>?,
+            ),
+          )
+          .handleError((Object e) {
+            log('Error streaming quiet hours: $e');
+          }),
+    );
+  }
+
+  /// Saves the window, and the offset the backend needs to interpret it.
+  ///
+  /// The offset is written every time rather than only when it changes: the
+  /// server has no idea what "22:00" means without it, and a user who has
+  /// flown somewhere should not have their alarms shifted by five hours until
+  /// they happen to edit the setting.
+  Future<void> setQuietHours({
+    required String userId,
+    required QuietHours quietHours,
+  }) async {
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'quietHours': quietHours.toMap(),
+        'timezoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error saving quiet hours: $e');
+      throw appL10n.errQuietHours;
+    }
+  }
+
+  /// Refreshes the stored UTC offset.
+  ///
+  /// Called on launch. Cheap, idempotent, and the only thing standing between
+  /// a quiet-hours window and it meaning the wrong hours after a flight.
+  /// Failures are swallowed — this is housekeeping, and a user is never
+  /// waiting on it.
+  Future<void> syncTimezoneOffset(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'timezoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      log('Could not sync the timezone offset: $e');
+    }
+  }
+
+  Future<AlertWallet> getAlertWallet(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      return AlertWallet.fromMap(doc.data());
+    } catch (e) {
+      log('Error reading alert wallet: $e');
+      return AlertWallet.empty;
+    }
   }
 
   // Stream vehicles for user
   Stream<List<VehicleModel>> streamUserVehicles(String userId) {
-    return _vehiclesRef(userId)
-        .orderBy('createdAt', descending: false)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => VehicleModel.fromFirestore(doc))
-              .toList(),
-        );
+    return _shared(
+      'vehicles:$userId',
+      () => _vehiclesRef(userId)
+          .orderBy('createdAt', descending: false)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => VehicleModel.fromFirestore(doc))
+                .toList(),
+          ),
+    );
   }
 
   Future<List<VehicleModel>> getUserVehicles(String userId) async {
@@ -499,17 +639,20 @@ class FirestoreService {
 
   // Get user notifications
   Stream<List<NotificationModel>> streamUserNotifications(String userId) {
-    return _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: userId)
-        .orderBy('sentAt', descending: true)
-        .limit(50)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => NotificationModel.fromFirestore(doc))
-              .toList(),
-        );
+    return _shared(
+      'notifications:$userId',
+      () => _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .orderBy('sentAt', descending: true)
+          .limit(50)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => NotificationModel.fromFirestore(doc))
+                .toList(),
+          ),
+    );
   }
 
   Future<List<NotificationModel>> getUserNotifications(
@@ -641,13 +784,22 @@ class FirestoreService {
   }
 
   // Stream unread notification count
+  /// How many alerts are unread.
+  ///
+  /// Derived from [streamUserNotifications] rather than opening a second query
+  /// against the same collection. The list is already live, already capped at
+  /// 50, and already in memory — a separate `where('read', false)` listener was
+  /// a second billed sync of substantially the same documents to answer a
+  /// question the first one had already answered.
+  ///
+  /// The cap is the one behavioural difference: an owner with more than 50
+  /// unread alerts sees "50", which is a number no badge renders anyway (the
+  /// badge caps at 99+) and a situation that means something has gone very
+  /// wrong regardless.
   Stream<int> streamUnreadNotificationCount(String userId) {
-    return _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: userId)
-        .where('read', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+    return streamUserNotifications(
+      userId,
+    ).map((alerts) => alerts.where((alert) => !alert.read).length).distinct();
   }
 
   // Get notification statistics

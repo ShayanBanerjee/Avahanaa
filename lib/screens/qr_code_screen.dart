@@ -97,31 +97,31 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
             const SizedBox(height: AppSpacing.xl),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 60),
+              delay: AppMotion.staggerFor(0),
               child: _buildStylePicker(),
             ),
             const SizedBox(height: AppSpacing.xl),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 120),
+              delay: AppMotion.staggerFor(1),
               child: _buildPrintCard(),
             ),
             const SizedBox(height: AppSpacing.xl),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 180),
+              delay: AppMotion.staggerFor(2),
               child: _buildImageCard(shareableLink),
             ),
             const SizedBox(height: AppSpacing.xl),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 220),
+              delay: AppMotion.staggerFor(3),
               child: _buildPrintingTipsCard(),
             ),
             const SizedBox(height: AppSpacing.lg),
 
             EntranceFade(
-              delay: const Duration(milliseconds: 260),
+              delay: AppMotion.staggerFor(4),
               child: _buildScanTipCard(),
             ),
           ],

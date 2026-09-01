@@ -42,7 +42,10 @@ identity.
   `docs/play_store_compliance.md`.
 - Backend is Firebase: Auth (email/password + email verification), Firestore,
   Cloud Messaging.
-- Monetised with AdMob banners (`lib/widgets/admob_banner.dart`).
+- Monetised three ways since Sep 2026: one AdMob banner in the app shell,
+  rewarded ads that buy alert credits, and Avahanaa Plus subscriptions.
+  `docs/monetization.md` is the design and the Play Console setup that has to
+  happen before any of it works.
 
 ## Repo layout
 
@@ -50,7 +53,9 @@ identity.
 lib/
   main.dart                  App root, theme, AuthGate, FCM background handler
   firebase_options.dart      Generated — do not hand-edit
-  models/                    UserModel, VehicleModel, NotificationModel
+  models/                    UserModel, VehicleModel, NotificationModel,
+                             AlertWallet (the alert budget), ScanLocation,
+                             QuietHours, AlertInsights
   screens/
     auth/                    login, signup, verify_email, forgot_password
     home_screen.dart         Bottom nav shell + home tab (largest screen file)
@@ -58,15 +63,26 @@ lib/
     profile_screen.dart      Vehicle list, account settings (largest file, 1047 lines)
     qr_code_screen.dart      Sticker studio: theme picker, sheet layout, print
     legal_documents_screen.dart
+    plans_screen.dart          Paywall: ad top-up + the three subscription tiers
   services/
     auth_service.dart        Sign up/in/out, account deletion, FCM token writes
     firestore_service.dart   All Firestore reads/writes (vehicles, QR, notifications)
+                             + the shared-listener cache, see Conventions
+    avahanaa_api.dart        HTTPS client for avahanaa.com/api/* (wallet, billing,
+                             self-test) — the three things a client may not decide
+    billing_service.dart     Google Play subscriptions; hands tokens to the backend
+    rewarded_ad_service.dart Rewarded ads; mints the SSV nonce
+    alert_credits.dart       The one implementation of "watch an ad, get a credit"
+    alert_readiness.dart     Will this phone actually wake its owner up?
+    ad_gate.dart             One notifier: may this app show ads right now
+    shared_stream.dart       One upstream listener, many subscribers, replayed
     fcm_service.dart         Push receipt, local notifications, reminder scheduling
     notification_payload.dart      FCM data-payload contract + reminder ID derivation
     notification_navigation_service.dart  Deep-link a tapped notification to a screen
   theme/
     app_theme.dart           ALL design tokens + ThemeData (single source)
   utils/
+    alert_share.dart         Forward an alert to whoever is nearer the car
     qr_payload_builder.dart  Builds the URL encoded into the QR
     sticker_renderer.dart    Canvas-drawn themeable sticker (preview + export)
     sticker_sheet.dart       Lays stickers onto a page; PDF + system print dialog
@@ -75,6 +91,10 @@ lib/
     vehicle_registration_validator.dart  Indian plate regex (standard + Bharat series)
   widgets/
     ui_kit.dart              Shared components (cards, rows, empty states, ...)
+    alert_credit_meter.dart  The balance, inline on the hero or as a card
+    alert_readiness_card.dart  Appears only when alerts cannot reach this phone
+    scan_location_card.dart  Where the vehicle was, when the scanner shared it
+    alert_insights_card.dart How fast you answer, and where alerts come from
     hero_header.dart         Brand gradient surface + glass panel
     qr_visual.dart           Canonical QR styling, hero plinth, showcase panel
     vehicle_panel.dart       The swipeable vehicle rail on the home hero
@@ -83,7 +103,9 @@ docs/                        Architecture and contract docs — read before chan
 assets/
   fonts/                     Inter, Plus Jakarta Sans, Noto Sans Kannada (subset)
   images/qr_template.svg     Legacy sticker artwork — NO LONGER USED, see Known issues
-  audio/avahanaa_alarm.wav   Alarm sound — CURRENTLY UNUSED, see Known issues
+  audio/avahanaa_alarm.wav   Alarm sound. The copy the app actually plays lives
+                             in android/app/src/main/res/raw/ — Android will not
+                             take a notification sound from Flutter assets.
 tool/verify_sticker_scan.py  Decodes exported stickers under simulated scan conditions
 test/                        Only notification_payload_test.dart is meaningful
 ```
@@ -111,6 +133,14 @@ users/{userId}
   email, phoneNumber, fcmToken, fcmTokenUpdatedAt,
   primaryVehicleId, notificationsEnabled, createdAt, updatedAt
   qrCodeId, carDetails      <- LEGACY single-vehicle fields, still dual-written
+  quietHours{enabled,startMinute,endMinute}, timezoneOffsetMinutes
+                            <- client-written preferences. The backend reads
+                               the offset to know what "22:00" means.
+  plan, planProductId, planExpiresAt, planUpdatedAt,
+  alertCredits, freeAlertsUsed, cycleStartedAt,
+  lifetimeAlertsReceived, lifetimeAdsWatched
+                            <- the alert budget. ALL server-written; the rules
+                               deny the client every one of these fields.
 
 users/{userId}/vehicles/{vehicleId}
   userId, color, carModel, licensePlate, assetNumber,
@@ -122,6 +152,11 @@ qrCodes/{qrCodeId}          <- top-level, readable by the scan page
 
 notifications/{notificationId}
   qrCodeId, userId, vehicleId, reason, message, status, read, sentAt, readAt
+  deliveryTier              <- 'full' | 'quiet', decided once at write time
+  location                  <- {lat, lng, accuracyM} rounded to ~110m, or null
+
+adRewards/{transactionId}   <- one settled AdMob SSV callback. Server-only.
+purchaseTokens/{sha256}     <- which account claimed a Play purchase. Server-only.
 ```
 
 The multi-vehicle migration is mid-flight: Phase 1/2 (dual-write + lazy
@@ -152,6 +187,14 @@ and keep owner PII out of it.
 5. `FCMService.showNotificationForMessage` dedupes by `notificationId`, shows the
    alert on the `avahanaa_critical_alerts_v2` channel, then schedules **two
    escalating reminders at +3 min and +15 min** from `sentAt`.
+5b. **The alert budget decides how loud step 5 is.** `/api/notify` spends one
+   alert against the owner's wallet and stamps the notification `full` or
+   `quiet`; the push carries it as a `tier` data key. `quiet` means a
+   default-importance channel and no reminders — never a missing alert, and
+   never for an `emergency`, which is checked before the balance is. An absent
+   or unknown `tier` means `full`. **Quiet hours use the same mechanism** —
+   inside the window a non-emergency is forced to `quiet`, never suppressed.
+   See `docs/monetization.md`.
 6. Reminders are cancelled when the alert is read/tapped
    (`cancelNotificationLifecycleById`), and re-synced from Firestore unread docs
    on app start (`_syncReminderStateFromFirestore`).
@@ -194,6 +237,24 @@ background isolate can cancel them without reading state.
   colours (`AppColors.inkOnLightFill`, `inkOnAlertFill`, `onDark`,
   `AppPrint.*`). Getting this wrong is invisible in light mode and glaring at
   night. `test/contrast_test.dart` gates both palettes.
+- **Never cache a shared stream in a `late final` and wrap it.** `SharedStream`
+  hands out one multi-subscriber, replaying, stable-identity stream; that is
+  exactly what `StreamBuilder` needs. Wrapping it in `asBroadcastStream()` kills
+  the source the first time the widget unmounts (the hero froze on a stale
+  balance for a whole session), and a single-subscription view throws on the
+  second listen. `test/shared_stream_test.dart` pins all three properties.
+- **Firestore listeners are shared, not per-screen.** The shell keeps all three
+  tabs alive in an `IndexedStack`, so every tab's `StreamBuilder` is mounted at
+  once — which is how `users/{uid}` came to have four simultaneous listeners.
+  `FirestoreService` memoises the streaming reads and replays the last value to
+  each new subscriber. Add a new `stream*` method through `_shared(key, ...)`,
+  and if you ever add a third sign-out path, call
+  `FirestoreService.disposeSharedStreams()` from it.
+- **There is exactly one ad slot**, in the app shell above the nav bar, and it
+  removes itself for subscribers via `adsAllowed` in `ad_gate.dart`. Do not add
+  an `AdMobBanner` to a screen: with the tabs all alive, a second one is a
+  second simultaneous ad load for a slot nobody can see. Panic surfaces carry
+  no ads at all.
 - **All Firestore access goes through `FirestoreService`.** Screens never touch
   `FirebaseFirestore.instance` directly. `AuthService` and `FCMService` are the
   only exceptions, and only for their own concerns.
@@ -204,11 +265,33 @@ background isolate can cancel them without reading state.
   `AppSpacing`, `AppRadius`, `AppShadows`, `AppMotion`, `AppText`, and
   `AvahanaaTheme.light()`. Screens must not hardcode hex, spacing or text
   styles; if a shade is missing, add it to the token file so the whole app
-  moves together. The palette is `#2563EB` primary blue, `#10B981` green,
-  `#C81B30` alert crimson, `#F8FAFC` background, `#0F172A` text, `#E2E8F0`
-  borders. The neutrals are blue-tinted slate rather than pure grey, so they
-  sit with the brand blue instead of reading faintly green next to it.
-  Radius 12 for inputs/buttons, 16 for cards, 24 for hero surfaces.
+  moves together.
+
+  **Graphite and amber since Sep 2026**, replacing the corporate blue. The hero
+  is a machined near-black (`MetalPalette.brand`) with one warm bronze corner —
+  the ramp's `catchLight` — so the surface reads as lit rather than filled.
+
+  `primary` is a deep bronze `#8A5A18` in daylight and a bright amber
+  `#E8A33D` at night. It has to be both, because `primary` is used as ink on
+  white *and* as a fill under white: one bright amber cannot do both, and
+  `#E8A33D` on white is 1.9:1.
+
+  The neutrals are warm greys for the same reason they used to be blue-slate —
+  a cool grey beside bronze reads faintly green. `warning` is burnt orange
+  `#C2410C`, moved so it stays distinguishable now that the brand is warm.
+  `success` `#10B981` and alert crimson `#C81B30` are unchanged.
+
+  `AppPrint.heroGradient` carries the flat three-stop version of the same ramp,
+  so the app and the printed sticker are one brand. Changing it means
+  re-running the sticker scan verification — the QR itself is never touched,
+  but the band around it is.
+- Radius 12 for inputs/buttons, 14 for cards, 20 for hero surfaces. Card
+  padding is 24, matching the web's `.card-body`.
+- **The app and `avahanaa.com` are one brand.** The web's theme layer
+  (`Avahanaa-Web/index.html`) carries the same tokens as `app_theme.dart`;
+  primary buttons are graphite in both, bronze is the accent in both, and green
+  is a status in both. A change to the palette here that is not mirrored there
+  is a visible mismatch to anyone who scans a sticker and then opens the app.
 - Shared components live in `lib/widgets/ui_kit.dart` (cards, list rows, empty
   states, stat tiles, plate badge, skeletons, snackbars), `hero_header.dart`
   (the brand gradient surface), `qr_visual.dart` (the single definition of how
@@ -257,6 +340,13 @@ fails loudly on release without it (`android/app/build.gradle.kts`).
 - **Never commit signing material.** `*.jks`, `*.keystore`, `key.properties` are
   gitignored. An upload keystore was committed once and removed in `10626d0` —
   do not repeat it.
+- **Never meter an emergency, and never let a spent budget silence an alert
+  outright.** The whole monetisation design rests on those two carve-outs; read
+  `docs/monetization.md` before touching `spendAlertBudget` or `AlertTier`.
+- **Never grant a credit or a subscription from the client.** Credits come from
+  AdMob's signed server-side-verification callback; subscriptions come from the
+  Play Developer API. The rules deny the client those fields, and that is
+  load-bearing rather than defence in depth.
 - **Never put owner PII into `qrCodes` docs or QR payloads.** The whole product
   promise is that the scanner learns nothing about the owner. The QR encodes an
   opaque ID and nothing else.
