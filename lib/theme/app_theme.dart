@@ -668,7 +668,17 @@ abstract final class AvahanaaTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: p.primary,
+          // Graphite, not bronze.
+          //
+          // Bronze is the *accent* — links, selected states, the icon on a
+          // tinted badge. It is what `primary` means when it is ink. As a
+          // full-width fill it produced a slab of brown, and it disagreed
+          // with `MetalButton`, which has always used the graphite brand
+          // ramp. The app had two different primary buttons.
+          //
+          // Same value as `MetalPalette.brand.core` and as the web's
+          // `.btn-primary`, so the three agree.
+          backgroundColor: const Color(0xFF1A1E24),
           foregroundColor: AppColors.onDark,
           disabledBackgroundColor: p.borderStrong,
           disabledForegroundColor: p.surface,

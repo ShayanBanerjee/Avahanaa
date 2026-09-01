@@ -444,7 +444,15 @@ class QrHeroPlinth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = isActive ? AppColors.success : AppColors.textTertiary;
+    // The reticle is a *scanner affordance* — "point a camera here" — not a
+    // status readout. The status is already on the pill beside it, in words.
+    //
+    // It used to be success green, which put a third saturated colour on a
+    // screen that is otherwise graphite and bronze, and spent the one colour
+    // reserved for "somebody is on their way" on decoration. Bronze when the
+    // code is live, muted when it is paused: the same information, in the
+    // brand's own accent.
+    final accent = isActive ? AppColors.primary : AppColors.textTertiary;
 
     // Bezel: a machined graphite ring around a recessed white well.
     //
@@ -630,6 +638,9 @@ class QrShowcasePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Green stays here: this one *is* a status readout — the showcase panel's
+    // whole job is to say whether the code is live or paused — and that is
+    // exactly what the success token is reserved for.
     final accent = isActive ? AppColors.success : AppColors.warning;
 
     return DecoratedBox(

@@ -149,7 +149,13 @@ class AppCard extends StatelessWidget {
   AppCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.lg),
+    // 24, not 16. The same 1.5rem the web's `.card-body` uses.
+    //
+    // The two surfaces are the same product seen from two ends, and side by
+    // side the app read cramped against the page — not because anything was
+    // wrong with it, but because eight pixels of breathing room on every card
+    // is most of what "considered" looks like at a glance.
+    this.padding = const EdgeInsets.all(AppSpacing.xl),
     Color? color,
     Color? borderColor,
     this.onTap,
@@ -422,9 +428,23 @@ class StatusPill extends StatelessWidget {
             Icon(icon, size: 14, color: foreground),
             const SizedBox(width: 6),
           ],
-          Text(
-            label,
-            style: AppText.labelSmall.copyWith(color: foreground),
+          // Flexible, so the pill gives way rather than overflowing.
+          //
+          // A `Wrap` cannot shrink an item that is individually too wide, and
+          // at 2.0x text scale on a 320dp screen a single pill is: "QR ACTIVE"
+          // with an icon does not fit inside a card's padding. It used to
+          // overflow with a yellow-and-black stripe across the card.
+          //
+          // Ellipsising a status label is a real loss, so it is the last
+          // resort rather than the design — the pills are short precisely so
+          // that it almost never happens.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.labelSmall.copyWith(color: foreground),
+            ),
           ),
         ],
       ),

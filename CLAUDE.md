@@ -285,7 +285,13 @@ background isolate can cancel them without reading state.
   so the app and the printed sticker are one brand. Changing it means
   re-running the sticker scan verification — the QR itself is never touched,
   but the band around it is.
-- Radius 12 for inputs/buttons, 14 for cards, 20 for hero surfaces.
+- Radius 12 for inputs/buttons, 14 for cards, 20 for hero surfaces. Card
+  padding is 24, matching the web's `.card-body`.
+- **The app and `avahanaa.com` are one brand.** The web's theme layer
+  (`Avahanaa-Web/index.html`) carries the same tokens as `app_theme.dart`;
+  primary buttons are graphite in both, bronze is the accent in both, and green
+  is a status in both. A change to the palette here that is not mirrored there
+  is a visible mismatch to anyone who scans a sticker and then opens the app.
 - Shared components live in `lib/widgets/ui_kit.dart` (cards, list rows, empty
   states, stat tiles, plate badge, skeletons, snackbars), `hero_header.dart`
   (the brand gradient surface), `qr_visual.dart` (the single definition of how
