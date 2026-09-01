@@ -542,5 +542,144 @@
   "readinessPreferenceCta": "Open alert settings",
   "readinessTokenCta": "Try again",
   "creditsEarnedPending": "Ad complete. Your credit will appear shortly.",
-  "readinessFullScreenCta": "Allow lock screen alerts"
+  "readinessFullScreenCta": "Allow lock screen alerts",
+  "errQuietHours": "Could not save your quiet hours. Please try again.",
+  "quietHoursTitle": "Quiet hours",
+  "quietHoursOff": "Off — alerts always ring",
+  "quietHoursRange": "{start} to {end}",
+  "@quietHoursRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "quietHoursSheetTitle": "Quiet hours",
+  "quietHoursSheetBody": "Between these times, ordinary alerts arrive without the alarm — your phone's normal notification sound, once, and no reminders.\n\nThey still arrive. You can still reply. Nothing is ever hidden from you.",
+  "quietHoursEmergencyNote": "Emergencies ignore quiet hours completely and ring at full volume.",
+  "quietHoursEnable": "Quieten alerts overnight",
+  "quietHoursFrom": "From",
+  "quietHoursTo": "To",
+  "quietHoursAllDayWarning": "That covers the whole day — alerts would never ring. Choose a shorter window.",
+  "quietHoursSaved": "Quiet hours saved.",
+  "commonSave": "Save",
+  "insightsOverline": "YOUR ALERTS",
+  "insightsResponseTitle": "You usually answer in {duration}",
+  "@insightsResponseTitle": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsNoResponsesTitle": "You haven't answered an alert yet",
+  "insightsWindow": "From your last {count} alerts",
+  "@insightsWindow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsThisMonth": "This month",
+  "insightsAnswered": "Answered",
+  "insightsEmergencies": "Emergencies",
+  "insightsTopReason": "Most often: {reason} ({count})",
+  "@insightsTopReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsTopVehicle": "Most alerted vehicle: {plate}",
+  "@insightsTopVehicle": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsBusiestHour": "Busiest around {hour}",
+  "@insightsBusiestHour": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsSeconds": "{count} seconds",
+  "@insightsSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsMinutes": "{count} minutes",
+  "@insightsMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsHours": "{count} hours",
+  "@insightsHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsEmergencyCount": "{count, plural, one{1 was an emergency} other{{count} were emergencies}}",
+  "@insightsEmergencyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareHeadline": "Someone needs help with my vehicle: {reason}",
+  "@shareHeadline": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "shareVehicle": "Vehicle: {vehicle}",
+  "@shareVehicle": {
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhen": "Reported: {time}",
+  "@shareWhen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "shareTheySaid": "They said: \"{message}\"",
+  "@shareTheySaid": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhere": "Roughly where it is:",
+  "shareFooter": "Sent from Avahanaa. Can you get there before me?",
+  "alertsForward": "Ask someone to go",
+  "alertsForwardHint": "Send the details to whoever is closest to your vehicle."
 }

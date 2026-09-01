@@ -2322,6 +2322,216 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Allow lock screen alerts'**
   String get readinessFullScreenCta;
+
+  /// No description provided for @errQuietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your quiet hours. Please try again.'**
+  String get errQuietHours;
+
+  /// No description provided for @quietHoursTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHoursTitle;
+
+  /// No description provided for @quietHoursOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — alerts always ring'**
+  String get quietHoursOff;
+
+  /// No description provided for @quietHoursRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} to {end}'**
+  String quietHoursRange(String start, String end);
+
+  /// No description provided for @quietHoursSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHoursSheetTitle;
+
+  /// No description provided for @quietHoursSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Between these times, ordinary alerts arrive without the alarm — your phone\'s normal notification sound, once, and no reminders.\n\nThey still arrive. You can still reply. Nothing is ever hidden from you.'**
+  String get quietHoursSheetBody;
+
+  /// No description provided for @quietHoursEmergencyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergencies ignore quiet hours completely and ring at full volume.'**
+  String get quietHoursEmergencyNote;
+
+  /// No description provided for @quietHoursEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Quieten alerts overnight'**
+  String get quietHoursEnable;
+
+  /// No description provided for @quietHoursFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get quietHoursFrom;
+
+  /// No description provided for @quietHoursTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get quietHoursTo;
+
+  /// No description provided for @quietHoursAllDayWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'That covers the whole day — alerts would never ring. Choose a shorter window.'**
+  String get quietHoursAllDayWarning;
+
+  /// No description provided for @quietHoursSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours saved.'**
+  String get quietHoursSaved;
+
+  /// No description provided for @commonSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get commonSave;
+
+  /// No description provided for @insightsOverline.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR ALERTS'**
+  String get insightsOverline;
+
+  /// No description provided for @insightsResponseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You usually answer in {duration}'**
+  String insightsResponseTitle(String duration);
+
+  /// No description provided for @insightsNoResponsesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t answered an alert yet'**
+  String get insightsNoResponsesTitle;
+
+  /// No description provided for @insightsWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'From your last {count} alerts'**
+  String insightsWindow(int count);
+
+  /// No description provided for @insightsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get insightsThisMonth;
+
+  /// No description provided for @insightsAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get insightsAnswered;
+
+  /// No description provided for @insightsEmergencies.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergencies'**
+  String get insightsEmergencies;
+
+  /// No description provided for @insightsTopReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Most often: {reason} ({count})'**
+  String insightsTopReason(String reason, int count);
+
+  /// No description provided for @insightsTopVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Most alerted vehicle: {plate}'**
+  String insightsTopVehicle(String plate);
+
+  /// No description provided for @insightsBusiestHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Busiest around {hour}'**
+  String insightsBusiestHour(String hour);
+
+  /// No description provided for @insightsSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} seconds'**
+  String insightsSeconds(int count);
+
+  /// No description provided for @insightsMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} minutes'**
+  String insightsMinutes(int count);
+
+  /// No description provided for @insightsHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hours'**
+  String insightsHours(int count);
+
+  /// No description provided for @insightsEmergencyCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 was an emergency} other{{count} were emergencies}}'**
+  String insightsEmergencyCount(int count);
+
+  /// No description provided for @shareHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone needs help with my vehicle: {reason}'**
+  String shareHeadline(String reason);
+
+  /// No description provided for @shareVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle: {vehicle}'**
+  String shareVehicle(String vehicle);
+
+  /// No description provided for @shareWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported: {time}'**
+  String shareWhen(String time);
+
+  /// No description provided for @shareTheySaid.
+  ///
+  /// In en, this message translates to:
+  /// **'They said: \"{message}\"'**
+  String shareTheySaid(String message);
+
+  /// No description provided for @shareWhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Roughly where it is:'**
+  String get shareWhere;
+
+  /// No description provided for @shareFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent from Avahanaa. Can you get there before me?'**
+  String get shareFooter;
+
+  /// No description provided for @alertsForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask someone to go'**
+  String get alertsForward;
+
+  /// No description provided for @alertsForwardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the details to whoever is closest to your vehicle.'**
+  String get alertsForwardHint;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

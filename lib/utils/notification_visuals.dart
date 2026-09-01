@@ -107,6 +107,37 @@ class ReasonVisual {
     }
   }
 
+  /// The reason as a short noun phrase, in the reader's language.
+  ///
+  /// Distinct from [guidanceIn], which is the instruction. This is the label —
+  /// what to call the thing in a list or a breakdown, where a full sentence
+  /// would not fit and would read oddly beside a count.
+  ///
+  /// Delegates to the same strings `NotificationModel.reasonTextIn` uses, so
+  /// there is one translation of each reason rather than two that can drift.
+  static String labelIn(AppL10n l10n, String reason) {
+    switch (reason) {
+      case 'blocking_driveway':
+        return l10n.reasonBlockingDriveway;
+      case 'illegal_parking':
+        return l10n.reasonIllegalParking;
+      case 'blocking_traffic':
+        return l10n.reasonBlockingTraffic;
+      case 'double_parked':
+        return l10n.reasonDoubleParked;
+      case 'emergency':
+        return l10n.reasonEmergency;
+      case 'private_property':
+        return l10n.reasonPrivateProperty;
+      case 'test':
+        return l10n.reasonTest;
+      case 'other':
+        return l10n.reasonOther;
+      default:
+        return l10n.reasonUnknown;
+    }
+  }
+
   /// A short line telling the owner what this actually means for them.
   /// The one-line instruction, in the reader's language.
   static String guidanceIn(AppL10n l10n, String reason) {

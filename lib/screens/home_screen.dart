@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -77,6 +79,18 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Which vehicle's QR the home tab is showing. Local only — switching the
   /// view must not rewrite the account's primary vehicle.
   String? _viewedVehicleId;
+
+  @override
+  void initState() {
+    super.initState();
+    // The backend has no idea what "22:00" means without this, and somebody
+    // who has flown somewhere should not have their quiet hours shifted by
+    // five hours until they next happen to edit the setting.
+    final user = _currentUser;
+    if (user != null) {
+      unawaited(_firestoreService.syncTimezoneOffset(user.uid));
+    }
+  }
 
   void _openTab(int index) => setState(() => _selectedIndex = index);
 

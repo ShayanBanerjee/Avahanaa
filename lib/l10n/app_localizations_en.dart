@@ -1224,4 +1224,148 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get readinessFullScreenCta => 'Allow lock screen alerts';
+
+  @override
+  String get errQuietHours =>
+      'Could not save your quiet hours. Please try again.';
+
+  @override
+  String get quietHoursTitle => 'Quiet hours';
+
+  @override
+  String get quietHoursOff => 'Off — alerts always ring';
+
+  @override
+  String quietHoursRange(String start, String end) {
+    return '$start to $end';
+  }
+
+  @override
+  String get quietHoursSheetTitle => 'Quiet hours';
+
+  @override
+  String get quietHoursSheetBody =>
+      'Between these times, ordinary alerts arrive without the alarm — your phone\'s normal notification sound, once, and no reminders.\n\nThey still arrive. You can still reply. Nothing is ever hidden from you.';
+
+  @override
+  String get quietHoursEmergencyNote =>
+      'Emergencies ignore quiet hours completely and ring at full volume.';
+
+  @override
+  String get quietHoursEnable => 'Quieten alerts overnight';
+
+  @override
+  String get quietHoursFrom => 'From';
+
+  @override
+  String get quietHoursTo => 'To';
+
+  @override
+  String get quietHoursAllDayWarning =>
+      'That covers the whole day — alerts would never ring. Choose a shorter window.';
+
+  @override
+  String get quietHoursSaved => 'Quiet hours saved.';
+
+  @override
+  String get commonSave => 'Save';
+
+  @override
+  String get insightsOverline => 'YOUR ALERTS';
+
+  @override
+  String insightsResponseTitle(String duration) {
+    return 'You usually answer in $duration';
+  }
+
+  @override
+  String get insightsNoResponsesTitle => 'You haven\'t answered an alert yet';
+
+  @override
+  String insightsWindow(int count) {
+    return 'From your last $count alerts';
+  }
+
+  @override
+  String get insightsThisMonth => 'This month';
+
+  @override
+  String get insightsAnswered => 'Answered';
+
+  @override
+  String get insightsEmergencies => 'Emergencies';
+
+  @override
+  String insightsTopReason(String reason, int count) {
+    return 'Most often: $reason ($count)';
+  }
+
+  @override
+  String insightsTopVehicle(String plate) {
+    return 'Most alerted vehicle: $plate';
+  }
+
+  @override
+  String insightsBusiestHour(String hour) {
+    return 'Busiest around $hour';
+  }
+
+  @override
+  String insightsSeconds(int count) {
+    return '$count seconds';
+  }
+
+  @override
+  String insightsMinutes(int count) {
+    return '$count minutes';
+  }
+
+  @override
+  String insightsHours(int count) {
+    return '$count hours';
+  }
+
+  @override
+  String insightsEmergencyCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count were emergencies',
+      one: '1 was an emergency',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareHeadline(String reason) {
+    return 'Someone needs help with my vehicle: $reason';
+  }
+
+  @override
+  String shareVehicle(String vehicle) {
+    return 'Vehicle: $vehicle';
+  }
+
+  @override
+  String shareWhen(String time) {
+    return 'Reported: $time';
+  }
+
+  @override
+  String shareTheySaid(String message) {
+    return 'They said: \"$message\"';
+  }
+
+  @override
+  String get shareWhere => 'Roughly where it is:';
+
+  @override
+  String get shareFooter => 'Sent from Avahanaa. Can you get there before me?';
+
+  @override
+  String get alertsForward => 'Ask someone to go';
+
+  @override
+  String get alertsForwardHint =>
+      'Send the details to whoever is closest to your vehicle.';
 }

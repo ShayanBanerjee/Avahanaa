@@ -459,5 +459,144 @@
   "readinessPreferenceCta": "ಎಚ್ಚರಿಕೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ",
   "readinessTokenCta": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   "creditsEarnedPending": "ಜಾಹೀರಾತು ಪೂರ್ಣಗೊಂಡಿದೆ. ನಿಮ್ಮ ಕ್ರೆಡಿಟ್ ಶೀಘ್ರದಲ್ಲೇ ಕಾಣಿಸುತ್ತದೆ.",
-  "readinessFullScreenCta": "ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಎಚ್ಚರಿಕೆಗಳಿಗೆ ಅನುಮತಿಸಿ"
+  "readinessFullScreenCta": "ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಎಚ್ಚರಿಕೆಗಳಿಗೆ ಅನುಮತಿಸಿ",
+  "errQuietHours": "ನಿಮ್ಮ ಶಾಂತ ಸಮಯವನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "quietHoursTitle": "ಶಾಂತ ಸಮಯ",
+  "quietHoursOff": "ಆಫ್ — ಎಚ್ಚರಿಕೆಗಳು ಯಾವಾಗಲೂ ಮೊಳಗುತ್ತವೆ",
+  "quietHoursRange": "{start} ರಿಂದ {end}",
+  "@quietHoursRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "quietHoursSheetTitle": "ಶಾಂತ ಸಮಯ",
+  "quietHoursSheetBody": "ಈ ಸಮಯದ ನಡುವೆ ಸಾಮಾನ್ಯ ಎಚ್ಚರಿಕೆಗಳು ಅಲಾರಂ ಇಲ್ಲದೆ ಬರುತ್ತವೆ — ನಿಮ್ಮ ಫೋನಿನ ಸಾಮಾನ್ಯ ಶಬ್ದ, ಒಮ್ಮೆ ಮಾತ್ರ, ಜ್ಞಾಪನೆಗಳಿಲ್ಲದೆ.\n\nಅವು ಬರುತ್ತವೆ. ನೀವು ಉತ್ತರಿಸಬಹುದು. ನಿಮ್ಮಿಂದ ಏನನ್ನೂ ಮರೆಮಾಡುವುದಿಲ್ಲ.",
+  "quietHoursEmergencyNote": "ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು ಶಾಂತ ಸಮಯವನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ನಿರ್ಲಕ್ಷಿಸಿ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತವೆ.",
+  "quietHoursEnable": "ರಾತ್ರಿ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಶಾಂತಗೊಳಿಸಿ",
+  "quietHoursFrom": "ಇಂದ",
+  "quietHoursTo": "ವರೆಗೆ",
+  "quietHoursAllDayWarning": "ಅದು ಇಡೀ ದಿನವನ್ನು ಆವರಿಸುತ್ತದೆ — ಎಚ್ಚರಿಕೆಗಳು ಎಂದಿಗೂ ಮೊಳಗುವುದಿಲ್ಲ. ಚಿಕ್ಕ ಅವಧಿಯನ್ನು ಆರಿಸಿ.",
+  "quietHoursSaved": "ಶಾಂತ ಸಮಯ ಉಳಿಸಲಾಗಿದೆ.",
+  "commonSave": "ಉಳಿಸಿ",
+  "insightsOverline": "ನಿಮ್ಮ ಎಚ್ಚರಿಕೆಗಳು",
+  "insightsResponseTitle": "ನೀವು ಸಾಮಾನ್ಯವಾಗಿ {duration} ನಲ್ಲಿ ಉತ್ತರಿಸುತ್ತೀರಿ",
+  "@insightsResponseTitle": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsNoResponsesTitle": "ನೀವು ಇನ್ನೂ ಯಾವ ಎಚ್ಚರಿಕೆಗೂ ಉತ್ತರಿಸಿಲ್ಲ",
+  "insightsWindow": "ನಿಮ್ಮ ಕೊನೆಯ {count} ಎಚ್ಚರಿಕೆಗಳಿಂದ",
+  "@insightsWindow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsThisMonth": "ಈ ತಿಂಗಳು",
+  "insightsAnswered": "ಉತ್ತರಿಸಿದ್ದು",
+  "insightsEmergencies": "ತುರ್ತುಗಳು",
+  "insightsTopReason": "ಹೆಚ್ಚಾಗಿ: {reason} ({count})",
+  "@insightsTopReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsTopVehicle": "ಹೆಚ್ಚು ಎಚ್ಚರಿಕೆ ಬಂದ ವಾಹನ: {plate}",
+  "@insightsTopVehicle": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsBusiestHour": "{hour} ಸುಮಾರಿಗೆ ಹೆಚ್ಚು",
+  "@insightsBusiestHour": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsSeconds": "{count} ಸೆಕೆಂಡ್",
+  "@insightsSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsMinutes": "{count} ನಿಮಿಷ",
+  "@insightsMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsHours": "{count} ಗಂಟೆ",
+  "@insightsHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "insightsEmergencyCount": "{count, plural, one{1 ತುರ್ತು ಪರಿಸ್ಥಿತಿ} other{{count} ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು}}",
+  "@insightsEmergencyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareHeadline": "ನನ್ನ ವಾಹನಕ್ಕೆ ಯಾರಿಗೋ ಸಹಾಯ ಬೇಕು: {reason}",
+  "@shareHeadline": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "shareVehicle": "ವಾಹನ: {vehicle}",
+  "@shareVehicle": {
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhen": "ವರದಿಯಾದದ್ದು: {time}",
+  "@shareWhen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "shareTheySaid": "ಅವರು ಹೇಳಿದ್ದು: \"{message}\"",
+  "@shareTheySaid": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhere": "ಅದು ಸುಮಾರಾಗಿ ಎಲ್ಲಿದೆ:",
+  "shareFooter": "ಅವಾಹನಾದಿಂದ ಕಳುಹಿಸಲಾಗಿದೆ. ನನಗಿಂತ ಮೊದಲು ನೀವು ಅಲ್ಲಿಗೆ ಹೋಗಬಹುದೇ?",
+  "alertsForward": "ಯಾರನ್ನಾದರೂ ಕಳುಹಿಸಿ",
+  "alertsForwardHint": "ನಿಮ್ಮ ವಾಹನಕ್ಕೆ ಹತ್ತಿರವಿರುವವರಿಗೆ ವಿವರಗಳನ್ನು ಕಳುಹಿಸಿ."
 }

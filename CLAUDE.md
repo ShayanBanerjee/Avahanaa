@@ -54,7 +54,8 @@ lib/
   main.dart                  App root, theme, AuthGate, FCM background handler
   firebase_options.dart      Generated — do not hand-edit
   models/                    UserModel, VehicleModel, NotificationModel,
-                             AlertWallet (the alert budget), ScanLocation
+                             AlertWallet (the alert budget), ScanLocation,
+                             QuietHours, AlertInsights
   screens/
     auth/                    login, signup, verify_email, forgot_password
     home_screen.dart         Bottom nav shell + home tab (largest screen file)
@@ -74,12 +75,14 @@ lib/
     alert_credits.dart       The one implementation of "watch an ad, get a credit"
     alert_readiness.dart     Will this phone actually wake its owner up?
     ad_gate.dart             One notifier: may this app show ads right now
+    shared_stream.dart       One upstream listener, many subscribers, replayed
     fcm_service.dart         Push receipt, local notifications, reminder scheduling
     notification_payload.dart      FCM data-payload contract + reminder ID derivation
     notification_navigation_service.dart  Deep-link a tapped notification to a screen
   theme/
     app_theme.dart           ALL design tokens + ThemeData (single source)
   utils/
+    alert_share.dart         Forward an alert to whoever is nearer the car
     qr_payload_builder.dart  Builds the URL encoded into the QR
     sticker_renderer.dart    Canvas-drawn themeable sticker (preview + export)
     sticker_sheet.dart       Lays stickers onto a page; PDF + system print dialog
@@ -91,6 +94,7 @@ lib/
     alert_credit_meter.dart  The balance, inline on the hero or as a card
     alert_readiness_card.dart  Appears only when alerts cannot reach this phone
     scan_location_card.dart  Where the vehicle was, when the scanner shared it
+    alert_insights_card.dart How fast you answer, and where alerts come from
     hero_header.dart         Brand gradient surface + glass panel
     qr_visual.dart           Canonical QR styling, hero plinth, showcase panel
     vehicle_panel.dart       The swipeable vehicle rail on the home hero
@@ -129,6 +133,9 @@ users/{userId}
   email, phoneNumber, fcmToken, fcmTokenUpdatedAt,
   primaryVehicleId, notificationsEnabled, createdAt, updatedAt
   qrCodeId, carDetails      <- LEGACY single-vehicle fields, still dual-written
+  quietHours{enabled,startMinute,endMinute}, timezoneOffsetMinutes
+                            <- client-written preferences. The backend reads
+                               the offset to know what "22:00" means.
   plan, planProductId, planExpiresAt, planUpdatedAt,
   alertCredits, freeAlertsUsed, cycleStartedAt,
   lifetimeAlertsReceived, lifetimeAdsWatched
@@ -185,7 +192,9 @@ and keep owner PII out of it.
    `quiet`; the push carries it as a `tier` data key. `quiet` means a
    default-importance channel and no reminders — never a missing alert, and
    never for an `emergency`, which is checked before the balance is. An absent
-   or unknown `tier` means `full`. See `docs/monetization.md`.
+   or unknown `tier` means `full`. **Quiet hours use the same mechanism** —
+   inside the window a non-emergency is forced to `quiet`, never suppressed.
+   See `docs/monetization.md`.
 6. Reminders are cancelled when the alert is read/tapped
    (`cancelNotificationLifecycleById`), and re-synced from Firestore unread docs
    on app start (`_syncReminderStateFromFirestore`).
@@ -228,6 +237,12 @@ background isolate can cancel them without reading state.
   colours (`AppColors.inkOnLightFill`, `inkOnAlertFill`, `onDark`,
   `AppPrint.*`). Getting this wrong is invisible in light mode and glaring at
   night. `test/contrast_test.dart` gates both palettes.
+- **Never cache a shared stream in a `late final` and wrap it.** `SharedStream`
+  hands out one multi-subscriber, replaying, stable-identity stream; that is
+  exactly what `StreamBuilder` needs. Wrapping it in `asBroadcastStream()` kills
+  the source the first time the widget unmounts (the hero froze on a stale
+  balance for a whole session), and a single-subscription view throws on the
+  second listen. `test/shared_stream_test.dart` pins all three properties.
 - **Firestore listeners are shared, not per-screen.** The shell keeps all three
   tabs alive in an `IndexedStack`, so every tab's `StreamBuilder` is mounted at
   once — which is how `users/{uid}` came to have four simultaneous listeners.
@@ -250,15 +265,26 @@ background isolate can cancel them without reading state.
   `AppSpacing`, `AppRadius`, `AppShadows`, `AppMotion`, `AppText`, and
   `AvahanaaTheme.light()`. Screens must not hardcode hex, spacing or text
   styles; if a shade is missing, add it to the token file so the whole app
-  moves together. The palette is `#1F4FB8` primary blue, `#10B981` green,
-  `#C81B30` alert crimson, `#F8FAFC` background, `#0F172A` text, `#E2E8F0`
-  borders. The neutrals are blue-tinted slate rather than pure grey, so they
-  sit with the brand blue instead of reading faintly green next to it.
+  moves together.
 
-  The primary is the same value as `MetalPalette.brand.base`, and that is the
-  point: before Aug 2026 the hero was one blue and every button and active nav
-  item was a brighter one. `AppPrint.heroGradient` carries the flat three-stop
-  version of the same ramp, so the app and the printed sticker are one brand.
+  **Graphite and amber since Sep 2026**, replacing the corporate blue. The hero
+  is a machined near-black (`MetalPalette.brand`) with one warm bronze corner —
+  the ramp's `catchLight` — so the surface reads as lit rather than filled.
+
+  `primary` is a deep bronze `#8A5A18` in daylight and a bright amber
+  `#E8A33D` at night. It has to be both, because `primary` is used as ink on
+  white *and* as a fill under white: one bright amber cannot do both, and
+  `#E8A33D` on white is 1.9:1.
+
+  The neutrals are warm greys for the same reason they used to be blue-slate —
+  a cool grey beside bronze reads faintly green. `warning` is burnt orange
+  `#C2410C`, moved so it stays distinguishable now that the brand is warm.
+  `success` `#10B981` and alert crimson `#C81B30` are unchanged.
+
+  `AppPrint.heroGradient` carries the flat three-stop version of the same ramp,
+  so the app and the printed sticker are one brand. Changing it means
+  re-running the sticker scan verification — the QR itself is never touched,
+  but the band around it is.
 - Radius 12 for inputs/buttons, 14 for cards, 20 for hero surfaces.
 - Shared components live in `lib/widgets/ui_kit.dart` (cards, list rows, empty
   states, stat tiles, plate badge, skeletons, snackbars), `hero_header.dart`

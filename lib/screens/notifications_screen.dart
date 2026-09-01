@@ -11,8 +11,12 @@ import '../services/fcm_service.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/notification_visuals.dart';
+import '../models/alert_insights.dart';
+import '../models/vehicle_model.dart';
+import '../widgets/alert_insights_card.dart';
 import '../widgets/alert_readiness_card.dart';
 import '../widgets/alert_reply_panel.dart';
+import '../utils/alert_share.dart';
 import '../widgets/scan_location_card.dart';
 import '../widgets/ui_kit.dart';
 import 'home_screen.dart';
@@ -41,10 +45,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// settings screen having fixed it.
   ReadinessReport _readiness = ReadinessReport.healthy;
 
+  /// Only so the insights card can name a vehicle rather than print its id.
+  /// Read from the shared listener the rest of the app already holds open, so
+  /// it costs nothing.
+  List<VehicleModel> _vehicles = const [];
+
   @override
   void initState() {
     super.initState();
     unawaited(_refreshReadiness());
+    _watchVehicles();
   }
 
   Future<void> _refreshReadiness() async {
@@ -61,8 +71,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       hasStoredToken: (profile?.fcmToken ?? '').trim().isNotEmpty,
     );
 
-    if (!mounted || report == _readiness) return;
-    setState(() => _readiness = report);
+    if (!mounted) return;
+    if (report != _readiness) setState(() => _readiness = report);
+  }
+
+  /// Keeps [_vehicles] in step. Subscribed rather than fetched because the
+  /// listener is shared and already open for the other tabs.
+  StreamSubscription<List<VehicleModel>>? _vehicleSub;
+
+  /// The vehicle an alert belongs to, or null if it has been deleted or the
+  /// alert predates per-vehicle QR codes.
+  VehicleModel? _vehicleFor(String vehicleId) {
+    if (vehicleId.isEmpty) return null;
+    for (final vehicle in _vehicles) {
+      if (vehicle.id == vehicleId) return vehicle;
+    }
+    return null;
+  }
+
+  void _watchVehicles() {
+    final user = _currentUser;
+    if (user == null) return;
+    _vehicleSub = _firestoreService.streamUserVehicles(user.uid).listen((v) {
+      if (mounted) setState(() => _vehicles = v);
+    });
+  }
+
+  @override
+  void dispose() {
+    _vehicleSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -205,6 +243,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final entries = <Widget>[];
     String? currentHeading;
 
+    // The summary leads the list rather than pinning above it: it is worth a
+    // glance on the way past, not worth permanent screen space on a tab whose
+    // job is the alerts themselves.
+    //
+    // Computed from the list already in memory — no extra reads, no
+    // aggregation query, no index. That is the whole reason it is cheap enough
+    // to be worth having.
+    final insights = AlertInsights.from(notifications);
+    if (insights.hasEnoughData) {
+      entries.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: AlertInsightsCard(
+            insights: insights,
+            vehicles: _vehicles,
+          ),
+        ),
+      );
+    }
+
     for (var i = 0; i < notifications.length; i++) {
       final notification = notifications[i];
       final heading = _dateHeading(l10n, localeName, notification.sentAt);
@@ -344,6 +402,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return _NotificationDetailSheet(
             notification: notification,
             scrollController: scrollController,
+            vehicle: _vehicleFor(notification.vehicleId),
             onReply: (reply) => _firestoreService.replyToNotification(
               notificationId: notification.id,
               reply: reply,
@@ -600,11 +659,17 @@ class _NotificationDetailSheet extends StatelessWidget {
     required this.notification,
     required this.scrollController,
     required this.onReply,
+    this.vehicle,
   });
 
   final NotificationModel notification;
   final ScrollController scrollController;
   final AlertReplySender onReply;
+
+  /// Named in the forwarded message so the recipient knows which car. Null
+  /// when the alert predates multi-vehicle or the vehicle has been deleted;
+  /// the message simply omits the line.
+  final VehicleModel? vehicle;
 
   @override
   Widget build(BuildContext context) {
@@ -737,6 +802,32 @@ class _NotificationDetailSheet extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(height: AppSpacing.xl),
+
+          // Below the reply panel in the tree but above it in importance for
+          // one specific person: the owner who cannot get there. Answering the
+          // scanner is still the primary action, so this sits after it.
+          Text(l10n.alertsForward.toUpperCase(), style: AppText.overline),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.alertsForwardHint,
+            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton.icon(
+            onPressed: () => AlertShare.forward(
+              l10n: l10n,
+              alert: notification,
+              vehicle: vehicle,
+              localTime: DateFormat(
+                'EEEE d MMMM, h:mm a',
+                Localizations.localeOf(context).toLanguageTag(),
+              ).format(notification.sentAt),
+            ),
+            icon: const Icon(Icons.ios_share_rounded, size: 18),
+            label: Text(l10n.alertsForward),
           ),
 
           const SizedBox(height: AppSpacing.xl),

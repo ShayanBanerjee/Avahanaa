@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../models/alert_reply.dart';
 import '../models/alert_wallet.dart';
+import '../models/quiet_hours.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
@@ -104,6 +105,66 @@ class FirestoreService {
             log('Error streaming alert wallet: $e');
           }),
     );
+  }
+
+  /// The owner's quiet-hours window, live.
+  ///
+  /// A preference rather than a balance, so unlike the wallet fields the client
+  /// does write this one — the rules allow it and the backend only reads it.
+  Stream<QuietHours> streamQuietHours(String userId) {
+    return _shared(
+      'quietHours:$userId',
+      () => _firestore
+          .collection('users')
+          .doc(userId)
+          .snapshots()
+          .map(
+            (doc) => QuietHours.fromMap(
+              doc.data()?['quietHours'] as Map<String, dynamic>?,
+            ),
+          )
+          .handleError((Object e) {
+            log('Error streaming quiet hours: $e');
+          }),
+    );
+  }
+
+  /// Saves the window, and the offset the backend needs to interpret it.
+  ///
+  /// The offset is written every time rather than only when it changes: the
+  /// server has no idea what "22:00" means without it, and a user who has
+  /// flown somewhere should not have their alarms shifted by five hours until
+  /// they happen to edit the setting.
+  Future<void> setQuietHours({
+    required String userId,
+    required QuietHours quietHours,
+  }) async {
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'quietHours': quietHours.toMap(),
+        'timezoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error saving quiet hours: $e');
+      throw appL10n.errQuietHours;
+    }
+  }
+
+  /// Refreshes the stored UTC offset.
+  ///
+  /// Called on launch. Cheap, idempotent, and the only thing standing between
+  /// a quiet-hours window and it meaning the wrong hours after a flight.
+  /// Failures are swallowed — this is housekeeping, and a user is never
+  /// waiting on it.
+  Future<void> syncTimezoneOffset(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'timezoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      log('Could not sync the timezone offset: $e');
+    }
   }
 
   Future<AlertWallet> getAlertWallet(String userId) async {

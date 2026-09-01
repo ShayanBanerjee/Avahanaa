@@ -45,6 +45,24 @@ same timing. "This owner is out of credits" is exactly the signal somebody with
 bad intentions would want, and the state of a stranger's subscription is not a
 passer-by's business.
 
+## Quiet hours use the same mechanism
+
+Added Sep 2026, and deliberately built on the tier rather than beside it.
+Inside the owner's window a non-emergency alert is forced to `quiet` — it still
+arrives, is still written, and can still be replied to; it simply does not
+alarm. Suppressing it would mean a vehicle towed at 3am goes unreported because
+of a preference set months ago.
+
+Applied to subscribers too: somebody paying for unlimited alerts still asked not
+to be woken, and honouring the meter over their own preference would be the
+wrong way round. It still spends from the budget — the alert was delivered and
+the function ran — and making it free would also hand anyone a way to work out
+when an owner sleeps by watching their own balance.
+
+The backend runs in UTC, so the app writes `timezoneOffsetMinutes` on the user
+document at launch. A missing offset means UTC: the wrong hour for an Indian
+user, but a bounded, self-correcting error rather than a dropped alert.
+
 ## Where the numbers live
 
 `users/{uid}` carries the wallet, and **every field is server-written**:

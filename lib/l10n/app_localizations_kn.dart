@@ -1231,4 +1231,150 @@ class AppL10nKn extends AppL10n {
 
   @override
   String get readinessFullScreenCta => 'ಲಾಕ್ ಸ್ಕ್ರೀನ್ ಎಚ್ಚರಿಕೆಗಳಿಗೆ ಅನುಮತಿಸಿ';
+
+  @override
+  String get errQuietHours =>
+      'ನಿಮ್ಮ ಶಾಂತ ಸಮಯವನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get quietHoursTitle => 'ಶಾಂತ ಸಮಯ';
+
+  @override
+  String get quietHoursOff => 'ಆಫ್ — ಎಚ್ಚರಿಕೆಗಳು ಯಾವಾಗಲೂ ಮೊಳಗುತ್ತವೆ';
+
+  @override
+  String quietHoursRange(String start, String end) {
+    return '$start ರಿಂದ $end';
+  }
+
+  @override
+  String get quietHoursSheetTitle => 'ಶಾಂತ ಸಮಯ';
+
+  @override
+  String get quietHoursSheetBody =>
+      'ಈ ಸಮಯದ ನಡುವೆ ಸಾಮಾನ್ಯ ಎಚ್ಚರಿಕೆಗಳು ಅಲಾರಂ ಇಲ್ಲದೆ ಬರುತ್ತವೆ — ನಿಮ್ಮ ಫೋನಿನ ಸಾಮಾನ್ಯ ಶಬ್ದ, ಒಮ್ಮೆ ಮಾತ್ರ, ಜ್ಞಾಪನೆಗಳಿಲ್ಲದೆ.\n\nಅವು ಬರುತ್ತವೆ. ನೀವು ಉತ್ತರಿಸಬಹುದು. ನಿಮ್ಮಿಂದ ಏನನ್ನೂ ಮರೆಮಾಡುವುದಿಲ್ಲ.';
+
+  @override
+  String get quietHoursEmergencyNote =>
+      'ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು ಶಾಂತ ಸಮಯವನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ನಿರ್ಲಕ್ಷಿಸಿ ಪೂರ್ಣ ಶಬ್ದದಲ್ಲಿ ಮೊಳಗುತ್ತವೆ.';
+
+  @override
+  String get quietHoursEnable => 'ರಾತ್ರಿ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಶಾಂತಗೊಳಿಸಿ';
+
+  @override
+  String get quietHoursFrom => 'ಇಂದ';
+
+  @override
+  String get quietHoursTo => 'ವರೆಗೆ';
+
+  @override
+  String get quietHoursAllDayWarning =>
+      'ಅದು ಇಡೀ ದಿನವನ್ನು ಆವರಿಸುತ್ತದೆ — ಎಚ್ಚರಿಕೆಗಳು ಎಂದಿಗೂ ಮೊಳಗುವುದಿಲ್ಲ. ಚಿಕ್ಕ ಅವಧಿಯನ್ನು ಆರಿಸಿ.';
+
+  @override
+  String get quietHoursSaved => 'ಶಾಂತ ಸಮಯ ಉಳಿಸಲಾಗಿದೆ.';
+
+  @override
+  String get commonSave => 'ಉಳಿಸಿ';
+
+  @override
+  String get insightsOverline => 'ನಿಮ್ಮ ಎಚ್ಚರಿಕೆಗಳು';
+
+  @override
+  String insightsResponseTitle(String duration) {
+    return 'ನೀವು ಸಾಮಾನ್ಯವಾಗಿ $duration ನಲ್ಲಿ ಉತ್ತರಿಸುತ್ತೀರಿ';
+  }
+
+  @override
+  String get insightsNoResponsesTitle =>
+      'ನೀವು ಇನ್ನೂ ಯಾವ ಎಚ್ಚರಿಕೆಗೂ ಉತ್ತರಿಸಿಲ್ಲ';
+
+  @override
+  String insightsWindow(int count) {
+    return 'ನಿಮ್ಮ ಕೊನೆಯ $count ಎಚ್ಚರಿಕೆಗಳಿಂದ';
+  }
+
+  @override
+  String get insightsThisMonth => 'ಈ ತಿಂಗಳು';
+
+  @override
+  String get insightsAnswered => 'ಉತ್ತರಿಸಿದ್ದು';
+
+  @override
+  String get insightsEmergencies => 'ತುರ್ತುಗಳು';
+
+  @override
+  String insightsTopReason(String reason, int count) {
+    return 'ಹೆಚ್ಚಾಗಿ: $reason ($count)';
+  }
+
+  @override
+  String insightsTopVehicle(String plate) {
+    return 'ಹೆಚ್ಚು ಎಚ್ಚರಿಕೆ ಬಂದ ವಾಹನ: $plate';
+  }
+
+  @override
+  String insightsBusiestHour(String hour) {
+    return '$hour ಸುಮಾರಿಗೆ ಹೆಚ್ಚು';
+  }
+
+  @override
+  String insightsSeconds(int count) {
+    return '$count ಸೆಕೆಂಡ್';
+  }
+
+  @override
+  String insightsMinutes(int count) {
+    return '$count ನಿಮಿಷ';
+  }
+
+  @override
+  String insightsHours(int count) {
+    return '$count ಗಂಟೆ';
+  }
+
+  @override
+  String insightsEmergencyCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳು',
+      one: '1 ತುರ್ತು ಪರಿಸ್ಥಿತಿ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareHeadline(String reason) {
+    return 'ನನ್ನ ವಾಹನಕ್ಕೆ ಯಾರಿಗೋ ಸಹಾಯ ಬೇಕು: $reason';
+  }
+
+  @override
+  String shareVehicle(String vehicle) {
+    return 'ವಾಹನ: $vehicle';
+  }
+
+  @override
+  String shareWhen(String time) {
+    return 'ವರದಿಯಾದದ್ದು: $time';
+  }
+
+  @override
+  String shareTheySaid(String message) {
+    return 'ಅವರು ಹೇಳಿದ್ದು: \"$message\"';
+  }
+
+  @override
+  String get shareWhere => 'ಅದು ಸುಮಾರಾಗಿ ಎಲ್ಲಿದೆ:';
+
+  @override
+  String get shareFooter =>
+      'ಅವಾಹನಾದಿಂದ ಕಳುಹಿಸಲಾಗಿದೆ. ನನಗಿಂತ ಮೊದಲು ನೀವು ಅಲ್ಲಿಗೆ ಹೋಗಬಹುದೇ?';
+
+  @override
+  String get alertsForward => 'ಯಾರನ್ನಾದರೂ ಕಳುಹಿಸಿ';
+
+  @override
+  String get alertsForwardHint =>
+      'ನಿಮ್ಮ ವಾಹನಕ್ಕೆ ಹತ್ತಿರವಿರುವವರಿಗೆ ವಿವರಗಳನ್ನು ಕಳುಹಿಸಿ.';
 }
