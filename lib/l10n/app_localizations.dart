@@ -2310,6 +2310,12 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Try again'**
   String get readinessTokenCta;
+
+  /// No description provided for @creditsEarnedPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad complete. Your credit will appear shortly.'**
+  String get creditsEarnedPending;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

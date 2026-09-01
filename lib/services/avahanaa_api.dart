@@ -122,6 +122,25 @@ class AvahanaaApi {
           .join()
           .timeout(_timeout);
 
+      // A 200 carrying HTML means the hosting catch-all rewrite swallowed the
+      // route — the endpoint is not deployed. This is not a hypothetical: it
+      // is how every `/api/*` path on avahanaa.com currently answers, and it
+      // is the exact failure `docs/web_backend_sync.md` documents.
+      //
+      // Worth detecting on its own, because it is the one failure that looks
+      // like success to `statusCode` and would otherwise be retried three
+      // times against a server that will never answer differently.
+      final contentType = response.headers.contentType;
+      if (contentType != null && contentType.mimeType == 'text/html') {
+        log('Endpoint not deployed (got HTML): $uri');
+        return const ApiResult.failure(
+          'This feature is not available yet.',
+          // 501, not 0: a route that does not exist will not exist on a
+          // retry either, and the caller uses this to stop asking.
+          statusCode: 501,
+        );
+      }
+
       Map<String, dynamic> decoded = const {};
       if (text.trim().isNotEmpty) {
         final parsed = jsonDecode(text);

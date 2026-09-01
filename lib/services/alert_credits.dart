@@ -61,13 +61,19 @@ abstract final class AlertCredits {
     // The wallet stream repaints from Firestore the moment the backend writes
     // the credit, so nothing here has to plumb the new balance back. This is
     // only a nudge to settle it now rather than on the next poll.
-    await _claimWithRetries(token);
+    final settled = await _claimWithRetries(token);
 
     if (!context.mounted) return true;
+    // Say which of the two actually happened. "Credit added" next to a balance
+    // that has not moved is the app claiming something it cannot see — and the
+    // gap is not hypothetical: with the SSV callback unconfigured, *every* ad
+    // ends here and the balance never moves at all. Google's callback usually
+    // lands in under a second, so the honest message is rare in production and
+    // exactly right when it is not.
     showAppSnackBar(
       messenger,
-      l10n.creditsEarnedOne,
-      kind: AppSnackKind.success,
+      settled ? l10n.creditsEarnedOne : l10n.creditsEarnedPending,
+      kind: settled ? AppSnackKind.success : AppSnackKind.neutral,
     );
     return true;
   }
@@ -78,7 +84,8 @@ abstract final class AlertCredits {
   /// overwhelming majority of callbacks without leaving a spinner up. A claim
   /// that has not landed by then still lands — `deliverAlert`-style, the
   /// callback writes the credit whenever it arrives and the stream picks it up.
-  static Future<void> _claimWithRetries(String rewardToken) async {
+  /// Returns true once the backend confirms the credit is written.
+  static Future<bool> _claimWithRetries(String rewardToken) async {
     const delays = [Duration.zero, Duration(seconds: 1), Duration(seconds: 3)];
     for (final delay in delays) {
       if (delay > Duration.zero) await Future<void>.delayed(delay);
@@ -86,10 +93,11 @@ abstract final class AlertCredits {
         rewardToken: rewardToken,
       );
       // Settled: the credit is written and the wallet stream has it.
-      if (result.isOk && result.data != null) return;
-      // A hard failure — a bad token, a signed-out user — will fail the same
-      // way on every retry, so stop asking.
-      if (!result.isOk && !result.isRetryable) return;
+      if (result.isOk && result.data != null) return true;
+      // A hard failure — a bad token, a signed-out user, a route that is not
+      // deployed — will fail the same way on every retry, so stop asking.
+      if (!result.isOk && !result.isRetryable) return false;
     }
+    return false;
   }
 }

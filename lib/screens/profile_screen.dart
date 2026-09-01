@@ -802,11 +802,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               SheetGrabber(),
               const SizedBox(height: AppSpacing.lg),
-              AppIconBadge(
-                icon: Icons.notifications_active_rounded,
-                color: AppColors.success,
-                size: 56,
-                iconSize: 28,
+              // Aligned, not stretched. The column stretches so the button
+              // fills the sheet, and a 56x56 badge inside a stretching column
+              // is a 56-tall band the full width of the screen.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AppIconBadge(
+                  icon: Icons.notifications_active_rounded,
+                  color: AppColors.success,
+                  size: 56,
+                  iconSize: 28,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(l10n.selfTestSheetTitle, style: AppText.headlineMedium),

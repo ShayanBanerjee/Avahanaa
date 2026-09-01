@@ -1224,4 +1224,8 @@ class AppL10nKn extends AppL10n {
 
   @override
   String get readinessTokenCta => 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
+
+  @override
+  String get creditsEarnedPending =>
+      'ಜಾಹೀರಾತು ಪೂರ್ಣಗೊಂಡಿದೆ. ನಿಮ್ಮ ಕ್ರೆಡಿಟ್ ಶೀಘ್ರದಲ್ಲೇ ಕಾಣಿಸುತ್ತದೆ.';
 }

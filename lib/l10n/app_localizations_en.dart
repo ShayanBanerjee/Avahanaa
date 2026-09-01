@@ -1217,4 +1217,8 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get readinessTokenCta => 'Try again';
+
+  @override
+  String get creditsEarnedPending =>
+      'Ad complete. Your credit will appear shortly.';
 }
